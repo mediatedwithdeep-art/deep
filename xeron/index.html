@@ -1,0 +1,1240 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xeron Energy — Sales Agent</title>
+<style>
+:root{
+  --navy:#0B1B33; --navy2:#122a4d; --navy3:#1b3a66;
+  --blue:#1E7BE8; --blue-d:#0F4FA8; --blue-l:#e8f1fd;
+  --orange:#F7941D; --orange-l:#fff3e2;
+  --ink:#101a29; --body:#2c3a4d; --muted:#6b7a90;
+  --line:#dfe5ee; --line2:#eef2f7; --bg:#f4f6fa; --white:#fff;
+  --green:#0f9d58; --green-l:#e6f6ee;
+  --red:#d9342b; --red-l:#fdecea;
+  --amber:#c47f0a; --amber-l:#fdf3e0;
+  --f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  --sh:0 1px 2px rgba(16,26,41,.05),0 4px 14px rgba(16,26,41,.05);
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{background:var(--bg);color:var(--body);font-family:var(--f);font-size:15px;line-height:1.55;}
+button,input,select,textarea{font:inherit;color:inherit;}
+button{cursor:pointer;background:none;border:none;}
+a{color:var(--blue);}
+h1,h2,h3,h4{color:var(--ink);line-height:1.25;font-weight:700;}
+
+/* ---------- LOGO ---------- */
+.logo{display:flex;align-items:center;gap:10px;}
+.logo svg{flex:none;}
+.logo .wm{display:flex;flex-direction:column;line-height:1;}
+.logo .wm b{font-size:19px;font-weight:800;letter-spacing:.06em;color:#fff;}
+.logo .wm span{font-size:8.5px;font-weight:700;letter-spacing:.34em;color:var(--orange);margin-top:3px;}
+.logo.dark .wm b{color:var(--navy);}
+
+/* ---------- TOP BAR ---------- */
+.topbar{background:var(--navy);background-image:linear-gradient(120deg,#0B1B33 0%,#122a4d 55%,#1b3a66 100%);position:sticky;top:0;z-index:50;}
+.topbar .rule{height:3px;background:linear-gradient(90deg,var(--blue) 0%,var(--blue) 45%,var(--orange) 45%,var(--orange) 100%);}
+.tb-in{max-width:1180px;margin:0 auto;padding:14px 20px;display:flex;align-items:center;gap:18px;flex-wrap:wrap;}
+.tb-tag{color:rgba(255,255,255,.62);font-size:12px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;border-left:1px solid rgba(255,255,255,.18);padding-left:16px;}
+.tb-note{margin-left:auto;display:flex;align-items:center;gap:7px;font-size:12px;color:#ffd9a8;background:rgba(247,148,29,.13);border:1px solid rgba(247,148,29,.32);padding:5px 11px;border-radius:99px;font-weight:600;}
+.tabs{max-width:1180px;margin:0 auto;padding:0 20px;display:flex;gap:4px;overflow-x:auto;}
+.tab{padding:11px 17px;color:rgba(255,255,255,.62);font-size:14px;font-weight:600;border-bottom:3px solid transparent;white-space:nowrap;transition:.15s;}
+.tab:hover{color:#fff;}
+.tab.on{color:#fff;border-bottom-color:var(--orange);}
+.tab .n[hidden]{display:none;}
+.tab .n{display:inline-flex;align-items:center;justify-content:center;min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--red);color:#fff;font-size:11px;font-weight:700;margin-left:7px;}
+
+/* ---------- LAYOUT ---------- */
+.wrap{max-width:1180px;margin:0 auto;padding:26px 20px 90px;}
+body{overflow-x:hidden;}
+.panel{display:none;}
+.panel.on{display:block;animation:fade .18s ease;}
+@keyframes fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
+.grid2{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;align-items:start;}
+@media(max-width:900px){.grid2{grid-template-columns:minmax(0,1fr);}}
+
+.card{min-width:0;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:var(--sh);margin-bottom:20px;overflow:hidden;}
+.card>h3{padding:14px 18px;border-bottom:1px solid var(--line2);font-size:14px;letter-spacing:.02em;display:flex;align-items:center;gap:10px;flex-wrap:wrap;}
+.card>h3 .sub{font-weight:500;color:var(--muted);font-size:12.5px;letter-spacing:0;}
+.card .bd{padding:18px;}
+.card .bd.tight{padding:0;}
+
+.sec-head{margin-bottom:18px;}
+.sec-head h2{font-size:21px;}
+.sec-head p{color:var(--muted);font-size:13.5px;margin-top:3px;max-width:760px;}
+
+label.fl{display:block;font-size:11.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-bottom:6px;}
+.inp,select.inp,textarea.inp{width:100%;padding:9px 11px;border:1px solid var(--line);border-radius:8px;background:#fff;transition:.15s;font-size:14.5px;}
+.inp:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,123,232,.13);}
+textarea.inp{resize:vertical;line-height:1.6;}
+.fields{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.fields .full{grid-column:1/-1;}
+@media(max-width:560px){.fields{grid-template-columns:1fr;}}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:9px 16px;border-radius:8px;font-size:14px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);transition:.15s;}
+.btn:hover{border-color:#c3cddc;background:#fafbfd;}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.pri:hover{background:var(--blue-d);border-color:var(--blue-d);}
+.btn.acc{background:var(--orange);border-color:var(--orange);color:#3d2400;}
+.btn.acc:hover{filter:brightness(.95);}
+.btn.sm{padding:6px 11px;font-size:12.5px;border-radius:7px;}
+.btn.dgr{color:var(--red);}
+.btn.dgr:hover{background:var(--red-l);border-color:#f3b7b3;}
+.btnrow{display:flex;gap:9px;flex-wrap:wrap;}
+
+.chip{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:3px 9px;border-radius:99px;font-size:11.5px;font-weight:700;letter-spacing:.02em;}
+.c-new{background:var(--blue-l);color:var(--blue-d);}
+.c-quoted{background:#ede9fe;color:#5b2ec7;}
+.c-follow{background:var(--amber-l);color:var(--amber);}
+.c-won{background:var(--green-l);color:var(--green);}
+.c-lost{background:#eef1f5;color:#6b7a90;}
+.c-flag{background:var(--red-l);color:var(--red);}
+
+.note{border-left:3px solid var(--blue);background:var(--blue-l);padding:11px 14px;border-radius:0 8px 8px 0;font-size:13px;color:#12447e;}
+.note.warn{border-color:var(--orange);background:var(--orange-l);color:#7a4a00;}
+.note.int{border-color:#6b7a90;background:#f2f5f9;color:#43526b;}
+.muted{color:var(--muted);font-size:12.5px;}
+.mono{font-family:var(--mono);}
+
+table.grid{width:100%;border-collapse:collapse;font-size:14px;}
+table.grid th{background:#f7f9fc;text-align:left;font-size:11px;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);font-weight:700;padding:9px 9px;border-bottom:1px solid var(--line);white-space:nowrap;}
+table.grid td{padding:8px 9px;border-bottom:1px solid var(--line2);vertical-align:middle;}
+table.grid tr:last-child td{border-bottom:none;}
+table.grid td.num{text-align:right;font-variant-numeric:tabular-nums;}
+.scrollx{overflow-x:auto;}
+.cellinp{width:100%;min-width:96px;padding:6px 8px;border:1px solid transparent;border-radius:6px;background:transparent;font-size:13.5px;}
+.cellinp:hover{border-color:var(--line);}
+.cellinp:focus{outline:none;border-color:var(--blue);background:#fff;box-shadow:0 0 0 3px rgba(30,123,232,.12);}
+.cellinp.dt{min-width:104px;font-size:12px;padding:6px 4px;}
+select.cellinp.st{font-weight:700;font-size:12px;border-radius:99px;padding:5px 6px;background:#f1f4f9;-webkit-appearance:none;appearance:none;text-align:center;min-width:88px;}
+tr.flagged td{background:#fff8f7;}
+
+/* quote summary */
+.sumline{display:flex;justify-content:space-between;align-items:baseline;padding:9px 0;border-bottom:1px dashed var(--line);font-size:14px;}
+.sumline:last-child{border-bottom:none;}
+.sumline b{font-variant-numeric:tabular-nums;color:var(--ink);}
+.sumline.tot{border-top:2px solid var(--navy);border-bottom:none;margin-top:6px;padding-top:12px;font-size:17px;}
+.sumline.tot b{font-size:22px;font-weight:800;color:var(--navy);}
+.kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:14px;}
+.kpi{background:#f7f9fc;border:1px solid var(--line2);border-radius:9px;padding:10px 12px;}
+.kpi span{display:block;font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;}
+.kpi b{font-size:16px;color:var(--ink);font-variant-numeric:tabular-nums;}
+@media(max-width:560px){.kpis{grid-template-columns:1fr 1fr;}}
+
+/* modal */
+.mask{position:fixed;inset:0;background:rgba(11,27,51,.55);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:5vh 16px;overflow-y:auto;}
+.mask.on{display:flex;}
+.modal{background:#fff;border-radius:13px;max-width:560px;width:100%;box-shadow:0 22px 60px rgba(11,27,51,.3);overflow:hidden;}
+.modal h3{padding:15px 18px;border-bottom:1px solid var(--line2);font-size:15px;display:flex;align-items:center;gap:9px;}
+.modal .bd{padding:18px;}
+.modal .ft{padding:13px 18px;background:#f7f9fc;border-top:1px solid var(--line2);display:flex;gap:9px;justify-content:flex-end;flex-wrap:wrap;}
+
+.toast{position:fixed;left:50%;bottom:26px;transform:translate(-50%,20px);background:var(--navy);color:#fff;padding:10px 18px;border-radius:99px;font-size:13.5px;font-weight:600;box-shadow:0 10px 30px rgba(11,27,51,.35);opacity:0;pointer-events:none;transition:.22s;z-index:400;}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+
+/* objections */
+.obj{border:1px solid var(--line);border-radius:11px;margin-bottom:12px;background:#fff;overflow:hidden;}
+.obj>summary{padding:13px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:11px;font-weight:700;color:var(--ink);font-size:15px;}
+.obj>summary::-webkit-details-marker{display:none;}
+.obj>summary::before{content:"";width:7px;height:7px;border-right:2px solid var(--orange);border-bottom:2px solid var(--orange);transform:rotate(-45deg);transition:.18s;flex:none;margin-left:3px;}
+.obj[open]>summary::before{transform:rotate(45deg);}
+.obj>summary .cue{font-weight:500;color:var(--muted);font-size:12.5px;margin-left:auto;text-align:right;}
+@media(max-width:640px){.obj>summary .cue{display:none;}}
+.obj .ob{padding:0 16px 16px;}
+.obj .prev{white-space:pre-wrap;background:#f7f9fc;border:1px solid var(--line2);border-radius:9px;padding:13px 15px;font-size:14px;line-height:1.65;color:var(--ink);}
+.obj .prev mark{background:#fff0d6;color:#7a4a00;border-radius:3px;padding:0 2px;font-weight:600;}
+
+/* ---------- PDF PAGE ---------- */
+#pdfwrap{background:#5d6b80;padding:18px;border-radius:0 0 12px 12px;overflow:hidden;}
+.page{width:794px;min-height:1123px;background:#fff;margin:0 auto;color:#1a2537;font-size:12px;line-height:1.5;display:flex;flex-direction:column;}
+.page .ph{background:var(--navy);background-image:linear-gradient(115deg,#0B1B33 0%,#12294a 60%,#1b3a66 100%);padding:22px 34px 18px;display:flex;align-items:center;justify-content:space-between;gap:20px;}
+.page .ph .ttl{text-align:right;}
+.page .ph .ttl b{display:block;color:#fff;font-size:19px;letter-spacing:.2em;font-weight:800;}
+.page .ph .ttl span{display:block;color:var(--orange);font-size:9.5px;letter-spacing:.24em;font-weight:700;margin-top:5px;}
+.page .prule{height:4px;background:linear-gradient(90deg,var(--blue) 0%,var(--blue) 62%,var(--orange) 62%,var(--orange) 100%);}
+.page .pbody{padding:24px 34px 0;flex:1;}
+.page .meta{display:flex;justify-content:space-between;gap:26px;border:1px solid #e2e8f0;border-radius:8px;overflow:hidden;}
+.page .meta>div{flex:1;padding:12px 15px;}
+.page .meta>div+div{border-left:1px solid #e2e8f0;background:#f8fafc;}
+.page .meta em{display:block;font-style:normal;font-size:9px;letter-spacing:.09em;text-transform:uppercase;color:#7b8aa0;font-weight:700;margin-bottom:3px;}
+.page .meta strong{font-size:13px;color:#0B1B33;font-weight:700;}
+.page .meta .ln{font-size:11.5px;color:#40506a;}
+.page h4.ps{font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--navy);margin:22px 0 9px;padding-bottom:6px;border-bottom:2px solid var(--blue);display:flex;align-items:center;gap:8px;}
+.page h4.ps::after{content:"";flex:1;height:2px;background:var(--orange);max-width:34px;}
+.page table.pt{width:100%;border-collapse:collapse;font-size:11.5px;}
+.page table.pt th{background:var(--navy);color:#fff;text-align:left;padding:8px 11px;font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;font-weight:700;}
+.page table.pt td{padding:8px 11px;border-bottom:1px solid #e7ecf3;vertical-align:top;}
+.page table.pt tr:nth-child(even) td{background:#fafbfd;}
+.page table.pt td.r{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.page .totrow td{background:var(--navy)!important;color:#fff;font-weight:800;font-size:13px;padding:11px;border:none;}
+.page .totrow td.r{font-size:15px;}
+.page .words{background:var(--orange-l);border:1px solid #f3d2a0;border-radius:7px;padding:8px 12px;margin-top:9px;font-size:11.5px;color:#7a4a00;}
+.page ol.tnc{margin:0;padding-left:17px;font-size:11.5px;}
+.page ol.tnc li{margin-bottom:5px;padding-left:3px;}
+.page ol.tnc li::marker{color:var(--blue);font-weight:700;}
+.page .sign{display:flex;justify-content:space-between;gap:30px;margin-top:26px;padding-top:8px;}
+.page .sign div{font-size:11px;color:#40506a;}
+.page .sign b{display:block;color:#0B1B33;font-size:12px;margin-bottom:34px;}
+.page .sign .line{border-top:1px solid #9aa8bc;padding-top:4px;min-width:170px;}
+.page .pf{margin-top:auto;background:var(--navy);color:rgba(255,255,255,.9);padding:13px 34px;display:flex;justify-content:space-between;align-items:center;gap:16px;font-size:11px;}
+.page .pf b{color:#fff;font-size:12.5px;}
+.page .pf .dot{color:var(--orange);}
+.page .pfrule{height:3px;background:linear-gradient(90deg,var(--orange) 0%,var(--orange) 38%,var(--blue) 38%,var(--blue) 100%);}
+
+@media(max-width:860px){#pdfwrap{padding:10px;}.page{transform-origin:top left;}}
+
+/* ---------- PRINT ---------- */
+@media print{
+  @page{size:A4;margin:0;}
+  html,body{background:#fff!important;}
+  .app{display:none!important;}
+  #printroot{display:block!important;}
+  #printroot .page{width:210mm;min-height:297mm;box-shadow:none;margin:0;font-size:11.6px;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+}
+#printroot{display:none;}
+</style>
+</head>
+<body>
+
+<template id="logotpl">
+<span class="logo">
+  <svg width="38" height="38" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+    <defs>
+      <linearGradient id="xg1" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="#2E93FF"/><stop offset="1" stop-color="#0F4FA8"/>
+      </linearGradient>
+      <linearGradient id="xg2" x1="0" y1="1" x2="1" y2="0">
+        <stop offset="0" stop-color="#F7941D"/><stop offset="1" stop-color="#FFC46B"/>
+      </linearGradient>
+    </defs>
+    <path d="M24 2.6 43.4 13.3v21.4L24 45.4 4.6 34.7V13.3z" fill="url(#xg1)"/>
+    <path d="M24 2.6 43.4 13.3v21.4L24 45.4 4.6 34.7V13.3z" stroke="rgba(255,255,255,.28)" stroke-width="1.1"/>
+    <path d="M13.8 14.4h6.1L24 20.6l4.1-6.2h6.1l-7.2 10.5 7.4 10.7h-6.1L24 29.1l-4.3 6.5h-6.1L21 24.9z" fill="#fff"/>
+    <path d="M28.1 14.4h6.1l-7.2 10.5 7.4 10.7h-6.1l-4.3-6.5 1.5-2.3 2.8 4.2 3.2-4.6-4.5-6.5z" fill="url(#xg2)"/>
+  </svg>
+  <span class="wm"><b>XERON</b><span>ENERGY</span></span>
+</span>
+</template>
+
+<div class="app">
+<header class="topbar">
+  <div class="rule"></div>
+  <div class="tb-in">
+    <span id="hdrlogo"></span>
+    <span class="tb-tag">Sales Agent</span>
+    <span class="tb-note">&#9998; Drafts only &mdash; nothing is sent to any customer</span>
+  </div>
+  <nav class="tabs">
+    <button class="tab on" data-go="quote">Quote Generator</button>
+    <button class="tab" data-go="leads">Lead &amp; Follow-up Tracker <span class="n" id="flagcount" hidden>0</span></button>
+    <button class="tab" data-go="obj">Objection Handling</button>
+    <button class="tab" data-go="rates">Kit Cost Table</button>
+  </nav>
+</header>
+
+<main class="wrap">
+
+<!-- ============ QUOTE ============ -->
+<section class="panel on" id="p-quote">
+  <div class="sec-head">
+    <h2>Quote Generator</h2>
+    <p>Pick the system, and margin is applied automatically from the Xeron pricing rule. The customer PDF shows only the final all-inclusive price &mdash; kit cost and margin stay on this screen.</p>
+  </div>
+
+  <div class="grid2">
+    <div>
+      <div class="card">
+        <h3>1 &nbsp;System &amp; Customer</h3>
+        <div class="bd">
+          <div class="fields">
+            <div>
+              <label class="fl" for="q_nos">Nos. of panels</label>
+              <select class="inp" id="q_nos"></select>
+            </div>
+            <div>
+              <label class="fl" for="q_brand">Panel brand</label>
+              <select class="inp" id="q_brand">
+                <option>APS</option><option>Adani</option><option selected>Waaree</option>
+              </select>
+            </div>
+            <div>
+              <label class="fl" for="q_name">Customer name</label>
+              <input class="inp" id="q_name" placeholder="e.g. Mr. Rakesh Patel">
+            </div>
+            <div>
+              <label class="fl" for="q_date">Quotation date</label>
+              <input class="inp" id="q_date" type="date">
+            </div>
+            <div>
+              <label class="fl" for="q_contact">Contact no. <span style="text-transform:none;letter-spacing:0;font-weight:500">(optional)</span></label>
+              <input class="inp" id="q_contact" placeholder="+91 ">
+            </div>
+            <div>
+              <label class="fl" for="q_place">Site / location <span style="text-transform:none;letter-spacing:0;font-weight:500">(optional)</span></label>
+              <input class="inp" id="q_place" placeholder="e.g. Rajkot, Gujarat">
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>2 &nbsp;Pricing <span class="sub">auto-calculated</span></h3>
+        <div class="bd">
+          <div style="margin-bottom:12px">
+            <label class="fl" for="q_kit">Kit cost for this brand &amp; size (&#8377;)</label>
+            <input class="inp mono" id="q_kit" type="number" step="500" inputmode="numeric">
+            <p class="muted" style="margin-top:6px" id="kitnote"></p>
+          </div>
+          <div class="sumline"><span>Kit cost</span><b id="s_kit">&mdash;</b></div>
+          <div class="sumline"><span>Xeron margin <span class="muted" id="s_rule"></span></span><b id="s_mar">&mdash;</b></div>
+          <div class="sumline tot"><span>Final quoted price</span><b id="s_tot">&mdash;</b></div>
+          <div class="kpis">
+            <div class="kpi"><span>System size</span><b id="k_kw">&mdash;</b></div>
+            <div class="kpi"><span>Rate per kW</span><b id="k_perkw">&mdash;</b></div>
+            <div class="kpi"><span>Margin %</span><b id="k_mpc">&mdash;</b></div>
+          </div>
+          <div class="note int" style="margin-top:14px">Internal only &mdash; kit cost, margin and margin&nbsp;% are never printed on the customer PDF.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>3 &nbsp;Scope of supply <span class="sub">printed on the PDF &mdash; editable</span></h3>
+        <div class="bd">
+          <textarea class="inp" id="q_scope" rows="8"></textarea>
+          <p class="muted" style="margin-top:7px">One line per row. Use <span class="mono">Item | Description</span> to split into two columns. <span class="mono">{kw}</span>, <span class="mono">{nos}</span>, <span class="mono">{brand}</span>, <span class="mono">{wp}</span> are filled in automatically.</p>
+          <div class="btnrow" style="margin-top:11px"><button class="btn sm" id="scope_reset">Reset to default scope</button></div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h3>4 &nbsp;Terms &amp; conditions <span class="sub">editable</span></h3>
+        <div class="bd">
+          <textarea class="inp" id="q_tnc" rows="7"></textarea>
+          <p class="muted" style="margin-top:7px">One term per line; numbering is added automatically.</p>
+          <div class="btnrow" style="margin-top:11px"><button class="btn sm" id="tnc_reset">Reset to standard T&amp;Cs</button></div>
+        </div>
+      </div>
+    </div>
+
+    <div>
+      <div class="card" style="position:sticky;top:118px">
+        <h3>Quotation preview
+          <span class="sub" id="qnolbl"></span>
+          <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn sm" id="q_save">Save to Tracker</button>
+            <button class="btn sm pri" id="q_pdf">Download PDF</button>
+          </span>
+        </h3>
+        <div class="bd" style="padding:12px 18px 0">
+          <div class="note">Downloading opens your browser&rsquo;s print dialog &mdash; choose <b>Save as PDF</b>, A4, margins <b>None</b>, and tick <b>Background graphics</b>.</div>
+        </div>
+        <div id="pdfwrap"><div id="preview"></div></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ LEADS ============ -->
+<section class="panel" id="p-leads">
+  <div class="sec-head">
+    <h2>Lead &amp; Follow-up Tracker</h2>
+    <p>Any lead with no contact for 5 or more days is flagged automatically. Follow-up messages are <b>drafted for you to review and send yourself</b> &mdash; this tool never messages a customer.</p>
+  </div>
+
+  <div class="card">
+    <h3>Leads
+      <span class="sub" id="leadstat"></span>
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <select class="inp" id="l_filter" style="width:auto;padding:6px 10px;font-size:13px">
+          <option value="">All statuses</option>
+          <option value="flag">Needs follow-up (5+ days)</option>
+          <option>New</option><option>Quoted</option><option>Follow-up</option><option>Won</option><option>Lost</option>
+        </select>
+        <button class="btn sm" id="l_add">+ Add lead</button>
+      </span>
+    </h3>
+    <div class="bd tight scrollx">
+      <table class="grid" id="leadtbl">
+        <thead><tr>
+          <th style="min-width:172px">Customer</th><th style="min-width:118px">Contact</th>
+          <th style="min-width:68px">kW</th><th style="min-width:104px">Quoted (&#8377;)</th>
+          <th style="min-width:112px">Quote date</th><th style="min-width:96px">Status</th>
+          <th style="min-width:112px">Last contact</th><th style="min-width:112px">Next follow-up</th>
+          <th style="min-width:104px;text-align:right">Action</th>
+        </tr></thead>
+        <tbody></tbody>
+      </table>
+      <div id="leadempty" class="bd" style="text-align:center;color:var(--muted);display:none">No leads yet. Add one above, or save a quote from the Quote Generator.</div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Follow-up message template <span class="sub">editable &mdash; used for every draft</span></h3>
+    <div class="bd">
+      <textarea class="inp" id="l_tpl" rows="6"></textarea>
+      <p class="muted" style="margin-top:7px">Placeholders: <span class="mono">{name} {kw} {price} {quotedate} {days} {nextdate}</span></p>
+      <div class="btnrow" style="margin-top:11px"><button class="btn sm" id="tpl_reset">Reset to default</button></div>
+    </div>
+  </div>
+</section>
+
+<!-- ============ OBJECTIONS ============ -->
+<section class="panel" id="p-obj">
+  <div class="sec-head">
+    <h2>Objection Handling</h2>
+    <p>Response drafts to copy from and refine over time. Everything here is editable and saved on this device.</p>
+  </div>
+
+  <div class="card">
+    <h3>Numbers helper <span class="sub">fills the <span class="mono">{&hellip;}</span> figures inside the drafts</span></h3>
+    <div class="bd">
+      <div class="fields" style="grid-template-columns:repeat(3,1fr)">
+        <div><label class="fl" for="c_kw">System size (kW)</label><input class="inp" id="c_kw" type="number" step="0.05"></div>
+        <div><label class="fl" for="c_price">Our price (&#8377;)</label><input class="inp" id="c_price" type="number" step="1000"></div>
+        <div><label class="fl" for="c_comp">Competitor price (&#8377;)</label><input class="inp" id="c_comp" type="number" step="1000"></div>
+        <div><label class="fl" for="c_tariff">Tariff (&#8377;/unit)</label><input class="inp" id="c_tariff" type="number" step="0.25"></div>
+        <div><label class="fl" for="c_yield">Yield (kWh/kW/year)</label><input class="inp" id="c_yield" type="number" step="10"></div>
+        <div><label class="fl" for="c_amc">AMC after free period (&#8377;/yr)</label><input class="inp" id="c_amc" type="number" step="500"></div>
+      </div>
+      <div class="btnrow" style="margin:13px 0 4px"><button class="btn sm" id="c_pull">Use the current quote&rsquo;s numbers</button></div>
+      <div class="kpis" style="grid-template-columns:repeat(4,1fr)">
+        <div class="kpi"><span>Units / year</span><b id="c_units">&mdash;</b></div>
+        <div class="kpi"><span>Year-1 savings</span><b id="c_y1">&mdash;</b></div>
+        <div class="kpi"><span>Our &#8377;/kWh (25 yr)</span><b id="c_rs">&mdash;</b></div>
+        <div class="kpi"><span>Their &#8377;/kWh (25 yr)</span><b id="c_crs">&mdash;</b></div>
+      </div>
+      <p class="muted" style="margin-top:10px">25-year generation assumes 0.6% annual degradation. Lifetime cost = price + AMC &times; 25 years.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Objections
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <input class="inp" id="o_find" placeholder="Search&hellip;" style="width:auto;padding:6px 10px;font-size:13px">
+        <button class="btn sm" id="o_add">+ Add objection</button>
+        <button class="btn sm" id="o_resetall">Restore all defaults</button>
+      </span>
+    </h3>
+    <div class="bd" style="padding-bottom:0"><div class="note"><b>Highlighted [brackets]</b> are yours to fill in once with your real numbers &mdash; warranty years, DISCOM name, approval timelines. Use <b>Edit wording</b> and they are saved for good. Figures in <span class="mono">{curly braces}</span> come from the numbers helper above and update on their own.</div></div>
+    <div class="bd" id="objlist"></div>
+  </div>
+</section>
+
+<!-- ============ RATES ============ -->
+<section class="panel" id="p-rates">
+  <div class="sec-head">
+    <h2>Kit Cost Table</h2>
+    <p>Your purchase cost per brand and size. Edit any cell &mdash; it saves instantly and drives every quote. Margin is applied on top by the pricing rule and is never shown to the customer.</p>
+  </div>
+
+  <div class="card">
+    <h3>Kit cost by brand &amp; size (&#8377;)
+      <span style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn sm" id="r_reset">Reset to seeded values</button>
+      </span>
+    </h3>
+    <div class="bd tight scrollx">
+      <table class="grid" id="ratetbl"><thead><tr>
+        <th>Nos.</th><th>kW</th><th>APS</th><th>Adani</th><th>Waaree</th><th>Margin (rule)</th>
+      </tr></thead><tbody></tbody></table>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Pricing rule</h3>
+    <div class="bd">
+      <table class="grid">
+        <tbody>
+          <tr><td><b>4 &ndash; 7 panels</b> (2.20 &ndash; 3.85 kW)</td><td class="num mono">flat &#8377;32,000 margin</td></tr>
+          <tr><td><b>8 panels</b> (4.40 kW)</td><td class="num mono">flat &#8377;33,000 margin</td></tr>
+          <tr><td><b>9 panels and above</b> (4.95 kW+)</td><td class="num mono">&#8377;33,000 + &#8377;4,000 &times; (kW &minus; 4.40)</td></tr>
+          <tr><td><b>Final price</b></td><td class="num mono">kit cost + margin</td></tr>
+        </tbody>
+      </table>
+      <p class="muted" style="margin-top:12px">Panel wattage is taken as 550 Wp, giving the 2.20 &ndash; 9.35 kW range across 4 &ndash; 17 panels.</p>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>Your data</h3>
+    <div class="bd">
+      <p class="muted" style="margin-bottom:12px">Everything &mdash; kit costs, leads, templates and objection drafts &mdash; is stored only in this browser. Back it up before clearing browser data or switching device.</p>
+      <div class="btnrow">
+        <button class="btn" id="d_export">Export backup (.json)</button>
+        <button class="btn" id="d_import">Import backup</button>
+        <input type="file" id="d_file" accept="application/json" hidden>
+        <button class="btn dgr" id="d_clear">Erase all data</button>
+      </div>
+    </div>
+  </div>
+</section>
+
+</main>
+</div>
+
+<div id="printroot"></div>
+
+<div class="mask" id="mask"><div class="modal" id="modal"></div></div>
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* ============================================================
+   XERON ENERGY — SALES AGENT
+   All output is a DRAFT. Nothing is ever sent to a customer.
+   ============================================================ */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+
+const store = {
+  get(k, d) { try { const v = localStorage.getItem('xe.' + k); return v === null ? JSON.parse(JSON.stringify(d)) : JSON.parse(v); }
+              catch (e) { return JSON.parse(JSON.stringify(d)); } },
+  set(k, v) { try { localStorage.setItem('xe.' + k, JSON.stringify(v)); } catch (e) { toast('Could not save — browser storage is full or blocked'); } },
+  del(k)    { try { localStorage.removeItem('xe.' + k); } catch (e) {} }
+};
+
+/* ---------- formatting ---------- */
+const nf = new Intl.NumberFormat('en-IN', { maximumFractionDigits: 0 });
+const money   = n => '₹' + nf.format(Math.round(Number(n) || 0));
+const num     = n => nf.format(Math.round(Number(n) || 0));
+const esc     = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+const todayISO = () => new Date().toLocaleDateString('en-CA');
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return '—';
+  return String(d.getDate()).padStart(2, '0') + '-' +
+         ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'][d.getMonth()] + '-' +
+         d.getFullYear();
+}
+function daysSince(iso) {
+  if (!iso) return null;
+  const d = new Date(iso + 'T00:00:00');
+  if (isNaN(d)) return null;
+  const t = new Date(todayISO() + 'T00:00:00');
+  return Math.round((t - d) / 86400000);
+}
+/* Indian numbering, in words */
+function inWords(n) {
+  n = Math.round(Number(n) || 0);
+  if (n === 0) return 'Zero';
+  const ones = ['','One','Two','Three','Four','Five','Six','Seven','Eight','Nine','Ten','Eleven','Twelve','Thirteen',
+                'Fourteen','Fifteen','Sixteen','Seventeen','Eighteen','Nineteen'];
+  const tens = ['','','Twenty','Thirty','Forty','Fifty','Sixty','Seventy','Eighty','Ninety'];
+  const two = x => x < 20 ? ones[x] : tens[Math.floor(x / 10)] + (x % 10 ? ' ' + ones[x % 10] : '');
+  const three = x => (x >= 100 ? ones[Math.floor(x / 100)] + ' Hundred' + (x % 100 ? ' ' + two(x % 100) : '') : two(x));
+  const parts = [];
+  const cr = Math.floor(n / 10000000); n %= 10000000;
+  const la = Math.floor(n / 100000);   n %= 100000;
+  const th = Math.floor(n / 1000);     n %= 1000;
+  if (cr) parts.push(two(cr) + ' Crore');
+  if (la) parts.push(two(la) + ' Lakh');
+  if (th) parts.push(two(th) + ' Thousand');
+  if (n)  parts.push(three(n));
+  return parts.join(' ');
+}
+function toast(msg) {
+  const t = $('#toast'); t.textContent = msg; t.classList.add('on');
+  clearTimeout(toast._t); toast._t = setTimeout(() => t.classList.remove('on'), 2300);
+}
+async function copyText(text, okMsg) {
+  try { await navigator.clipboard.writeText(text); toast(okMsg || 'Copied — paste it wherever you like'); }
+  catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand('copy'); toast(okMsg || 'Copied'); } catch (e2) { toast('Copy failed — select the text manually'); }
+    ta.remove();
+  }
+}
+
+/* ---------- system + pricing ---------- */
+const PANEL_WP = 550;
+const SIZES  = [4, 5, 6, 7, 8, 9, 10, 11, 13, 15, 17];
+const BRANDS = ['APS', 'Adani', 'Waaree'];
+const BRAND_FULL = { APS: 'APS', Adani: 'Adani Solar', Waaree: 'Waaree' };
+
+const kwOf = n => Math.round(n * PANEL_WP) / 1000;               // 4 panels -> 2.20 kW
+const kwTxt = kw => kw.toFixed(2);
+
+/** Xeron margin rule. 4–7: flat 32,000 | 8: 33,000 | 9+: 33,000 + 4,000 × (kW − 4.40) */
+function marginFor(nos) {
+  if (nos <= 7) return 32000;
+  if (nos === 8) return 33000;
+  return Math.round(33000 + 4000 * (kwOf(nos) - 4.40));
+}
+function marginRule(nos) {
+  if (nos <= 7) return '(flat, 4–7 panels)';
+  if (nos === 8) return '(flat, 8 panels)';
+  return '(₹33,000 + ₹4,000 × ' + (kwOf(nos) - 4.40).toFixed(2) + ' kW)';
+}
+
+/* Seeded kit costs — indicative only, meant to be overwritten with real purchase costs */
+const SEED_RATE = { APS: 30, Adani: 32, Waaree: 33 };            // rupees per Wp
+const seedKit = (brand, nos) => {
+  const kw = kwOf(nos);
+  const f = kw <= 3.30 ? 1.12 : kw <= 4.40 ? 1.06 : 1.00;        // small systems cost more per Wp
+  return Math.round(kw * 1000 * SEED_RATE[brand] * f / 500) * 500;
+};
+function seedKits() {
+  const t = {};
+  BRANDS.forEach(b => { t[b] = {}; SIZES.forEach(n => { t[b][n] = seedKit(b, n); }); });
+  return t;
+}
+let KITS = store.get('kits', seedKits());
+BRANDS.forEach(b => { KITS[b] = KITS[b] || {}; SIZES.forEach(n => { if (!KITS[b][n]) KITS[b][n] = seedKit(b, n); }); });
+
+/* ---------- defaults: scope, T&Cs, follow-up, objections ---------- */
+const DEF_SCOPE = [
+  'Solar PV modules | {nos} nos. × {wp} Wp {brand} mono PERC / TOPCon modules — {kw} kW',
+  'Grid-tied inverter | Suitably rated on-grid inverter with Wi-Fi generation monitoring',
+  'Mounting structure | Hot-dip galvanised / GI structure, designed for local wind speed',
+  'Balance of system | DC & AC cables, ACDB/DCDB, earthing kit, lightning arrestor',
+  'Installation | Complete mechanical & electrical installation, testing and commissioning',
+  'Liaisoning | Net-metering application, DISCOM co-ordination and documentation support'
+].join('\n');
+
+const DEF_TNC = [
+  'The above price is all-inclusive.',
+  'Transportation is extra, charged as actual.',
+  '100% advance payment along with the confirmed work order.',
+  'Kindly confirm before we place the order with the supplier.'
+].join('\n');
+
+const DEF_TPL =
+`Hello {name}, Deep here from Xeron Energy.
+
+Following up on the {kw} kW rooftop solar proposal we shared with you on {quotedate} at {price} (all inclusive).
+
+Happy to take you through the generation numbers again, or arrange a quick site visit at your convenience. Is there anything holding the decision back that I can help clear up?
+
+- Deep Solanki, Xeron Energy, +91 83205 45680`;
+
+const DEF_OBJ = [
+  {
+    id: 'price',
+    q: 'Your price is higher',
+    cue: 'Move from sticker price to ₹/kWh over 25 years',
+    a: `I understand — on the sticker price we are higher, and I won't pretend otherwise.
+
+But a solar plant isn't a product you buy once. You are buying 25 years of electricity, upfront. So the only honest comparison is what each rupee actually generates.
+
+Our {kw} kW system at {price} works out to about {rs_per_kwh} per unit generated over 25 years. The cheaper quote at {comp_price} works out to about {comp_rs_per_kwh} per unit — but only if their modules degrade the same way, their inverter lasts the same number of years, and somebody picks up the phone in year seven.
+
+The gap between the two quotes is {price_gap}. Against what this system saves you every month, that difference is recovered in roughly {gap_months} months — and then you are left with the better plant for the remaining two decades.
+
+So compare us on three things: module warranty terms, inverter make, and who services it. If the cheaper quote matches on all three, I will tell you honestly to take it.`
+  },
+  {
+    id: 'nextyear',
+    q: "I'll do it next year",
+    cue: 'Put a rupee figure on twelve months of waiting',
+    a: `That's fair — but let's put a number on waiting, and then you decide.
+
+Your {kw} kW system would generate roughly {units_yr} units a year. At {tariff} per unit, that is about {year1_savings} of electricity you would have produced yourself over the next twelve months — close to {month_savings} every month that goes to the DISCOM instead.
+
+And a year of delay is not a year postponed, it's a year removed from the end. The plant still runs its 25 years, it just starts — and finishes — twelve months later. Panel prices may soften a little, but nothing moves as fast as {year1_savings} of savings you didn't take.
+
+If cash flow is the real reason, tell me plainly — that we can plan around. If it's only timing, the meter is running either way.`
+  },
+  {
+    id: 'roof',
+    q: 'Roof might need work',
+    cue: 'Inspect first, price it openly as a separate line',
+    a: `Good that you raised it — a weak or leaking roof is genuinely the one thing that should delay a solar project.
+
+Let me send our technician for a structural and waterproofing check: slab condition, existing seepage, parapet, and shading through the day. It takes about an hour and there is no charge for it.
+
+If the roof does need work, I will price it into the scope as a separate line so you can see exactly what is solar and what is civil — it will not be buried inside the system cost. Wherever possible we plan the layout so the structure loads sit away from the weaker sections.
+
+If the roof is fine, you have that in writing before spending anything. Either way you know where you stand. When would suit you for the inspection?`
+  },
+  {
+    id: 'disappear',
+    q: 'What if you disappear later',
+    cue: 'Warranties sit with the manufacturer; AMC is contracted',
+    a: `That is a fair concern — a lot of people have started solar companies in the last three years, and not all of them will be around.
+
+Two things protect you regardless of us:
+
+1. The warranties are the manufacturer's, not mine. The modules carry [12] years product and [25] years performance warranty from {brand}, and the inverter carries its own manufacturer warranty. These are registered against your plant's serial numbers and are honoured through any authorised service partner in India. Every warranty document and serial number is handed to you at commissioning.
+
+2. Xeron Energy's own commitment: [X] years of free service after commissioning, and a written AMC after that at a fixed annual price — cleaning, inverter health check, generation audit and DISCOM co-ordination. Not goodwill, a contract.
+
+I will also share contacts from the installations we have completed near you. Call them without me present and ask how the service has actually been.`
+  },
+  {
+    id: 'discom',
+    q: 'DISCOM will create problems',
+    cue: 'Our job, not yours — cite real approval timelines',
+    a: `That part is our job, not yours.
+
+We run the entire net-metering process end to end: application, feasibility, agreement, meter testing and the final installation report. You sign where required; we chase the file.
+
+On the installations we have completed with [DISCOM name], approval has typically taken about [X–Y] weeks from application to net-meter installation. The delays in this process are almost never the DISCOM being difficult — they are incomplete or mismatched documents, and that is exactly the part we control.
+
+What we need from you: latest electricity bill, ID proof, property or index copy, and a photograph. That is all.
+
+And if something does get stuck for reasons outside our control, you will get a written status update at every stage — you will not have to chase me to find out where it stands.`
+  }
+];
+
+/* ============================================================
+   MODULE 1 — QUOTE GENERATOR
+   ============================================================ */
+const Q = {
+  nos:   store.get('q.nos', 10),
+  brand: store.get('q.brand', 'Waaree'),
+  name:  '', contact: '', place: '',
+  date:  todayISO(),
+  kit:   null,
+  scope: store.get('scope', DEF_SCOPE),
+  tnc:   store.get('tnc', DEF_TNC),
+  no:    ''
+};
+
+function quoteNo() {
+  const seq = store.get('qseq', 0) + 1;
+  const d = new Date();
+  return 'XE/' + d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '/' + String(seq).padStart(3, '0');
+}
+function bumpQuoteNo() { store.set('qseq', store.get('qseq', 0) + 1); Q.no = quoteNo(); $('#qnolbl').textContent = Q.no; }
+
+function calcQuote() {
+  const nos = Q.nos, kw = kwOf(nos);
+  const kit = Number(Q.kit != null ? Q.kit : KITS[Q.brand][nos]) || 0;
+  const margin = marginFor(nos);
+  return { nos, kw, kit, margin, total: kit + margin };
+}
+
+function fillScope(text, c) {
+  return text.replace(/\{kw\}/g, kwTxt(c.kw)).replace(/\{nos\}/g, c.nos)
+             .replace(/\{brand\}/g, BRAND_FULL[Q.brand]).replace(/\{wp\}/g, PANEL_WP);
+}
+
+function renderPDF(target) {
+  const c = calcQuote();
+  const logo = $('#logotpl').innerHTML;
+  const scopeRows = fillScope(Q.scope, c).split('\n').filter(l => l.trim()).map(l => {
+    const i = l.indexOf('|');
+    const a = i > -1 ? l.slice(0, i).trim() : l.trim();
+    const b = i > -1 ? l.slice(i + 1).trim() : '';
+    return '<tr><td style="width:31%"><b>' + esc(a) + '</b></td><td>' + esc(b) + '</td></tr>';
+  }).join('');
+  const tncRows = Q.tnc.split('\n').filter(l => l.trim()).map(l => '<li>' + esc(l.trim()) + '</li>').join('');
+  const desc = 'Design, supply, installation, testing &amp; commissioning of a <b>' + kwTxt(c.kw) +
+               ' kW</b> grid-tied rooftop solar power plant<br><span style="color:#5b6b80">' +
+               c.nos + ' nos. × ' + PANEL_WP + ' Wp ' + esc(BRAND_FULL[Q.brand]) +
+               ' modules, with on-grid inverter, mounting structure and balance of system</span>';
+
+  target.innerHTML =
+  '<div class="page">' +
+    '<div class="ph">' + logo +
+      '<div class="ttl"><b>QUOTATION</b><span>ROOFTOP SOLAR POWER PLANT</span></div>' +
+    '</div><div class="prule"></div>' +
+    '<div class="pbody">' +
+      '<div class="meta">' +
+        '<div><em>Quotation for</em><strong>' + (esc(Q.name) || 'Customer name') + '</strong>' +
+          (Q.place ? '<div class="ln">' + esc(Q.place) + '</div>' : '') +
+          (Q.contact ? '<div class="ln">' + esc(Q.contact) + '</div>' : '') + '</div>' +
+        '<div><em>Quotation no.</em><strong>' + esc(Q.no) + '</strong>' +
+          '<div class="ln">Date: ' + fmtDate(Q.date) + '</div>' +
+          '<div class="ln">System: ' + kwTxt(c.kw) + ' kW &middot; ' + esc(BRAND_FULL[Q.brand]) + '</div></div>' +
+      '</div>' +
+
+      '<h4 class="ps">Scope of supply</h4>' +
+      '<table class="pt"><tbody>' + scopeRows + '</tbody></table>' +
+
+      '<h4 class="ps">Price</h4>' +
+      '<table class="pt">' +
+        '<thead><tr><th>Description</th><th class="r" style="width:24%">Amount (INR)</th></tr></thead>' +
+        '<tbody>' +
+          '<tr><td>' + desc + '</td><td class="r">' + money(c.total) + '</td></tr>' +
+          '<tr class="totrow"><td>Total &mdash; all inclusive</td><td class="r">' + money(c.total) + '</td></tr>' +
+        '</tbody></table>' +
+      '<div class="words"><b>In words:</b> Rupees ' + inWords(c.total) + ' Only</div>' +
+
+      '<h4 class="ps">Terms &amp; conditions</h4>' +
+      '<ol class="tnc">' + tncRows + '</ol>' +
+
+      '<div class="sign">' +
+        '<div><b>For Xeron Energy</b><div class="line">Authorised signatory</div></div>' +
+        '<div style="text-align:right"><b>Accepted by customer</b><div class="line">Signature &amp; date</div></div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="pfrule"></div>' +
+    '<div class="pf"><div><b>Deep Solanki</b> <span class="dot">&bull;</span> +91 83205 45680</div>' +
+      '<div>Xeron Energy <span class="dot">&bull;</span> Solar EPC</div></div>' +
+  '</div>';
+}
+
+function renderQuote() {
+  const c = calcQuote();
+  $('#s_kit').textContent  = money(c.kit);
+  $('#s_mar').textContent  = money(c.margin);
+  $('#s_tot').textContent  = money(c.total);
+  $('#s_rule').textContent = marginRule(c.nos);
+  $('#k_kw').textContent    = kwTxt(c.kw) + ' kW';
+  $('#k_perkw').textContent = c.kw ? money(c.total / c.kw) : '—';
+  $('#k_mpc').textContent   = c.total ? (c.margin / c.total * 100).toFixed(1) + '%' : '—';
+  $('#kitnote').textContent = 'Table value for ' + Q.brand + ' ' + kwTxt(c.kw) + ' kW is ' +
+    money(KITS[Q.brand][c.nos]) + '. Editing here changes this quote only — edit the Kit Cost Table to change it everywhere.';
+  renderPDF($('#preview'));
+  fitPreview();
+}
+
+function fitPreview() {
+  const wrap = $('#pdfwrap'), page = $('#preview .page');
+  if (!wrap || !page) return;
+  const avail = wrap.clientWidth - 24;
+  const scale = Math.min(1, avail / 794);
+  page.style.transform = scale < 1 ? 'scale(' + scale + ')' : '';
+  page.style.transformOrigin = 'top left';
+  $('#preview').style.height = scale < 1 ? (1123 * scale) + 'px' : '';
+  $('#preview').style.width  = scale < 1 ? (794 * scale) + 'px' : '';
+  $('#preview').style.margin = '0 auto';
+}
+window.addEventListener('resize', fitPreview);
+
+function initQuote() {
+  const sel = $('#q_nos');
+  sel.innerHTML = SIZES.map(n => '<option value="' + n + '">' + n + ' panels — ' + kwTxt(kwOf(n)) + ' kW</option>').join('');
+  sel.value = Q.nos;
+  $('#q_brand').value = Q.brand;
+  $('#q_date').value  = Q.date;
+  $('#q_scope').value = Q.scope;
+  $('#q_tnc').value   = Q.tnc;
+  Q.no = quoteNo();
+  $('#qnolbl').textContent = Q.no;
+  syncKit();
+
+  sel.addEventListener('change', () => { Q.nos = +sel.value; store.set('q.nos', Q.nos); syncKit(); });
+  $('#q_brand').addEventListener('change', e => { Q.brand = e.target.value; store.set('q.brand', Q.brand); syncKit(); });
+  ['q_name', 'q_contact', 'q_place'].forEach(id =>
+    $('#' + id).addEventListener('input', e => { Q[id.slice(2)] = e.target.value; renderQuote(); }));
+  $('#q_date').addEventListener('change', e => { Q.date = e.target.value; renderQuote(); });
+  $('#q_kit').addEventListener('input', e => { Q.kit = e.target.value === '' ? null : +e.target.value; renderQuote(); });
+  $('#q_scope').addEventListener('input', e => { Q.scope = e.target.value; store.set('scope', Q.scope); renderQuote(); });
+  $('#q_tnc').addEventListener('input',   e => { Q.tnc   = e.target.value; store.set('tnc',   Q.tnc);   renderQuote(); });
+  $('#scope_reset').addEventListener('click', () => { Q.scope = DEF_SCOPE; $('#q_scope').value = DEF_SCOPE; store.set('scope', DEF_SCOPE); renderQuote(); toast('Scope reset'); });
+  $('#tnc_reset').addEventListener('click',   () => { Q.tnc   = DEF_TNC;   $('#q_tnc').value   = DEF_TNC;   store.set('tnc',   DEF_TNC);   renderQuote(); toast('Terms reset'); });
+
+  $('#q_pdf').addEventListener('click', () => {
+    if (!Q.name.trim()) { toast('Add the customer name first'); $('#q_name').focus(); return; }
+    renderPDF($('#printroot'));
+    bumpQuoteNo();
+    renderQuote();
+    setTimeout(() => window.print(), 60);
+  });
+  $('#q_save').addEventListener('click', saveQuoteToTracker);
+
+  function syncKit() { Q.kit = null; $('#q_kit').value = KITS[Q.brand][Q.nos]; renderQuote(); }
+  initQuote.syncKit = syncKit;
+}
+
+/* ============================================================
+   MODULE 2 — LEAD & FOLLOW-UP TRACKER
+   Drafts follow-ups. Never sends anything.
+   ============================================================ */
+const STATUSES = ['New', 'Quoted', 'Follow-up', 'Won', 'Lost'];
+const STATUS_CLASS = { 'New': 'c-new', 'Quoted': 'c-quoted', 'Follow-up': 'c-follow', 'Won': 'c-won', 'Lost': 'c-lost' };
+const STALE_DAYS = 5;
+
+let LEADS = store.get('leads', []);
+const saveLeads = () => store.set('leads', LEADS);
+const uid = () => 'L' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+
+/** A lead is flagged when there has been no contact for 5+ days and it is still live. */
+function leadFlag(l) {
+  if (l.status === 'Won' || l.status === 'Lost') return null;
+  const ref = l.lastContact || l.quoteDate;
+  const d = daysSince(ref);
+  if (d === null || d < STALE_DAYS) return null;
+  return { days: d, since: ref };
+}
+
+function saveQuoteToTracker() {
+  if (!Q.name.trim()) { toast('Add the customer name first'); $('#q_name').focus(); return; }
+  const c = calcQuote();
+  const existing = LEADS.find(l => l.name.trim().toLowerCase() === Q.name.trim().toLowerCase());
+  const next = new Date(Q.date + 'T00:00:00');
+  next.setDate(next.getDate() + STALE_DAYS);
+  const patch = {
+    name: Q.name.trim(), contact: Q.contact.trim(), kw: kwTxt(c.kw), price: c.total,
+    quoteDate: Q.date, status: 'Quoted', lastContact: Q.date,
+    nextFollowUp: next.toLocaleDateString('en-CA')
+  };
+  if (existing) { Object.assign(existing, patch); toast('Updated ' + patch.name + ' in the tracker'); }
+  else { LEADS.unshift(Object.assign({ id: uid(), notes: '' }, patch)); toast('Saved ' + patch.name + ' to the tracker'); }
+  saveLeads(); renderLeads();
+}
+
+function renderLeads() {
+  const tb = $('#leadtbl tbody');
+  const filter = $('#l_filter').value;
+  const rows = LEADS.filter(l => !filter ? true : filter === 'flag' ? !!leadFlag(l) : l.status === filter);
+  const flagged = LEADS.filter(leadFlag).length;
+
+  const badge = $('#flagcount');
+  badge.textContent = flagged;
+  badge.hidden = flagged === 0;
+  $('#leadstat').textContent = LEADS.length
+    ? LEADS.length + ' lead' + (LEADS.length > 1 ? 's' : '') + (flagged ? ' · ' + flagged + ' needing follow-up' : ' · all up to date')
+    : '';
+
+  tb.innerHTML = rows.map(l => {
+    const f = leadFlag(l);
+    const dateCell = (k) => '<input class="cellinp dt" type="date" data-id="' + l.id + '" data-k="' + k + '" value="' + esc(l[k] || '') + '">';
+    return '<tr class="' + (f ? 'flagged' : '') + '">' +
+      '<td><input class="cellinp" data-id="' + l.id + '" data-k="name" placeholder="Customer name" value="' + esc(l.name) + '">' +
+        (f ? '<div style="padding:0 8px;margin-top:3px"><span class="chip c-flag">&#9873; no contact ' + f.days + ' days</span></div>' : '') + '</td>' +
+      '<td><input class="cellinp" data-id="' + l.id + '" data-k="contact" placeholder="+91" value="' + esc(l.contact) + '"></td>' +
+      '<td><input class="cellinp" data-id="' + l.id + '" data-k="kw" style="min-width:52px" value="' + esc(l.kw) + '"></td>' +
+      '<td><input class="cellinp" data-id="' + l.id + '" data-k="price" type="number" step="1000" style="min-width:88px;text-align:right" value="' + esc(l.price) + '"></td>' +
+      '<td>' + dateCell('quoteDate') + '</td>' +
+      '<td><select class="cellinp st ' + STATUS_CLASS[l.status] + '" data-id="' + l.id + '" data-k="status">' +
+        STATUSES.map(s => '<option' + (s === l.status ? ' selected' : '') + '>' + s + '</option>').join('') + '</select></td>' +
+      '<td>' + dateCell('lastContact') + '</td>' +
+      '<td>' + dateCell('nextFollowUp') + '</td>' +
+      '<td style="white-space:nowrap;text-align:right">' +
+        '<button class="btn sm ' + (f ? 'acc' : '') + '" data-draft="' + l.id + '" title="Draft a follow-up message">Draft</button> ' +
+        '<button class="btn sm dgr" data-del="' + l.id + '" title="Delete lead">&times;</button>' +
+      '</td></tr>';
+  }).join('');
+
+  $('#leadempty').style.display = rows.length ? 'none' : 'block';
+  $('#leadempty').textContent = LEADS.length && !rows.length
+    ? 'No leads match this filter.'
+    : 'No leads yet. Add one above, or save a quote from the Quote Generator.';
+}
+
+function draftFollowUp(id) {
+  const l = LEADS.find(x => x.id === id);
+  if (!l) return;
+  const f = leadFlag(l);
+  const tpl = store.get('tpl', DEF_TPL);
+  const msg = tpl
+    .replace(/\{name\}/g, l.name || 'there')
+    .replace(/\{kw\}/g, l.kw || '—')
+    .replace(/\{price\}/g, l.price ? money(l.price) : '—')
+    .replace(/\{quotedate\}/g, fmtDate(l.quoteDate))
+    .replace(/\{nextdate\}/g, fmtDate(l.nextFollowUp))
+    .replace(/\{days\}/g, f ? f.days : (daysSince(l.lastContact || l.quoteDate) ?? 0));
+
+  openModal({
+    title: '&#128172; Draft follow-up &mdash; ' + esc(l.name),
+    body:
+      '<div class="note warn" style="margin-bottom:13px"><b>Draft only.</b> Nothing has been sent. Review the wording, copy it, and send it yourself from your own WhatsApp.</div>' +
+      '<textarea class="inp" id="draftbox" rows="11">' + esc(msg) + '</textarea>' +
+      '<p class="muted" style="margin-top:8px">Last contact ' + fmtDate(l.lastContact || l.quoteDate) +
+        (f ? ' &mdash; <b style="color:var(--red)">' + f.days + ' days ago</b>' : '') + '</p>',
+    actions:
+      '<button class="btn" data-close>Close</button>' +
+      '<button class="btn" id="markdone">Mark contacted today</button>' +
+      '<button class="btn pri" id="docopy">Copy message</button>',
+    ready() {
+      $('#docopy').addEventListener('click', () => copyText($('#draftbox').value, 'Message copied — paste it into WhatsApp yourself'));
+      $('#markdone').addEventListener('click', () => {
+        l.lastContact = todayISO();
+        const n = new Date(); n.setDate(n.getDate() + STALE_DAYS);
+        l.nextFollowUp = n.toLocaleDateString('en-CA');
+        if (l.status === 'Quoted' || l.status === 'New') l.status = 'Follow-up';
+        saveLeads(); renderLeads(); closeModal();
+        toast('Marked contacted today — next follow-up in ' + STALE_DAYS + ' days');
+      });
+    }
+  });
+}
+
+function initLeads() {
+  $('#l_tpl').value = store.get('tpl', DEF_TPL);
+  $('#l_tpl').addEventListener('input', e => store.set('tpl', e.target.value));
+  $('#tpl_reset').addEventListener('click', () => { store.set('tpl', DEF_TPL); $('#l_tpl').value = DEF_TPL; toast('Template reset'); });
+  $('#l_filter').addEventListener('change', renderLeads);
+
+  $('#l_add').addEventListener('click', () => {
+    LEADS.unshift({ id: uid(), name: '', contact: '', kw: '', price: '', quoteDate: todayISO(),
+                    status: 'New', lastContact: todayISO(), nextFollowUp: '', notes: '' });
+    saveLeads(); renderLeads();
+    const first = $('#leadtbl tbody input');
+    if (first) first.focus();
+  });
+
+  const tbl = $('#leadtbl');
+  tbl.addEventListener('input', e => {
+    const el = e.target;
+    if (!el.dataset.id) return;
+    const l = LEADS.find(x => x.id === el.dataset.id);
+    if (!l) return;
+    l[el.dataset.k] = el.value;
+    saveLeads();
+  });
+  // re-draw flags only once a field is committed, so typing never loses focus
+  tbl.addEventListener('change', e => {
+    const el = e.target;
+    if (!el.dataset.id) return;
+    const l = LEADS.find(x => x.id === el.dataset.id);
+    if (l) { l[el.dataset.k] = el.value; saveLeads(); }
+    if (['status', 'lastContact', 'quoteDate'].includes(el.dataset.k)) renderLeads();
+  });
+  tbl.addEventListener('click', e => {
+    const d = e.target.closest('[data-draft]'), x = e.target.closest('[data-del]');
+    if (d) draftFollowUp(d.dataset.draft);
+    if (x) {
+      const l = LEADS.find(y => y.id === x.dataset.del);
+      if (confirm('Delete ' + (l && l.name ? l.name : 'this lead') + ' from the tracker?')) {
+        LEADS = LEADS.filter(y => y.id !== x.dataset.del); saveLeads(); renderLeads();
+      }
+    }
+  });
+  renderLeads();
+}
+
+/* ============================================================
+   MODULE 3 — OBJECTION HANDLING
+   ============================================================ */
+let OBJ = store.get('obj', DEF_OBJ);
+const saveObj = () => store.set('obj', OBJ);
+
+const CALC_DEF = { kw: 5.50, price: 0, comp: 0, tariff: 8.00, yield: 1450, amc: 0 };
+let CALC = Object.assign({}, CALC_DEF, store.get('calc', {}));
+
+/** 25-year figures. 0.6% annual degradation, straight-line lifetime cost. */
+function calcNumbers() {
+  const kw = +CALC.kw || 0, yld = +CALC.yield || 0, tariff = +CALC.tariff || 0;
+  const price = +CALC.price || 0, comp = +CALC.comp || 0, amc = +CALC.amc || 0;
+  let factor = 0;
+  for (let i = 0; i < 25; i++) factor += Math.pow(1 - 0.006, i);      // ≈ 23.3
+  const unitsYr   = kw * yld;
+  const lifeUnits = unitsYr * factor;
+  const lifeCost  = price + amc * 25;
+  const rs        = lifeUnits ? lifeCost / lifeUnits : 0;
+  const compRs    = lifeUnits && comp ? (comp + amc * 25) / lifeUnits : 0;
+  const y1        = unitsYr * tariff;
+  const gap       = comp ? price - comp : 0;
+  const monthly   = y1 / 12;
+  return {
+    kw, unitsYr, lifeUnits, rs, compRs, y1, monthly, gap,
+    gapMonths: monthly && gap > 0 ? gap / monthly : 0,
+    price, comp, tariff
+  };
+}
+function calcMap() {
+  const n = calcNumbers();
+  const rs = v => '₹' + (Number(v) || 0).toFixed(2);
+  return {
+    kw: n.kw ? n.kw.toFixed(2) : '—',
+    price: n.price ? money(n.price) : '[our price]',
+    comp_price: n.comp ? money(n.comp) : '[their price]',
+    rs_per_kwh: n.rs ? rs(n.rs) : '[₹/unit]',
+    comp_rs_per_kwh: n.compRs ? rs(n.compRs) : '[their ₹/unit]',
+    units_yr: n.unitsYr ? num(n.unitsYr) : '[units]',
+    year1_savings: n.y1 ? money(n.y1) : '[yearly savings]',
+    month_savings: n.monthly ? money(n.monthly) : '[monthly savings]',
+    tariff: n.tariff ? rs(n.tariff) : '[tariff]',
+    price_gap: n.gap > 0 ? money(n.gap) : '[price gap]',
+    gap_months: n.gapMonths ? Math.round(n.gapMonths) : '[n]',
+    brand: BRAND_FULL[Q.brand]
+  };
+}
+function fillPlaceholders(t) {
+  const map = calcMap();
+  return String(t).replace(/\{(\w+)\}/g, (m, k) => (map[k] === undefined ? m : map[k]));
+}
+const markPlaceholders = t => esc(fillPlaceholders(t)).replace(/\[[^\]\n]{1,40}\]/g, m => '<mark>' + m + '</mark>');
+
+function renderCalc() {
+  const n = calcNumbers();
+  $('#c_units').textContent = n.unitsYr ? num(n.unitsYr) : '—';
+  $('#c_y1').textContent    = n.y1 ? money(n.y1) : '—';
+  $('#c_rs').textContent    = n.rs ? '₹' + n.rs.toFixed(2) : '—';
+  $('#c_crs').textContent   = n.compRs ? '₹' + n.compRs.toFixed(2) : '—';
+  renderObj();
+}
+
+function renderObj() {
+  const find = ($('#o_find').value || '').toLowerCase();
+  const list = OBJ.filter(o => !find || (o.q + ' ' + o.a + ' ' + (o.cue || '')).toLowerCase().includes(find));
+  $('#objlist').innerHTML = list.map(o =>
+    '<details class="obj" data-id="' + o.id + '"' + (find ? ' open' : '') + '>' +
+      '<summary>' + esc(o.q) + '<span class="cue">' + esc(o.cue || '') + '</span></summary>' +
+      '<div class="ob">' +
+        '<div class="prev" data-prev>' + markPlaceholders(o.a) + '</div>' +
+        '<div class="btnrow" style="margin-top:11px">' +
+          '<button class="btn sm pri" data-copy>Copy response</button>' +
+          '<button class="btn sm" data-edit>Edit wording</button>' +
+          '<button class="btn sm" data-def>Restore default</button>' +
+          '<button class="btn sm dgr" data-rm>Delete</button>' +
+        '</div>' +
+      '</div>' +
+    '</details>').join('') ||
+    '<p class="muted" style="text-align:center;padding:18px">Nothing matches that search.</p>';
+}
+
+function editObj(o) {
+  openModal({
+    title: 'Edit response &mdash; ' + esc(o.q),
+    body:
+      '<label class="fl" for="e_q">Objection</label><input class="inp" id="e_q" value="' + esc(o.q) + '">' +
+      '<label class="fl" for="e_cue" style="margin-top:13px">Short cue</label><input class="inp" id="e_cue" value="' + esc(o.cue || '') + '">' +
+      '<label class="fl" for="e_a" style="margin-top:13px">Response draft</label>' +
+      '<textarea class="inp" id="e_a" rows="14">' + esc(o.a) + '</textarea>' +
+      '<p class="muted" style="margin-top:8px"><span class="mono">{kw} {price} {comp_price} {rs_per_kwh} {comp_rs_per_kwh} {units_yr} {year1_savings} {month_savings} {tariff} {price_gap} {gap_months} {brand}</span> are filled from the numbers helper. Text in [brackets] is for you to replace once with your own figures.</p>',
+    actions: '<button class="btn" data-close>Cancel</button><button class="btn pri" id="e_save">Save</button>',
+    ready() {
+      $('#e_save').addEventListener('click', () => {
+        o.q = $('#e_q').value.trim() || o.q;
+        o.cue = $('#e_cue').value.trim();
+        o.a = $('#e_a').value;
+        saveObj(); renderObj(); closeModal(); toast('Saved');
+      });
+    }
+  });
+}
+
+function initObj() {
+  Object.keys(CALC_DEF).forEach(k => { $('#c_' + k).value = CALC[k]; });
+  Object.keys(CALC_DEF).forEach(k => $('#c_' + k).addEventListener('input', e => {
+    CALC[k] = e.target.value === '' ? '' : +e.target.value; store.set('calc', CALC); renderCalc();
+  }));
+  $('#c_pull').addEventListener('click', () => {
+    const c = calcQuote();
+    CALC.kw = c.kw; CALC.price = c.total;
+    $('#c_kw').value = c.kw; $('#c_price').value = c.total;
+    store.set('calc', CALC); renderCalc();
+    toast('Pulled ' + kwTxt(c.kw) + ' kW at ' + money(c.total) + ' from the quote');
+  });
+  $('#o_find').addEventListener('input', renderObj);
+  $('#o_add').addEventListener('click', () => {
+    const o = { id: 'o' + Date.now().toString(36), q: 'New objection', cue: '', a: '' };
+    OBJ.push(o); saveObj(); renderObj(); editObj(o);
+  });
+  $('#o_resetall').addEventListener('click', () => {
+    if (!confirm('Restore all five default objections and discard your edits?')) return;
+    OBJ = JSON.parse(JSON.stringify(DEF_OBJ)); saveObj(); renderObj(); toast('Defaults restored');
+  });
+  $('#objlist').addEventListener('click', e => {
+    const box = e.target.closest('.obj'); if (!box) return;
+    const o = OBJ.find(x => x.id === box.dataset.id); if (!o) return;
+    if (e.target.closest('[data-copy]')) { e.preventDefault(); copyText(fillPlaceholders(o.a), 'Response copied'); }
+    if (e.target.closest('[data-edit]')) { e.preventDefault(); editObj(o); }
+    if (e.target.closest('[data-def]')) {
+      e.preventDefault();
+      const d = DEF_OBJ.find(x => x.id === o.id);
+      if (!d) return toast('This one has no default — it was added by you');
+      Object.assign(o, JSON.parse(JSON.stringify(d))); saveObj(); renderObj(); toast('Restored default wording');
+    }
+    if (e.target.closest('[data-rm]')) {
+      e.preventDefault();
+      if (!confirm('Delete "' + o.q + '"?')) return;
+      OBJ = OBJ.filter(x => x.id !== o.id); saveObj(); renderObj();
+    }
+  });
+  renderCalc();
+}
+
+/* ============================================================
+   KIT COST TABLE + DATA
+   ============================================================ */
+function renderRates() {
+  $('#ratetbl tbody').innerHTML = SIZES.map(n =>
+    '<tr><td><b>' + n + '</b></td><td class="mono">' + kwTxt(kwOf(n)) + '</td>' +
+    BRANDS.map(b => '<td><input class="cellinp mono" type="number" step="500" data-b="' + b + '" data-n="' + n +
+                    '" value="' + KITS[b][n] + '" style="text-align:right"></td>').join('') +
+    '<td class="num mono" style="color:var(--muted)">' + money(marginFor(n)) + '</td></tr>').join('');
+}
+function initRates() {
+  $('#ratetbl').addEventListener('input', e => {
+    const el = e.target; if (!el.dataset.b) return;
+    KITS[el.dataset.b][el.dataset.n] = +el.value || 0;
+    store.set('kits', KITS);
+    if (el.dataset.b === Q.brand && +el.dataset.n === Q.nos) { $('#q_kit').value = KITS[Q.brand][Q.nos]; Q.kit = null; }
+    renderQuote();
+  });
+  $('#r_reset').addEventListener('click', () => {
+    if (!confirm('Reset every kit cost back to the seeded values?')) return;
+    KITS = seedKits(); store.set('kits', KITS); renderRates();
+    $('#q_kit').value = KITS[Q.brand][Q.nos]; Q.kit = null; renderQuote(); toast('Kit costs reset');
+  });
+
+  $('#d_export').addEventListener('click', () => {
+    const dump = {};
+    ['kits','leads','obj','scope','tnc','tpl','calc','qseq','q.nos','q.brand'].forEach(k => {
+      const v = localStorage.getItem('xe.' + k); if (v !== null) dump[k] = JSON.parse(v);
+    });
+    const blob = new Blob([JSON.stringify({ app: 'xeron-sales-agent', v: 1, saved: new Date().toISOString(), data: dump }, null, 2)],
+                          { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'xeron-sales-agent-' + todayISO() + '.json';
+    a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    toast('Backup downloaded');
+  });
+  $('#d_import').addEventListener('click', () => $('#d_file').click());
+  $('#d_file').addEventListener('change', e => {
+    const f = e.target.files[0]; if (!f) return;
+    const r = new FileReader();
+    r.onload = () => {
+      try {
+        const j = JSON.parse(r.result);
+        if (!j || !j.data) throw new Error('bad file');
+        if (!confirm('Replace all current data with this backup?')) return;
+        Object.keys(j.data).forEach(k => localStorage.setItem('xe.' + k, JSON.stringify(j.data[k])));
+        location.reload();
+      } catch (err) { toast('That file could not be read as a backup'); }
+    };
+    r.readAsText(f);
+    e.target.value = '';
+  });
+  $('#d_clear').addEventListener('click', () => {
+    if (!confirm('Erase all kit costs, leads and edited drafts from this browser? This cannot be undone.')) return;
+    Object.keys(localStorage).filter(k => k.indexOf('xe.') === 0).forEach(k => localStorage.removeItem(k));
+    location.reload();
+  });
+  renderRates();
+}
+
+/* ============================================================
+   MODAL / TABS / BOOT
+   ============================================================ */
+function openModal({ title, body, actions, ready }) {
+  $('#modal').innerHTML = '<h3>' + title + '</h3><div class="bd">' + body + '</div><div class="ft">' + actions + '</div>';
+  $('#mask').classList.add('on');
+  document.body.style.overflow = 'hidden';
+  $$('[data-close]', $('#modal')).forEach(b => b.addEventListener('click', closeModal));
+  if (ready) ready();
+}
+function closeModal() { $('#mask').classList.remove('on'); $('#modal').innerHTML = ''; document.body.style.overflow = ''; }
+$('#mask').addEventListener('click', e => { if (e.target === $('#mask')) closeModal(); });
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeModal(); });
+
+function go(name) {
+  $$('.tab').forEach(t => t.classList.toggle('on', t.dataset.go === name));
+  $$('.panel').forEach(p => p.classList.toggle('on', p.id === 'p-' + name));
+  if (name === 'quote') fitPreview();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+$$('.tab').forEach(t => t.addEventListener('click', () => go(t.dataset.go)));
+
+(function boot() {
+  $('#hdrlogo').innerHTML = $('#logotpl').innerHTML;
+  initQuote();
+  initLeads();
+  initObj();
+  initRates();
+  // first run: start the numbers helper from the current quote
+  if (!CALC.price) {
+    const c = calcQuote();
+    CALC.kw = c.kw; CALC.price = c.total;
+    $('#c_kw').value = c.kw; $('#c_price').value = c.total;
+    renderCalc();
+  }
+})();
+</script>
+</body>
+</html>
