@@ -1,0 +1,1294 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Xeron Energy — Solar PV Structural Calculation Assistant</title>
+<style>
+:root{
+  --navy:#0B1B33; --navy2:#122a4d; --blue:#1E7BE8; --blue-d:#0F4FA8; --blue-l:#e8f1fd;
+  --orange:#F7941D; --orange-l:#fff3e2;
+  --ink:#101a29; --body:#2c3a4d; --muted:#6b7a90;
+  --line:#dfe5ee; --line2:#eef2f7; --bg:#f4f6fa; --white:#fff;
+  --green:#0f7d45; --green-l:#e6f6ee;
+  --red:#c02419; --red-l:#fdecea; --red-b:#f2b8b2;
+  --amber:#a86a05; --amber-l:#fdf3e0; --amber-b:#f0d19a;
+  --f:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
+  --mono:ui-monospace,SFMono-Regular,Menlo,"DejaVu Sans Mono",Consolas,monospace;
+}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+html{-webkit-text-size-adjust:100%;}
+body{background:var(--bg);color:var(--body);font-family:var(--f);font-size:14.5px;line-height:1.55;overflow-x:hidden;}
+button,input,select,textarea{font:inherit;color:inherit;}
+button{cursor:pointer;background:none;border:none;}
+h1,h2,h3,h4{color:var(--ink);line-height:1.25;font-weight:700;}
+sub,sup{font-size:.72em;}
+
+.logo{display:flex;align-items:center;gap:10px;}
+.logo .wm{display:flex;flex-direction:column;line-height:1;}
+.logo .wm b{font-size:18px;font-weight:800;letter-spacing:.06em;color:#fff;}
+.logo .wm span{font-size:8px;font-weight:700;letter-spacing:.32em;color:var(--orange);margin-top:3px;}
+
+.topbar{background:var(--navy);background-image:linear-gradient(120deg,#0B1B33,#122a4d 55%,#1b3a66);position:sticky;top:0;z-index:60;}
+.topbar .rule{height:3px;background:linear-gradient(90deg,var(--blue) 0 45%,var(--orange) 45% 100%);}
+.tb-in{max-width:1560px;margin:0 auto;padding:12px 20px;display:flex;align-items:center;gap:16px;flex-wrap:wrap;}
+.tb-tag{color:rgba(255,255,255,.65);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;border-left:1px solid rgba(255,255,255,.2);padding-left:15px;}
+.tb-acts{margin-left:auto;display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.tb-warn{display:inline-flex;align-items:center;gap:7px;font-size:11.5px;color:#ffd9a8;background:rgba(247,148,29,.14);border:1px solid rgba(247,148,29,.34);padding:5px 11px;border-radius:99px;font-weight:600;}
+
+.shell{max-width:1560px;margin:0 auto;padding:18px 20px 80px;display:grid;grid-template-columns:396px minmax(0,1fr);gap:20px;align-items:start;}
+@media(max-width:1080px){.shell{grid-template-columns:minmax(0,1fr);}}
+
+/* ---------- input rail ---------- */
+.rail{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow-y:auto;background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 3px rgba(16,26,41,.06);}
+@media(max-width:1080px){.rail{position:static;max-height:none;}}
+.rail>header{padding:13px 16px;border-bottom:1px solid var(--line2);position:sticky;top:0;background:#fff;z-index:2;border-radius:12px 12px 0 0;}
+.rail>header h2{font-size:14px;}
+.rail>header p{font-size:12px;color:var(--muted);margin-top:2px;}
+.grp{border-bottom:1px solid var(--line2);}
+.grp>summary{padding:11px 16px;cursor:pointer;list-style:none;display:flex;align-items:center;gap:9px;font-weight:700;font-size:13px;color:var(--ink);background:#fafbfd;}
+.grp>summary::-webkit-details-marker{display:none;}
+.grp>summary::before{content:"";width:6px;height:6px;border-right:2px solid var(--orange);border-bottom:2px solid var(--orange);transform:rotate(-45deg);transition:.15s;flex:none;}
+.grp[open]>summary::before{transform:rotate(45deg);}
+.grp>summary .miss{margin-left:auto;font-size:10.5px;font-weight:700;letter-spacing:.03em;padding:2px 7px;border-radius:99px;background:var(--red-l);color:var(--red);}
+.grp>summary .ok{margin-left:auto;color:var(--green);font-size:13px;}
+.grp .gb{padding:13px 16px 16px;display:flex;flex-direction:column;gap:13px;}
+
+.fld label{display:block;font-size:11px;font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted);margin-bottom:5px;}
+.fld label .rq{color:var(--red);margin-left:3px;}
+.fld .ir{display:flex;align-items:stretch;}
+.fld input,.fld select,.fld textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:7px;background:#fff;font-size:14px;transition:.14s;}
+.fld input.mono{font-family:var(--mono);}
+.fld input:focus,.fld select:focus,.fld textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(30,123,232,.13);}
+.fld .ir input{border-radius:7px 0 0 7px;}
+.fld .ir .u{display:flex;align-items:center;padding:0 10px;border:1px solid var(--line);border-left:none;border-radius:0 7px 7px 0;background:#f4f6fa;color:var(--muted);font-size:12.5px;font-family:var(--mono);white-space:nowrap;}
+.fld .hlp{font-size:11.5px;color:var(--muted);margin-top:5px;line-height:1.45;}
+.fld.bad input,.fld.bad select{border-color:var(--red-b);background:#fffafa;}
+.fld.chk{display:flex;gap:9px;align-items:flex-start;}
+.fld.chk input{width:auto;margin-top:3px;flex:none;}
+.fld.chk label{text-transform:none;letter-spacing:0;font-size:12.5px;font-weight:600;color:var(--body);margin:0;}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:7px;padding:8px 15px;border-radius:7px;font-size:13.5px;font-weight:600;border:1px solid var(--line);background:#fff;color:var(--ink);transition:.14s;}
+.btn:hover{border-color:#c3cddc;background:#fafbfd;}
+.btn.pri{background:var(--blue);border-color:var(--blue);color:#fff;}
+.btn.pri:hover{background:var(--blue-d);}
+.btn.gh{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.24);color:#fff;}
+.btn.gh:hover{background:rgba(255,255,255,.18);}
+.btn.sm{padding:5px 10px;font-size:12px;}
+.btn.dgr{color:var(--red);}
+
+/* ---------- calc sheet ---------- */
+.sheet{background:var(--white);border:1px solid var(--line);border-radius:12px;box-shadow:0 1px 3px rgba(16,26,41,.06);overflow:hidden;}
+.sheet-hd{background:var(--navy);background-image:linear-gradient(115deg,#0B1B33,#12294a 60%,#1b3a66);padding:18px 26px;display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap;}
+.sheet-hd h1{color:#fff;font-size:17px;letter-spacing:.02em;}
+.sheet-hd p{color:rgba(255,255,255,.6);font-size:11.5px;margin-top:3px;font-family:var(--mono);}
+.sheet-hd .ttl{text-align:right;color:var(--orange);font-size:10px;letter-spacing:.22em;font-weight:700;}
+.sheet-rule{height:3px;background:linear-gradient(90deg,var(--blue) 0 62%,var(--orange) 62% 100%);}
+.sheet-bd{padding:22px 26px 26px;}
+@media(max-width:620px){.sheet-bd{padding:16px 14px;}.sheet-hd{padding:14px 16px;}}
+
+.mod{margin-bottom:26px;}
+.mod>h3{font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--navy);padding-bottom:7px;margin-bottom:14px;border-bottom:2px solid var(--blue);display:flex;align-items:center;gap:10px;}
+.mod>h3::after{content:"";flex:1;height:2px;background:var(--orange);max-width:32px;}
+.mod>h3 .mn{background:var(--navy);color:#fff;width:20px;height:20px;border-radius:4px;display:inline-flex;align-items:center;justify-content:center;font-size:11px;flex:none;}
+
+.step{border:1px solid var(--line);border-left:3px solid var(--blue);border-radius:0 9px 9px 0;padding:12px 15px;margin-bottom:11px;background:#fff;}
+.step .lbl{font-weight:700;color:var(--ink);font-size:14px;margin-bottom:8px;}
+.step .row{display:flex;gap:9px;font-size:12.5px;margin-bottom:5px;line-height:1.5;}
+.step .row .tag{flex:none;width:74px;font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;font-weight:700;color:var(--muted);padding-top:2px;}
+.step .row .val{flex:1;min-width:0;}
+.step .row.f .val{font-family:var(--mono);color:var(--ink);background:#f7f9fc;border:1px solid var(--line2);border-radius:5px;padding:4px 8px;overflow-x:auto;}
+.step .row.w .val{font-family:var(--mono);white-space:pre-wrap;background:#fbfcfe;border:1px dashed var(--line);border-radius:5px;padding:6px 9px;font-size:12px;overflow-x:auto;}
+.step .row.c .val{color:var(--blue-d);font-weight:600;}
+.step .res{margin-top:9px;padding:8px 11px;background:var(--blue-l);border-radius:6px;font-family:var(--mono);font-size:15px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:baseline;}
+.step .res .alt{font-size:11.5px;font-weight:500;color:var(--blue-d);}
+.step.up{border-left-color:var(--red);}
+.step.up .res{background:var(--red-l);color:#7d1a12;}
+.step.dn{border-left-color:var(--green);}
+.step.dn .res{background:var(--green-l);color:#0b5c33;}
+
+.stop{border:2px solid var(--red-b);background:var(--red-l);border-radius:9px;padding:15px 17px;}
+.stop h4{color:var(--red);font-size:14.5px;display:flex;align-items:center;gap:9px;margin-bottom:8px;}
+.stop p{font-size:13px;color:#7d2019;}
+.stop ul{margin:9px 0 0 18px;font-size:13px;color:#7d2019;}
+.stop li{margin-bottom:5px;}
+.stop li b{color:var(--red);}
+.stop .foot{margin-top:11px;font-size:12px;color:#8d4a43;border-top:1px solid var(--red-b);padding-top:9px;}
+
+.flag{border-radius:8px;padding:11px 14px;font-size:13px;margin-bottom:11px;border:1px solid;display:flex;gap:10px;align-items:flex-start;}
+.flag .ic{flex:none;font-size:15px;line-height:1.3;}
+.flag.warn{background:var(--amber-l);border-color:var(--amber-b);color:#7a4b06;}
+.flag.crit{background:var(--red-l);border-color:var(--red-b);color:#7d2019;}
+.flag.info{background:var(--blue-l);border-color:#bcd8f8;color:#12447e;}
+.flag.good{background:var(--green-l);border-color:#b3e0c7;color:#0b5c33;}
+.flag b{font-weight:700;}
+
+table.t{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:4px;}
+table.t th{background:#f4f7fb;text-align:left;padding:7px 10px;font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);font-weight:700;border-bottom:1px solid var(--line);}
+table.t td{padding:7px 10px;border-bottom:1px solid var(--line2);vertical-align:top;}
+table.t td.n{text-align:right;font-family:var(--mono);white-space:nowrap;}
+table.t tr:last-child td{border-bottom:none;}
+table.t tr.hi td{background:#fffbf2;font-weight:700;}
+.scrollx{overflow-x:auto;}
+
+ol.path{counter-reset:p;list-style:none;margin:2px 0 0;}
+ol.path li{counter-increment:p;position:relative;padding:7px 0 7px 34px;font-size:13px;border-left:2px dashed var(--line);margin-left:11px;}
+ol.path li::before{content:counter(p);position:absolute;left:-11px;top:8px;width:21px;height:21px;border-radius:50%;background:var(--navy);color:#fff;font-size:10.5px;font-weight:700;display:flex;align-items:center;justify-content:center;font-family:var(--f);}
+ol.path li:last-child{border-left-color:transparent;}
+ol.path li b{color:var(--ink);}
+ol.path li .q{font-family:var(--mono);color:var(--blue-d);font-size:12px;}
+
+.asm{border:1px solid var(--amber-b);border-radius:9px;overflow:hidden;}
+.asm h4{background:var(--amber-l);color:#7a4b06;padding:10px 14px;font-size:12px;letter-spacing:.1em;text-transform:uppercase;border-bottom:1px solid var(--amber-b);}
+.asm ol{margin:0;padding:6px 0;list-style:none;counter-reset:a;}
+.asm li{counter-increment:a;padding:8px 14px 8px 42px;position:relative;font-size:12.5px;border-bottom:1px solid var(--line2);}
+.asm li:last-child{border-bottom:none;}
+.asm li::before{content:"A" counter(a);position:absolute;left:12px;top:8px;font-family:var(--mono);font-size:10.5px;font-weight:700;color:var(--muted);}
+.asm li .sv{display:inline-block;font-size:9.5px;font-weight:800;letter-spacing:.05em;padding:1px 6px;border-radius:4px;margin-right:7px;vertical-align:1px;}
+.asm li .sv.check{background:var(--amber-l);color:var(--amber);border:1px solid var(--amber-b);}
+.asm li .sv.ph{background:var(--red-l);color:var(--red);border:1px solid var(--red-b);}
+.asm li .sv.info{background:var(--blue-l);color:var(--blue-d);border:1px solid #bcd8f8;}
+.asm li .ref{display:block;font-size:11px;color:var(--muted);font-family:var(--mono);margin-top:3px;}
+
+.disc{margin-top:24px;border-top:3px double var(--navy);padding-top:13px;text-align:center;}
+.disc b{display:block;font-size:13.5px;color:var(--navy);}
+.disc span{font-size:11.5px;color:var(--muted);display:block;margin-top:5px;}
+
+.phbanner{background:repeating-linear-gradient(45deg,var(--red-l),var(--red-l) 12px,#fbdedb 12px,#fbdedb 24px);border:2px solid var(--red-b);border-radius:9px;padding:12px 15px;margin-bottom:18px;text-align:center;}
+.phbanner b{color:var(--red);font-size:13.5px;letter-spacing:.04em;}
+.phbanner span{display:block;font-size:12px;color:#8d4a43;margin-top:3px;}
+
+.diag{background:#fbfcfe;border:1px solid var(--line);border-radius:9px;padding:12px;margin-bottom:11px;text-align:center;}
+.diag svg{max-width:100%;height:auto;}
+.diag figcaption{font-size:11.5px;color:var(--muted);margin-top:7px;}
+
+.toast{position:fixed;left:50%;bottom:24px;transform:translate(-50%,18px);background:var(--navy);color:#fff;padding:10px 18px;border-radius:99px;font-size:13px;font-weight:600;box-shadow:0 10px 30px rgba(11,27,51,.35);opacity:0;pointer-events:none;transition:.2s;z-index:400;}
+.toast.on{opacity:1;transform:translate(-50%,0);}
+
+@media print{
+  @page{size:A4;margin:12mm 11mm;}
+  body{background:#fff;font-size:10.2px;}
+  .topbar,.rail,.toast,.noprint{display:none!important;}
+  .shell{display:block;max-width:none;padding:0;}
+  .sheet{border:none;box-shadow:none;border-radius:0;}
+  .sheet-bd{padding:0;}
+  .sheet-hd{padding:10px 14px;border-radius:0;}
+  .mod{break-inside:auto;margin-bottom:16px;}
+  .step,.stop,.flag,.asm,.diag,table.t{break-inside:avoid;}
+  .mod>h3{break-after:avoid;}
+  *{-webkit-print-color-adjust:exact!important;print-color-adjust:exact!important;}
+}
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <div class="rule"></div>
+  <div class="tb-in">
+    <span class="logo">
+      <svg width="34" height="34" viewBox="0 0 48 48" fill="none" aria-hidden="true">
+        <defs>
+          <linearGradient id="xg1" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2E93FF"/><stop offset="1" stop-color="#0F4FA8"/></linearGradient>
+          <linearGradient id="xg2" x1="0" y1="1" x2="1" y2="0"><stop offset="0" stop-color="#F7941D"/><stop offset="1" stop-color="#FFC46B"/></linearGradient>
+        </defs>
+        <path d="M24 2.6 43.4 13.3v21.4L24 45.4 4.6 34.7V13.3z" fill="url(#xg1)" stroke="rgba(255,255,255,.28)" stroke-width="1.1"/>
+        <path d="M13.8 14.4h6.1L24 20.6l4.1-6.2h6.1l-7.2 10.5 7.4 10.7h-6.1L24 29.1l-4.3 6.5h-6.1L21 24.9z" fill="#fff"/>
+        <path d="M28.1 14.4h6.1l-7.2 10.5 7.4 10.7h-6.1l-4.3-6.5 1.5-2.3 2.8 4.2 3.2-4.6-4.5-6.5z" fill="url(#xg2)"/>
+      </svg>
+      <span class="wm"><b>XERON</b><span>ENERGY</span></span>
+    </span>
+    <span class="tb-tag">Structural Calculation Assistant</span>
+    <span class="tb-acts">
+      <span class="tb-warn">&#9888; Draft for engineer review &mdash; never a final sign-off</span>
+      <button class="btn gh sm" id="b_demo">Load example</button>
+      <button class="btn gh sm" id="b_clear">Clear</button>
+      <button class="btn pri sm" id="b_print">Print / PDF</button>
+    </span>
+  </div>
+</header>
+
+<div class="shell">
+  <aside class="rail noprint">
+    <header>
+      <h2>Inputs</h2>
+      <p>Required fields are marked <span style="color:var(--red);font-weight:700">&lowast;</span>. Nothing safety-critical is assumed &mdash; a module stops until you supply it.</p>
+    </header>
+    <div id="form"></div>
+  </aside>
+
+  <main class="sheet">
+    <div class="sheet-hd">
+      <div>
+        <h1>Solar PV Mounting Structure &mdash; Wind &amp; Foundation Check</h1>
+        <p id="hd_meta">Xeron Energy &middot; Rajkot, Saurashtra, Gujarat</p>
+      </div>
+      <div class="ttl">DRAFT CALCULATION<br>FOR ENGINEER REVIEW</div>
+    </div>
+    <div class="sheet-rule"></div>
+    <div class="sheet-bd" id="sheet"></div>
+  </main>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+"use strict";
+/* =============================================================================
+   XERON ENERGY — SOLAR PV STRUCTURAL CALCULATION ASSISTANT
+   Drafting / second-opinion tool. Produces a calculation sheet for a qualified
+   civil / structural engineer to review. It never issues an approval.
+
+   Design rule enforced throughout: no safety-critical value is ever assumed to
+   keep a calculation moving. A module that is missing an input STOPS and says
+   what it needs.
+   ========================================================================== */
+
+const $  = (s, r = document) => r.querySelector(s);
+const $$ = (s, r = document) => Array.from(r.querySelectorAll(s));
+const G  = 9.81;                                   // m/s²
+const CODE = 'IS 875 (Part 3) : 2015';
+
+/* ---- number formatting -------------------------------------------------- */
+const fx  = (v, d = 2) => (Number(v) || 0).toFixed(d);
+const sig = v => { v = Number(v) || 0; const a = Math.abs(v);
+  return a >= 1000 ? v.toFixed(0) : a >= 100 ? v.toFixed(1) : a >= 1 ? v.toFixed(2) : v.toFixed(3); };
+const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+function toast(m){ const t=$('#toast'); t.textContent=m; t.classList.add('on');
+  clearTimeout(toast._t); toast._t=setTimeout(()=>t.classList.remove('on'),2400); }
+
+/* =============================================================================
+   CODE TABLES
+   Transcribed from IS 875 (Part 3):2015. The engineer must verify every value
+   against their own controlled copy of the standard — the sheet says so too.
+   ========================================================================== */
+
+/* Table 1 — Risk coefficient k1, by mean probable design life and Vb */
+const VB_COLS = [33, 39, 44, 47, 50, 55];
+const K1_TABLE = {
+  5:   [0.82, 0.76, 0.73, 0.71, 0.70, 0.67],
+  25:  [0.94, 0.92, 0.91, 0.90, 0.90, 0.89],
+  50:  [1.00, 1.00, 1.00, 1.00, 1.00, 1.00],
+  100: [1.05, 1.06, 1.07, 1.07, 1.08, 1.08]
+};
+const LIFE_DESC = {
+  5:   'Temporary sheds, structures under construction',
+  25:  'Structures presenting a low degree of hazard to life and property on failure',
+  50:  'All general buildings and structures',
+  100: 'Important buildings and structures (hospitals, communication towers, power plant structures)'
+};
+
+/* Table 2 — Terrain roughness and height factor k2 (2015 edition: no A/B/C classes) */
+const K2_H  = [10, 15, 20, 30, 50, 100, 150, 200, 250, 300, 350, 400, 450, 500];
+const K2_TAB = {
+  1: [1.05,1.09,1.12,1.15,1.20,1.26,1.30,1.32,1.34,1.35,1.37,1.38,1.39,1.40],
+  2: [1.00,1.05,1.07,1.12,1.17,1.24,1.28,1.30,1.32,1.34,1.35,1.36,1.37,1.38],
+  3: [0.91,0.97,1.01,1.06,1.12,1.20,1.24,1.27,1.29,1.31,1.32,1.34,1.35,1.36],
+  4: [0.80,0.80,0.80,0.97,1.10,1.20,1.24,1.27,1.28,1.30,1.31,1.32,1.33,1.34]
+};
+const TERRAIN_DESC = {
+  1: 'Exposed open terrain with few or no obstructions; obstacles average under 1.5 m (open sea coast, flat treeless plains)',
+  2: 'Open terrain with well-scattered obstructions 1.5 m to 10 m high (airfields, open parkland, sparsely built-up outskirts)',
+  3: 'Terrain with numerous closely spaced obstructions up to 10 m high (well-wooded areas, towns, developed industrial areas)',
+  4: 'Terrain with numerous large, high, closely spaced obstructions (large city centres, well-developed industrial complexes)'
+};
+
+/* Table 4 — Area averaging factor Ka */
+const KA_A = [10, 25, 100], KA_V = [1.00, 0.90, 0.80];
+
+/* Cl. 6.3.4 — Importance factor k4 for the cyclonic region */
+const K4_OPTS = {
+  '1.30': 'Structures of post-cyclone importance for emergency services (cyclone shelters, hospitals, schools, communication towers, power plant structures)',
+  '1.15': 'Industrial structures',
+  '1.00': 'All other structures'
+};
+const COAST_KM = 60;
+
+/* ---- interpolation helpers --------------------------------------------- */
+function interp(x, xs, ys) {
+  if (x <= xs[0]) return { v: ys[0], lo: null, hi: 0, clamped: 'low' };
+  if (x >= xs[xs.length - 1]) return { v: ys[ys.length - 1], lo: null, hi: xs.length - 1, clamped: 'high' };
+  for (let i = 0; i < xs.length - 1; i++) {
+    if (x >= xs[i] && x <= xs[i + 1]) {
+      const t = (x - xs[i]) / (xs[i + 1] - xs[i]);
+      return { v: ys[i] + t * (ys[i + 1] - ys[i]), lo: i, hi: i + 1, t };
+    }
+  }
+  return { v: ys[ys.length - 1], lo: null, hi: xs.length - 1 };
+}
+function k1Column(vb) {                                   // nearest tabulated Vb column
+  let best = 0, d = Infinity;
+  VB_COLS.forEach((c, i) => { const dd = Math.abs(c - vb); if (dd < d) { d = dd; best = i; } });
+  return best;
+}
+
+/* =============================================================================
+   STATE + FORM SCHEMA
+   ========================================================================== */
+const S = {};
+const KEY = 'xe.struct';
+const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+const FORM = [
+{ id:'g1', title:'1 · Project & site', fields:[
+  { k:'project',  l:'Project / customer',      t:'text', ph:'e.g. Shreeji Textiles, Metoda GIDC' },
+  { k:'siteAddr', l:'Site address / village',  t:'text', ph:'e.g. Kalawad Road, Rajkot' },
+  { k:'coords',   l:'Site coordinates',        t:'text', req:1, ph:'e.g. 22.2734, 70.7713',
+    hlp:'Required. Latitude, longitude of the actual roof/plot — the wind zone and coastal distance must be read for this point, not for the town in general.' },
+  { k:'engineer', l:'Reviewing engineer',      t:'text', ph:'Name / licence no.' },
+  { k:'calcDate', l:'Calculation date',        t:'date' }
+]},
+
+{ id:'g2', title:'2 · Structure arrangement', fields:[
+  { k:'mount', l:'Mounting type', t:'sel', req:1, opts:['','Rooftop','Ground-mount'] },
+  { k:'roofType', l:'Roof type', t:'sel', opts:['','RCC flat slab','RCC sloped slab','Metal sheet (trapezoidal / standing seam)','AC sheet','Other'],
+    req:s=>s.mount==='Rooftop', show:s=>s.mount==='Rooftop',
+    hlp:'Metal and AC sheet roofs transfer load into purlins — the purlin and its fixing become the governing check, not the slab.' },
+  { k:'hBldg', l:'Height of building / plinth above ground', t:'num', u:'m', req:s=>s.mount==='Rooftop', show:s=>s.mount==='Rooftop', step:'0.1' },
+  { k:'hArr',  l:'Height of top of array above that level',  t:'num', u:'m', req:1, step:'0.1',
+    hlp:'For k₂ the code uses height above general ground level. The tool adds the two.' },
+  { k:'tilt',  l:'Array tilt from horizontal', t:'num', u:'deg', req:1, step:'0.5',
+    hlp:'Cp values must be read from the code for this same tilt.' },
+  { k:'material', l:'Structure material', t:'sel', opts:['Hot-dip galvanised MS','Pre-galvanised MS','Aluminium','Other'], },
+  { k:'zincCoat', l:'Specified zinc coating', t:'text', ph:'e.g. 80 µm / 610 g/m² to IS 4759',
+    hlp:'Recorded on the sheet for the durability note only — not used in any calculation.' }
+]},
+
+{ id:'g3', title:'3 · Panel & array', fields:[
+  { k:'pL', l:'Panel length', t:'num', u:'mm', req:1, step:'1' },
+  { k:'pW', l:'Panel width',  t:'num', u:'mm', req:1, step:'1' },
+  { k:'pWt', l:'Panel weight', t:'num', u:'kg', req:1, step:'0.1' },
+  { k:'nPan', l:'Total number of panels', t:'num', req:1, step:'1' },
+  { k:'kWp', l:'System size', t:'num', u:'kWp', step:'0.01', hlp:'Recorded on the sheet only.' },
+  { k:'panPerTab', l:'Panels per table / structure unit', t:'num', req:1, step:'1',
+    hlp:'One table = one independent framed unit standing on its own legs.' },
+  { k:'legsPerTab', l:'Support legs per table', t:'num', req:1, step:'1',
+    hlp:'Number of points where that table lands on the roof or foundation.' },
+  { k:'structWt', l:'Self-weight of one table (steel only)', t:'num', u:'kg', req:1, step:'1',
+    hlp:'From your own fabrication BOQ. There is no safe default for this — it drives the uplift restoring load.' }
+]},
+
+{ id:'g4', title:'4 · Wind — basic speed & site', fields:[
+  { k:'vb', l:'Basic wind speed V<sub>b</sub>', t:'num', u:'m/s', req:1, step:'1',
+    hlp:'Read from '+CODE+', Fig. 1 (basic wind speed map) or Annex A (list of towns) for the site coordinates above. This tool does not guess it.' },
+  { k:'vbSrc', l:'Source of V<sub>b</sub>', t:'text', req:1, ph:'e.g. Annex A — Rajkot; or Fig. 1, 39 m/s zone',
+    hlp:'Recorded verbatim as the citation on the calculation sheet.' },
+  { k:'vbOk', l:'I have read V<sub>b</sub> from a controlled copy of '+CODE+' for these coordinates.', t:'chk', req:1 },
+  { k:'distCoast', l:'Distance of site from the coastline', t:'num', u:'km', req:1, step:'1',
+    hlp:'Measured to the nearest shoreline. Drives Cl. 6.3.4 — within '+COAST_KM+' km of the Gujarat coast the k₄ cyclonic importance factor applies.' },
+  { k:'k4cls', l:'Structure classification for k<sub>4</sub>', t:'sel',
+    opts:['','1.30','1.15','1.00'], labels:{'1.30':'1.30 — post-cyclone importance','1.15':'1.15 — industrial structure','1.00':'1.00 — all other structures'},
+    req:s=>Number(s.distCoast) <= COAST_KM && s.distCoast !== '', show:s=>s.distCoast !== '' && Number(s.distCoast) <= COAST_KM,
+    hlp:'Cl. 6.3.4. Choose deliberately — this is a judgment call about the building, and it scales every load downstream.' }
+]},
+
+{ id:'g5', title:'5 · Wind — terrain, height, topography', fields:[
+  { k:'terrain', l:'Terrain category', t:'sel', req:1, opts:['','1','2','3','4'],
+    labels:{'1':'Category 1 — open, few obstructions','2':'Category 2 — scattered obstructions 1.5–10 m','3':'Category 3 — closely spaced obstructions to 10 m','4':'Category 4 — large closely spaced obstructions'},
+    hlp:'Cl. 6.3.2.1. Judge it from the fetch upwind of the site, in the worst direction.' },
+  { k:'life', l:'Mean probable design life', t:'sel', req:1, opts:['','5','25','50','100'],
+    labels:{'5':'5 years — temporary','25':'25 years — low hazard on failure','50':'50 years — general buildings','100':'100 years — important structures'},
+    hlp:'Cl. 6.3.1, Table 1 → k₁. Rooftop solar is commonly taken as 50 years to match the host building; 25 years is defensible only if you record why.' },
+  { k:'slope', l:'Upwind ground slope', t:'sel', req:1, opts:['','le3','gt3'],
+    labels:{'le3':'≤ 3° — effectively level','gt3':'> 3° — hill, ridge, cliff or escarpment'},
+    hlp:'Cl. 6.3.3. At ≤ 3° the code gives k₃ = 1.0 directly.' },
+  { k:'k3man', l:'k₃ from Annex C', t:'num', step:'0.01', req:s=>s.slope==='gt3', show:s=>s.slope==='gt3',
+    hlp:'For slopes over 3° k₃ = 1 + C·s and must be worked out per Annex C for this specific topography. Enter your computed value.' },
+  { k:'kd', l:'Wind directionality factor K<sub>d</sub>', t:'sel', opts:['1.00','0.90'],
+    labels:{'1.00':'1.00 — cyclonic region, or taken conservatively','0.90':'0.90 — general buildings and lattice frames'},
+    hlp:'Cl. 7.2.1. Forced to 1.00 automatically when the site falls inside the cyclonic belt.' },
+  { k:'kaMode', l:'Area averaging factor K<sub>a</sub>', t:'sel', opts:['unity','table'],
+    labels:{'unity':'1.00 — conservative, ignore area averaging','table':'From Table 4 on tributary area'},
+    hlp:'Cl. 7.2.2. Ka reduces the load, so 1.00 is the safe default. Use Table 4 only where the tributary area genuinely justifies it.' },
+  { k:'kc', l:'Combination factor K<sub>c</sub>', t:'sel', opts:['1.00','0.90'],
+    hlp:'Cl. 7.3.3.13. Leave at 1.00 unless you are applying the permitted combination reduction.' }
+]},
+
+{ id:'g6', title:'6 · Pressure coefficients', fields:[
+  { k:'cpModel', l:'Which model applies', t:'sel', req:1, opts:['','free','clad'],
+    labels:{'free':'Free-standing / elevated array — monoslope free roof (Cp,top & Cp,bottom)','clad':'Array on a clad building roof — Cpe and Cpi'},
+    hlp:'Tilted arrays on legs, and all ground mounts, are normally treated as monoslope free roofs because wind reaches both faces.' },
+  { k:'cpRef', l:'Table / clause the coefficients came from', t:'text', req:1, ph:'e.g. Table 8, monoslope free roof, α = 10°, θ = 0°',
+    hlp:'Quoted verbatim on the sheet. This tool deliberately holds no Cp values of its own — sign and magnitude depend on tilt, wind direction and blockage, and getting them off a table is your call, not a lookup I should be making for you.' },
+  { k:'cpUpTop', l:'UPLIFT case — Cp on upper surface', t:'num', step:'0.01', req:s=>s.cpModel==='free', show:s=>s.cpModel==='free' },
+  { k:'cpUpBot', l:'UPLIFT case — Cp on lower surface', t:'num', step:'0.01', req:s=>s.cpModel==='free', show:s=>s.cpModel==='free' },
+  { k:'cpDnTop', l:'DOWNFORCE case — Cp on upper surface', t:'num', step:'0.01', req:s=>s.cpModel==='free', show:s=>s.cpModel==='free' },
+  { k:'cpDnBot', l:'DOWNFORCE case — Cp on lower surface', t:'num', step:'0.01', req:s=>s.cpModel==='free', show:s=>s.cpModel==='free' },
+  { k:'cpeUp', l:'UPLIFT case — C<sub>pe</sub>', t:'num', step:'0.01', req:s=>s.cpModel==='clad', show:s=>s.cpModel==='clad' },
+  { k:'cpiUp', l:'UPLIFT case — C<sub>pi</sub>', t:'num', step:'0.01', req:s=>s.cpModel==='clad', show:s=>s.cpModel==='clad' },
+  { k:'cpeDn', l:'DOWNFORCE case — C<sub>pe</sub>', t:'num', step:'0.01', req:s=>s.cpModel==='clad', show:s=>s.cpModel==='clad' },
+  { k:'cpiDn', l:'DOWNFORCE case — C<sub>pi</sub>', t:'num', step:'0.01', req:s=>s.cpModel==='clad', show:s=>s.cpModel==='clad' }
+]},
+
+{ id:'g7', title:'7 · Foundation / fixing', fields:[
+  { k:'soilRpt', l:'Geotechnical report', t:'sel', req:s=>s.mount==='Ground-mount', show:s=>s.mount==='Ground-mount',
+    opts:['','yes','no'], labels:{'yes':'Yes — SBC from a site soil test','no':'No report yet — run as PLACEHOLDER only'},
+    hlp:'There is no acceptable default bearing capacity. Without a report the whole foundation module is stamped as not valid for construction.' },
+  { k:'sbc', l:'Safe bearing capacity', t:'num', u:'kN/m²', step:'5',
+    req:s=>s.mount==='Ground-mount' && s.soilRpt!=='', show:s=>s.mount==='Ground-mount' && s.soilRpt!=='' },
+  { k:'sbcRef', l:'Soil report reference', t:'text', ph:'agency, report no., date, borehole',
+    req:s=>s.soilRpt==='yes', show:s=>s.mount==='Ground-mount' && s.soilRpt==='yes' },
+  { k:'ftgD', l:'Founding depth below ground', t:'num', u:'m', step:'0.05', show:s=>s.mount==='Ground-mount',
+    req:s=>s.mount==='Ground-mount' },
+  { k:'soilDen', l:'Bulk density of backfill soil', t:'num', u:'kN/m³', step:'0.5', show:s=>s.mount==='Ground-mount',
+    req:s=>s.mount==='Ground-mount', hlp:'From the same soil report. Used for the overburden resisting uplift.' },
+  { k:'fosUp', l:'Factor of safety against uplift', t:'num', step:'0.1', show:s=>s.mount==='Ground-mount' },
+  { k:'fixType', l:'Fixing to roof', t:'sel', opts:['','anchored','ballasted'], labels:{'anchored':'Anchored — chemical / mechanical anchors','ballasted':'Ballasted — no penetration'},
+    req:s=>s.mount==='Rooftop', show:s=>s.mount==='Rooftop' },
+  { k:'anchCap', l:'Allowable tension per anchor point', t:'num', u:'kN', step:'0.1',
+    show:s=>s.mount==='Rooftop' && s.fixType==='anchored', req:s=>s.mount==='Rooftop' && s.fixType==='anchored',
+    hlp:'From the anchor manufacturer’s approval data for the actual substrate, edge distance and embedment — not a generic catalogue figure.' },
+  { k:'slabLL', l:'Spare imposed load capacity of roof slab', t:'num', u:'kN/m²', step:'0.1',
+    show:s=>s.mount==='Rooftop', hlp:'From the building’s own structural drawings, per IS 875 (Part 2). Leave blank if unverified — the check will stop rather than assume it.' }
+]}
+];
+
+const FIELD = {};
+FORM.forEach(g => g.fields.forEach(f => { FIELD[f.k] = f; S[f.k] = ''; }));
+S.kd = '1.00'; S.kc = '1.00'; S.kaMode = 'unity'; S.material = 'Hot-dip galvanised MS'; S.fosUp = '1.5';
+S.calcDate = new Date().toLocaleDateString('en-CA');
+try { Object.assign(S, JSON.parse(localStorage.getItem(KEY) || '{}')); } catch (e) {}
+
+const shown = f => (typeof f.show === 'function' ? !!f.show(S) : true);
+const required = f => shown(f) && (typeof f.req === 'function' ? !!f.req(S) : !!f.req);
+const filled = k => { const v = S[k]; return !(v === '' || v === null || v === undefined || v === false); };
+const need = keys => keys.filter(k => !filled(k));
+const nlabel = k => (FIELD[k] ? FIELD[k].l.replace(/<[^>]+>/g, '') : k);
+
+/* =============================================================================
+   SHEET PRIMITIVES
+   ========================================================================== */
+let A = [];                                        // assumptions register
+const assume = (sev, text, ref) => A.push({ sev, text, ref });
+
+function step(o) {
+  const row = (cls, tag, val) => val == null || val === '' ? '' :
+    '<div class="row ' + cls + '"><div class="tag">' + tag + '</div><div class="val">' + val + '</div></div>';
+  return '<div class="step ' + (o.cls || '') + '">' +
+    '<div class="lbl">' + o.lbl + '</div>' +
+    row('f', 'Formula', o.formula) +
+    row('c', 'Code ref', o.ref) +
+    row('', 'Inputs', o.inputs) +
+    row('w', 'Working', o.work) +
+    (o.result ? '<div class="res"><span>' + o.result + '</span>' + (o.alt ? '<span class="alt">' + o.alt + '</span>' : '') + '</div>' : '') +
+    row('', 'Why', o.why) +
+    '</div>';
+}
+function stopBlock(what, missing, note) {
+  return '<div class="stop"><h4>&#9940; STOPPED &mdash; ' + what + '</h4>' +
+    '<p>This module cannot proceed. Nothing below it has been assumed or estimated.</p><ul>' +
+    missing.map(m => '<li><b>' + (typeof m === 'string' ? esc(m) : esc(m.t)) + '</b>' +
+      (m.why ? ' &mdash; ' + esc(m.why) : '') + '</li>').join('') +
+    '</ul>' + (note ? '<div class="foot">' + note + '</div>' : '') + '</div>';
+}
+const flag = (kind, html) => '<div class="flag ' + kind + '"><span class="ic">' +
+  ({ warn: '&#9888;', crit: '&#9940;', info: '&#8505;', good: '&#10003;' }[kind]) + '</span><div>' + html + '</div></div>';
+const mod = (n, title, body) => '<section class="mod"><h3><span class="mn">' + n + '</span>' + title + '</h3>' + body + '</section>';
+
+/* =============================================================================
+   GEOMETRY (needed by several modules)
+   ========================================================================== */
+function geom() {
+  const miss = need(['pL', 'pW', 'pWt', 'nPan', 'panPerTab', 'legsPerTab', 'structWt', 'tilt']);
+  if (miss.length) return { ok: false, miss };
+  const aPan   = (+S.pL / 1000) * (+S.pW / 1000);
+  const nTab   = Math.ceil(+S.nPan / +S.panPerTab);
+  const aTab   = +S.panPerTab * aPan;
+  const aTotal = +S.nPan * aPan;
+  const aTrib  = aTab / +S.legsPerTab;
+  const tilt   = +S.tilt;
+  return { ok: true, aPan, aTab, aTotal, aTrib, nTab, tilt,
+           cos: Math.cos(tilt * Math.PI / 180), sin: Math.sin(tilt * Math.PI / 180),
+           plan: aTotal * Math.cos(tilt * Math.PI / 180),
+           dlTable: (+S.panPerTab * +S.pWt + +S.structWt) * G / 1000,       // kN per table
+           dlLeg: (+S.panPerTab * +S.pWt + +S.structWt) * G / 1000 / +S.legsPerTab };
+}
+
+/* =============================================================================
+   MODULE 1 — BASIC WIND SPEED
+   ========================================================================== */
+function m1() {
+  const miss = need(['coords', 'vb', 'vbSrc', 'vbOk', 'distCoast']);
+  if (miss.length) return { ok: false, html: mod(1, 'Basic wind speed V<sub>b</sub>', stopBlock(
+    'basic wind speed not established', miss.map(k => ({ t: nlabel(k), why: ({
+      coords: 'the wind zone and the coastal distance must be read at the actual site, not for the town',
+      vb: 'read from ' + CODE + ', Fig. 1 or Annex A — this tool holds no wind-speed map of its own',
+      vbSrc: 'the sheet must cite which figure/table the value came from',
+      vbOk: 'confirm you read it from a controlled copy of the standard',
+      distCoast: 'decides whether Cl. 6.3.4 (cyclonic k₄) applies'
+    })[k] })),
+    'Basic wind speed is the single value every load below scales from. A wrong V<sub>b</sub> makes the whole sheet wrong, so it is never inferred.')) };
+
+  const d = +S.distCoast, coastal = d <= COAST_KM;
+  let h = step({
+    lbl: 'Basic wind speed at the site',
+    formula: 'V<sub>b</sub> = value read from the basic wind speed map for the site location',
+    ref: CODE + ', Cl. 6.2 — Fig. 1 / Annex A',
+    inputs: 'Site: ' + esc(S.siteAddr || S.project || '—') + ' &nbsp;·&nbsp; coordinates <span style="font-family:var(--mono)">' + esc(S.coords) + '</span>',
+    work: 'Source cited by engineer: ' + esc(S.vbSrc),
+    result: 'V<sub>b</sub> = ' + fx(S.vb, 0) + ' m/s',
+    why: 'Entered and confirmed by the reviewing engineer against ' + CODE + '. This tool deliberately does not carry its own copy of the wind map — the value must be read for the coordinates above and re-checked at review.'
+  });
+  assume('check', 'V<sub>b</sub> = ' + fx(S.vb, 0) + ' m/s was taken from “' + esc(S.vbSrc) + '”. Re-read the map for the site coordinates before issue.', CODE + ', Cl. 6.2');
+
+  h += step({
+    lbl: 'Cyclonic region screening',
+    formula: 'Cl. 6.3.4 applies where the site lies within ~' + COAST_KM + ' km of the coastline',
+    ref: CODE + ', Cl. 6.3.4',
+    inputs: 'Distance from coastline = ' + fx(d, 0) + ' km',
+    work: fx(d, 0) + ' km ' + (coastal ? '≤' : '>') + ' ' + COAST_KM + ' km  →  k₄ ' + (coastal ? 'APPLIES' : 'does not apply, k₄ = 1.00'),
+    result: coastal ? 'Inside the cyclonic belt — k₄ must be applied' : 'Outside the ' + COAST_KM + ' km belt — k₄ = 1.00',
+    why: coastal
+      ? 'The Gujarat coast is named in Cl. 6.3.4 alongside the east coast. Saurashtra sites near Jamnagar, Morbi, Porbandar, Veraval and Bhavnagar routinely fall inside this belt even when the office is in Rajkot.'
+      : 'Sites inland of the belt take k₄ = 1.00. Confirm the distance was measured to the nearest shoreline, including the Gulf of Kutch, and not to the open Arabian Sea only.'
+  });
+  if (coastal) h += flag('warn', '<b>Cyclonic region.</b> k₄ is applied below and K<sub>d</sub> is held at 1.00. Also review the durability specification — coastal exposure drives the zinc coating, not just the loads.');
+  h += flag('info', '<b>Verify at review:</b> V<sub>b</sub>, the figure/table cited, and the coastal distance. These three inputs govern everything downstream.');
+  return { ok: true, vb: +S.vb, coastal, html: mod(1, 'Basic wind speed V<sub>b</sub>', h) };
+}
+
+/* =============================================================================
+   MODULE 2 — DESIGN WIND SPEED Vz
+   ========================================================================== */
+function m2(r1) {
+  if (!r1.ok) return { ok: false, html: mod(2, 'Design wind speed V<sub>z</sub>', stopBlock(
+    'depends on Module 1', [{ t: 'Module 1 has not completed', why: 'basic wind speed is not yet established' }])) };
+
+  const req = ['terrain', 'life', 'slope', 'hArr'];
+  if (S.mount === 'Rooftop') req.push('hBldg');
+  if (S.slope === 'gt3') req.push('k3man');
+  if (r1.coastal) req.push('k4cls');
+  const miss = need(req);
+  if (miss.length) {
+    const what = miss.every(k => k === 'k4cls') ? 'cyclonic structure class not selected'
+      : miss.some(k => ['terrain','slope','k3man'].includes(k)) ? 'terrain / topography not established'
+      : miss.some(k => ['hArr','hBldg'].includes(k)) ? 'array height not established'
+      : 'inputs for the k-factors not complete';
+    return { ok: false, html: mod(2, 'Design wind speed V<sub>z</sub>', stopBlock(
+    what, miss.map(k => ({ t: nlabel(k), why: ({
+      terrain: 'Cl. 6.3.2.1 — must be judged from the fetch upwind, it cannot be guessed from a postcode',
+      life: 'Cl. 6.3.1, Table 1 — sets k₁',
+      slope: 'Cl. 6.3.3 — sets k₃',
+      k3man: 'slope exceeds 3°, so k₃ must be computed per Annex C for this topography',
+      hArr: 'k₂ varies with height above ground',
+      hBldg: 'the array height must be added to the building height for k₂',
+      k4cls: 'Cl. 6.3.4 — the site is inside the cyclonic belt, so the structure class must be chosen deliberately'
+    })[k] })))) };
+  }
+
+  const vb = r1.vb;
+  const z  = (S.mount === 'Rooftop' ? +S.hBldg : 0) + (+S.hArr);
+
+  /* k1 */
+  const ci = k1Column(vb), k1 = K1_TABLE[S.life][ci];
+  let h = step({
+    lbl: 'k₁ — risk coefficient (probability factor)',
+    formula: 'k₁ = f(mean probable design life, V<sub>b</sub>) — read from Table 1',
+    ref: CODE + ', Cl. 6.3.1, Table 1',
+    inputs: 'Design life = ' + S.life + ' years &nbsp;·&nbsp; V<sub>b</sub> = ' + fx(vb, 0) + ' m/s',
+    work: 'Table 1, row “' + S.life + ' years”, column V₀ = ' + VB_COLS[ci] + ' m/s' +
+          (VB_COLS[ci] !== vb ? '\n(V₀ = ' + VB_COLS[ci] + ' m/s is the nearest tabulated column to ' + fx(vb, 0) + ' m/s)' : '') +
+          '\nk₁ = ' + fx(k1, 2),
+    result: 'k₁ = ' + fx(k1, 2),
+    why: LIFE_DESC[S.life] + ' → ' + S.life + '-year design life selected by the engineer.' +
+         (S.life === '50' ? ' Matches the host building, which is the usual basis for rooftop solar.' : '')
+  });
+  if (VB_COLS[ci] !== vb)
+    assume('check', 'k₁ read from the V<sub>b</sub> = ' + VB_COLS[ci] + ' m/s column of Table 1, the nearest tabulated column to the site value of ' + fx(vb, 0) + ' m/s.', CODE + ', Table 1');
+  if (S.life !== '50')
+    assume('check', 'Design life taken as ' + S.life + ' years rather than the 50 years normally used for general buildings — confirm this is defensible for a plant fixed to a permanent building.', CODE + ', Cl. 6.3.1');
+
+  /* k2 */
+  const tc = S.terrain, ip = interp(z, K2_H, K2_TAB[tc]);
+  const k2 = ip.v;
+  let k2work;
+  if (ip.clamped === 'low')
+    k2work = 'z = ' + fx(z, 2) + ' m is below the first tabulated height of 10 m.\n' +
+             'Table 2 is not extrapolated downwards — the 10 m value is used.\nk₂ = ' + fx(k2, 3);
+  else
+    k2work = 'Table 2, terrain category ' + tc + ', interpolating between ' +
+             K2_H[ip.lo] + ' m (k₂ = ' + fx(K2_TAB[tc][ip.lo], 2) + ') and ' +
+             K2_H[ip.hi] + ' m (k₂ = ' + fx(K2_TAB[tc][ip.hi], 2) + '):\n' +
+             'k₂ = ' + fx(K2_TAB[tc][ip.lo], 2) + ' + (' + fx(K2_TAB[tc][ip.hi], 2) + ' − ' + fx(K2_TAB[tc][ip.lo], 2) + ') × (' +
+             fx(z, 2) + ' − ' + K2_H[ip.lo] + ') / (' + K2_H[ip.hi] + ' − ' + K2_H[ip.lo] + ')\n' +
+             '   = ' + fx(K2_TAB[tc][ip.lo], 2) + ' + ' + fx(K2_TAB[tc][ip.hi] - K2_TAB[tc][ip.lo], 2) + ' × ' + fx(ip.t, 3) +
+             ' = ' + fx(k2, 3);
+  h += step({
+    lbl: 'k₂ — terrain roughness and height factor',
+    formula: 'k₂ = f(terrain category, height z above general ground level) — Table 2',
+    ref: CODE + ', Cl. 6.3.2.2, Table 2',
+    inputs: 'Terrain category ' + tc + ' &nbsp;·&nbsp; z = ' +
+            (S.mount === 'Rooftop' ? fx(S.hBldg, 2) + ' m (building) + ' + fx(S.hArr, 2) + ' m (array) = ' : '') + fx(z, 2) + ' m',
+    work: k2work,
+    result: 'k₂ = ' + fx(k2, 3),
+    why: 'Category ' + tc + ' — ' + TERRAIN_DESC[tc] + ' Selected by the engineer for the worst upwind fetch.'
+  });
+  assume('check', 'Terrain category ' + tc + ' assumed for all wind directions. If any approach to the site is more open than the rest, the more open category governs and k₂ rises.', CODE + ', Cl. 6.3.2.1');
+  if (ip.clamped === 'low')
+    assume('info', 'Array sits ' + fx(z, 2) + ' m above ground, below the 10 m base of Table 2; the 10 m value is used without reduction, as the code intends.', CODE + ', Table 2');
+
+  /* k3 */
+  const k3 = S.slope === 'le3' ? 1.00 : +S.k3man;
+  h += step({
+    lbl: 'k₃ — topography factor',
+    formula: S.slope === 'le3' ? 'k₃ = 1.0 where the upwind slope θ ≤ 3°' : 'k₃ = 1 + C·s, evaluated per Annex C',
+    ref: CODE + ', Cl. 6.3.3' + (S.slope === 'gt3' ? ' and Annex C' : ''),
+    inputs: 'Upwind ground slope ' + (S.slope === 'le3' ? '≤ 3° (effectively level)' : '> 3° (hill / ridge / escarpment)'),
+    work: S.slope === 'le3'
+      ? 'θ ≤ 3°  →  k₃ = 1.00 directly from Cl. 6.3.3'
+      : 'k₃ computed by the engineer per Annex C for this topography = ' + fx(k3, 2),
+    result: 'k₃ = ' + fx(k3, 2),
+    why: S.slope === 'le3'
+      ? 'Level ground. Most of the Rajkot–Morbi–Jamnagar plain qualifies, but confirm there is no local bund, embankment or ridge upwind of this particular roof.'
+      : 'Value supplied by the engineer from Annex C — this tool does not compute k₃ for sloping ground, since it depends on the hill geometry and the position of the site on it.'
+  });
+  if (S.slope === 'gt3')
+    assume('check', 'k₃ = ' + fx(k3, 2) + ' was supplied by the engineer from Annex C, not computed here. Re-derive it against the actual hill height, upwind slope and the site’s position on the feature.', CODE + ', Annex C');
+
+  /* k4 */
+  const k4 = r1.coastal ? +S.k4cls : 1.00;
+  h += step({
+    lbl: 'k₄ — importance factor for the cyclonic region',
+    formula: 'k₄ per Cl. 6.3.4, applied only within ~' + COAST_KM + ' km of the coast',
+    ref: CODE + ', Cl. 6.3.4',
+    inputs: 'Distance from coast = ' + fx(S.distCoast, 0) + ' km' + (r1.coastal ? ' &nbsp;·&nbsp; class: ' + K4_OPTS[S.k4cls] : ''),
+    work: r1.coastal
+      ? 'Site is inside the ' + COAST_KM + ' km cyclonic belt.\nClass selected: ' + K4_OPTS[S.k4cls] + '\nk₄ = ' + fx(k4, 2)
+      : 'Site is ' + fx(S.distCoast, 0) + ' km from the coast, outside the ~' + COAST_KM + ' km belt.\nk₄ = 1.00',
+    result: 'k₄ = ' + fx(k4, 2),
+    why: r1.coastal
+      ? 'Cl. 6.3.4 names the Gujarat coast explicitly. The class above is a judgment call about the building this plant sits on — check it against the occupancy.'
+      : 'Outside the belt the clause does not apply.'
+  });
+  if (r1.coastal)
+    assume('check', 'k₄ = ' + fx(k4, 2) + ' — “' + K4_OPTS[S.k4cls] + '” selected for this building. A rooftop plant on an industrial shed and one on a hospital do not take the same factor.', CODE + ', Cl. 6.3.4');
+
+  /* Vz */
+  const vz = vb * k1 * k2 * k3 * k4;
+  h += step({
+    cls: 'dn',
+    lbl: 'Design wind speed V<sub>z</sub>',
+    formula: 'V<sub>z</sub> = V<sub>b</sub> × k₁ × k₂ × k₃ × k₄',
+    ref: CODE + ', Cl. 6.3',
+    inputs: 'V<sub>b</sub> = ' + fx(vb, 0) + ' m/s, k₁ = ' + fx(k1, 2) + ', k₂ = ' + fx(k2, 3) + ', k₃ = ' + fx(k3, 2) + ', k₄ = ' + fx(k4, 2),
+    work: 'V_z = ' + fx(vb, 0) + ' × ' + fx(k1, 2) + ' × ' + fx(k2, 3) + ' × ' + fx(k3, 2) + ' × ' + fx(k4, 2) + '\n' +
+          '    = ' + fx(vz, 3) + ' m/s',
+    result: 'V<sub>z</sub> = ' + fx(vz, 2) + ' m/s',
+    alt: 'at z = ' + fx(z, 2) + ' m above ground'
+  });
+  return { ok: true, vz, z, k1, k2, k3, k4, html: mod(2, 'Design wind speed V<sub>z</sub>', h) };
+}
+
+/* =============================================================================
+   MODULE 3 — DESIGN WIND PRESSURE
+   ========================================================================== */
+function m3(r2, r1) {
+  if (!r2.ok) return { ok: false, html: mod(3, 'Design wind pressure', stopBlock(
+    'depends on Module 2', [{ t: 'Module 2 has not completed', why: 'design wind speed is not yet established' }])) };
+
+  const vz = r2.vz, pz = 0.6 * vz * vz;
+  let h = step({
+    lbl: 'Wind pressure at height z',
+    formula: 'p<sub>z</sub> = 0.6 × V<sub>z</sub>²  &nbsp;(p<sub>z</sub> in N/m², V<sub>z</sub> in m/s)',
+    ref: CODE + ', Cl. 7.2',
+    inputs: 'V<sub>z</sub> = ' + fx(vz, 2) + ' m/s',
+    work: 'p_z = 0.6 × (' + fx(vz, 2) + ')²\n' +
+          '    = 0.6 × ' + fx(vz * vz, 2) + '\n' +
+          '    = ' + fx(pz, 1) + ' N/m²',
+    result: 'p<sub>z</sub> = ' + fx(pz, 1) + ' N/m²',
+    alt: '= ' + fx(pz / 1000, 3) + ' kN/m² = ' + fx(pz / G, 1) + ' kgf/m²',
+    why: 'The 0.6 coefficient already carries the standard air density assumed by the code for Indian conditions.'
+  });
+
+  /* Kd */
+  let kd = +S.kd, kdWhy;
+  if (r1.coastal && kd !== 1.00) {
+    kd = 1.00;
+    kdWhy = 'Forced to 1.00 because the site is inside the cyclonic belt — cyclonic winds are not directionally reliable, so the directionality reduction is not taken.';
+    assume('check', 'K<sub>d</sub> forced to 1.00 for the cyclonic region rather than the 0.90 selected. Verify against Cl. 7.2.1 for this structure type.', CODE + ', Cl. 7.2.1');
+  } else {
+    kdWhy = kd === 1.00
+      ? 'Held at 1.00 — the conservative choice, no directionality reduction taken.'
+      : 'Engineer selected 0.90 for a general building/lattice frame per Cl. 7.2.1.';
+    if (kd !== 1.00) assume('check', 'K<sub>d</sub> = 0.90 reduces every wind load by 10%. Confirm the structure qualifies under Cl. 7.2.1 and that the site is genuinely outside the cyclonic belt.', CODE + ', Cl. 7.2.1');
+  }
+
+  /* Ka */
+  const g = geom();
+  let ka = 1.00, kaWork = 'K_a = 1.00 (area averaging not taken)', kaWhy =
+    'Conservative default. K<sub>a</sub> only ever reduces the load, so it is left at unity unless the tributary area is deliberately invoked.';
+  if (S.kaMode === 'table') {
+    if (!g.ok) return { ok: false, html: mod(3, 'Design wind pressure', stopBlock(
+      'K<sub>a</sub> from Table 4 needs the array geometry',
+      g.miss.map(k => ({ t: nlabel(k), why: 'tributary area cannot be found without it' })),
+      'Either complete the array geometry, or set K<sub>a</sub> back to the conservative 1.00.')) };
+    const ipa = interp(g.aTrib, KA_A, KA_V);
+    ka = ipa.v;
+    kaWork = 'Tributary area per support = ' + fx(g.aTrib, 3) + ' m²\n' +
+      (ipa.clamped === 'low' ? 'Below 10 m² → K_a = 1.00 from Table 4'
+       : ipa.clamped === 'high' ? 'At or above 100 m² → K_a = 0.80 from Table 4'
+       : 'Interpolating Table 4 between ' + KA_A[ipa.lo] + ' m² (' + fx(KA_V[ipa.lo], 2) + ') and ' + KA_A[ipa.hi] + ' m² (' + fx(KA_V[ipa.hi], 2) + '):\n' +
+         'K_a = ' + fx(KA_V[ipa.lo], 2) + ' + (' + fx(KA_V[ipa.hi], 2) + ' − ' + fx(KA_V[ipa.lo], 2) + ') × ' + fx(ipa.t, 3) + ' = ' + fx(ka, 3));
+    kaWhy = 'Taken from Table 4 on the tributary area of a single support. This reduces the load — satisfy yourself the averaging is appropriate for the member being designed.';
+    assume('check', 'K<sub>a</sub> = ' + fx(ka, 3) + ' taken from Table 4 on a tributary area of ' + fx(g.aTrib, 3) + ' m². Area averaging reduces the design load; confirm it is valid for the element you are checking.', CODE + ', Cl. 7.2.2, Table 4');
+  }
+
+  const kc = +S.kc;
+  if (kc !== 1.00) assume('check', 'K<sub>c</sub> = ' + fx(kc, 2) + ' combination reduction applied. Confirm the combination case in Cl. 7.3.3.13 genuinely applies.', CODE + ', Cl. 7.3.3.13');
+
+  const pd = kd * ka * kc * pz;
+  h += step({
+    cls: 'dn',
+    lbl: 'Design wind pressure p<sub>d</sub>',
+    formula: 'p<sub>d</sub> = K<sub>d</sub> × K<sub>a</sub> × K<sub>c</sub> × p<sub>z</sub>',
+    ref: CODE + ', Cl. 7.2 (with Cl. 7.2.1, 7.2.2 and 7.3.3.13)',
+    inputs: 'K<sub>d</sub> = ' + fx(kd, 2) + ', K<sub>a</sub> = ' + fx(ka, 3) + ', K<sub>c</sub> = ' + fx(kc, 2) + ', p<sub>z</sub> = ' + fx(pz, 1) + ' N/m²',
+    work: kaWork + '\n\np_d = ' + fx(kd, 2) + ' × ' + fx(ka, 3) + ' × ' + fx(kc, 2) + ' × ' + fx(pz, 1) + '\n' +
+          '    = ' + fx(pd, 1) + ' N/m²',
+    result: 'p<sub>d</sub> = ' + fx(pd, 1) + ' N/m²',
+    alt: '= ' + fx(pd / 1000, 3) + ' kN/m² = ' + fx(pd / G, 1) + ' kgf/m²',
+    why: kdWhy + ' ' + kaWhy
+  });
+  h += flag('info', 'The 2015 revision of IS 875 (Part 3) introduced K<sub>d</sub>, K<sub>a</sub> and K<sub>c</sub>; the 1987 edition stopped at p<sub>z</sub> = 0.6 V<sub>z</sub>². Both p<sub>z</sub> and p<sub>d</sub> are shown above so the step is visible for review.');
+  return { ok: true, pz, pd, kd, ka, kc, html: mod(3, 'Design wind pressure', h) };
+}
+
+/* =============================================================================
+   MODULE 4 — NET PRESSURE ON THE PANEL
+   Sign convention used throughout, stated on the sheet:
+     +ve Cp / pressure  = acting TOWARDS the upper surface (downforce onto panel)
+     −ve Cp / pressure  = acting AWAY from the upper surface (uplift)
+   ========================================================================== */
+function m4(r3) {
+  if (!r3.ok) return { ok: false, html: mod(4, 'Net pressure on panel &mdash; uplift and downforce', stopBlock(
+    'depends on Module 3', [{ t: 'Module 3 has not completed', why: 'design wind pressure is not yet established' }])) };
+
+  const req = ['cpModel', 'cpRef', 'tilt'].concat(
+    S.cpModel === 'free' ? ['cpUpTop', 'cpUpBot', 'cpDnTop', 'cpDnBot'] :
+    S.cpModel === 'clad' ? ['cpeUp', 'cpiUp', 'cpeDn', 'cpiDn'] : []);
+  const miss = need(req);
+  if (miss.length) return { ok: false, html: mod(4, 'Net pressure on panel &mdash; uplift and downforce', stopBlock(
+    'pressure coefficients not supplied', miss.map(k => ({ t: nlabel(k), why: ({
+      cpModel: 'free roof and clad roof are different tables with different sign conventions',
+      cpRef: 'the sheet must cite the table, tilt and wind direction the coefficients came from',
+      tilt: 'Cp is a function of the tilt angle'
+    })[k] || 'read from ' + CODE + ' for this tilt and wind direction' })),
+    'Cp values are the one input this tool will not supply. Their sign and magnitude depend on tilt, wind direction, blockage under the array and where the panel sits in the array — reading them off the table is an engineering judgment, not a lookup.')) };
+
+  const free = S.cpModel === 'free';
+  const cases = [
+    { key: 'up', name: 'UPLIFT case', cls: 'up',
+      top: free ? +S.cpUpTop : +S.cpeUp, bot: free ? +S.cpUpBot : +S.cpiUp },
+    { key: 'dn', name: 'DOWNFORCE case', cls: 'dn',
+      top: free ? +S.cpDnTop : +S.cpeDn, bot: free ? +S.cpDnBot : +S.cpiDn }
+  ];
+  const tilt = +S.tilt, cos = Math.cos(tilt * Math.PI / 180), sin = Math.sin(tilt * Math.PI / 180);
+
+  let h = flag('info', '<b>Sign convention on this sheet:</b> pressure acting <b>towards</b> the upper face of the panel is positive (downforce); acting <b>away</b> from it is negative (uplift). Enter the coefficients in the same convention as the table you read them from.');
+  h += '<div class="scrollx"><table class="t"><thead><tr><th>Case</th>' +
+       (free ? '<th class="n">C<sub>p,top</sub></th><th class="n">C<sub>p,bottom</sub></th>'
+             : '<th class="n">C<sub>pe</sub></th><th class="n">C<sub>pi</sub></th>') +
+       '<th class="n">Net C<sub>p</sub></th><th class="n">p<sub>net</sub> (N/m²)</th><th>Acting</th></tr></thead><tbody>';
+
+  const out = {};
+  cases.forEach(c => {
+    const net = c.top - c.bot, p = net * r3.pd;
+    out[c.key] = { net, p, top: c.top, bot: c.bot };
+    h += '<tr' + (Math.abs(p) > 0 ? ' class="hi"' : '') + '><td><b>' + c.name + '</b></td>' +
+         '<td class="n">' + fx(c.top, 2) + '</td><td class="n">' + fx(c.bot, 2) + '</td>' +
+         '<td class="n">' + fx(net, 2) + '</td><td class="n">' + fx(p, 1) + '</td>' +
+         '<td>' + (p < 0 ? 'uplift, away from panel' : p > 0 ? 'downforce, onto panel' : 'zero') + '</td></tr>';
+  });
+  h += '</tbody></table></div>';
+
+  cases.forEach(c => {
+    const o = out[c.key];
+    h += step({
+      cls: c.cls,
+      lbl: c.name + ' — net pressure normal to the panel',
+      formula: free
+        ? 'C<sub>p,net</sub> = C<sub>p,top</sub> − C<sub>p,bottom</sub> &nbsp;;&nbsp; p<sub>net</sub> = C<sub>p,net</sub> × p<sub>d</sub>'
+        : 'C<sub>p,net</sub> = C<sub>pe</sub> − C<sub>pi</sub> &nbsp;;&nbsp; p<sub>net</sub> = C<sub>p,net</sub> × p<sub>d</sub>',
+      ref: CODE + ' — ' + esc(S.cpRef) + (free ? ' (free roof, Cl. 7.3.3)' : ' (Cl. 7.3.3.14, F = (C<sub>pe</sub> − C<sub>pi</sub>)·A·p<sub>d</sub>)'),
+      inputs: (free ? 'C<sub>p,top</sub> = ' + fx(o.top, 2) + ', C<sub>p,bottom</sub> = ' + fx(o.bot, 2)
+                    : 'C<sub>pe</sub> = ' + fx(o.top, 2) + ', C<sub>pi</sub> = ' + fx(o.bot, 2)) +
+              ' &nbsp;·&nbsp; p<sub>d</sub> = ' + fx(r3.pd, 1) + ' N/m² &nbsp;·&nbsp; tilt α = ' + fx(tilt, 1) + '°',
+      work: 'C_p,net = ' + fx(o.top, 2) + ' − (' + fx(o.bot, 2) + ') = ' + fx(o.net, 2) + '\n' +
+            'p_net   = ' + fx(o.net, 2) + ' × ' + fx(r3.pd, 1) + ' = ' + fx(o.p, 1) + ' N/m²\n\n' +
+            'Resolved about the panel plane (α = ' + fx(tilt, 1) + '°):\n' +
+            '  vertical component   = ' + fx(o.p, 1) + ' × cos ' + fx(tilt, 1) + '° = ' + fx(o.p * cos, 1) + ' N/m²\n' +
+            '  horizontal component = ' + fx(o.p, 1) + ' × sin ' + fx(tilt, 1) + '° = ' + fx(o.p * sin, 1) + ' N/m²',
+      result: 'p<sub>net</sub> = ' + fx(o.p, 1) + ' N/m²',
+      alt: '= ' + fx(Math.abs(o.p) / G, 1) + ' kgf/m² ' + (o.p < 0 ? 'uplift' : 'downforce'),
+      why: 'Coefficients read by the engineer from ' + esc(S.cpRef) + '. Force acts normal to the panel surface; the components above are what reach the legs.'
+    });
+  });
+
+  if (out.up.p >= 0) h += flag('crit', '<b>Check the uplift inputs.</b> The uplift case has come out as ' + fx(out.up.p, 1) + ' N/m², which is not an uplift. Either the coefficients are swapped, or the sign convention used on the table differs from the one on this sheet.');
+  if (out.dn.p <= 0) h += flag('crit', '<b>Check the downforce inputs.</b> The downforce case has come out as ' + fx(out.dn.p, 1) + ' N/m², which is not a downforce.');
+
+  assume('check', 'C<sub>p</sub> values taken from “' + esc(S.cpRef) + '” for α = ' + fx(tilt, 1) + '°. Confirm the tilt, wind direction and the array’s position (edge, corner or interior bay) match the case read — edge and corner bays are consistently worse than interior ones.', CODE + ', Cl. 7.3.3');
+  assume('check', 'Pressure coefficients are applied to the full panel surface area, normal to the panel. Confirm the table you used is referenced to the inclined surface area and not to the plan projection.', CODE + ', Cl. 7.3.3');
+  assume('info', 'Local pressure concentrations at array edges and corners have not been applied separately. Where the code gives local coefficients for edge zones, the perimeter fixings should be re-checked against those.', CODE + ', Cl. 7.3.3');
+
+  return { ok: true, up: out.up, dn: out.dn, cos, sin, tilt, html: mod(4, 'Net pressure on panel &mdash; uplift and downforce', h) };
+}
+
+/* =============================================================================
+   MODULE 5 — LOAD PER SUPPORT, AND THE LOAD PATH
+   ========================================================================== */
+function m5(r4) {
+  if (!r4.ok) return { ok: false, html: mod(5, 'Load per support point &amp; load path', stopBlock(
+    'depends on Module 4', [{ t: 'Module 4 has not completed', why: 'net panel pressure is not yet established' }])) };
+  const g = geom();
+  if (!g.ok) return { ok: false, html: mod(5, 'Load per support point &amp; load path', stopBlock(
+    'array geometry not established', g.miss.map(k => ({ t: nlabel(k), why: ({
+      structWt: 'self-weight of the table is what resists uplift — there is no safe default for it',
+      legsPerTab: 'the tributary area per support cannot be found without it',
+      panPerTab: 'defines one independent structural unit'
+    })[k] || 'needed for the tributary area' })))) };
+
+  const upP = r4.up.p, dnP = r4.dn.p;
+  let h = step({
+    lbl: 'Array geometry and tributary area',
+    formula: 'A<sub>panel</sub> = L × W &nbsp;;&nbsp; A<sub>table</sub> = n<sub>panels/table</sub> × A<sub>panel</sub> &nbsp;;&nbsp; A<sub>trib</sub> = A<sub>table</sub> ÷ n<sub>legs/table</sub>',
+    ref: 'Geometry — tributary area method',
+    inputs: 'Panel ' + fx(S.pL, 0) + ' × ' + fx(S.pW, 0) + ' mm &nbsp;·&nbsp; ' + S.panPerTab + ' panels per table on ' + S.legsPerTab + ' legs &nbsp;·&nbsp; ' + S.nPan + ' panels total',
+    work: 'A_panel = ' + fx(+S.pL / 1000, 3) + ' × ' + fx(+S.pW / 1000, 3) + ' = ' + fx(g.aPan, 3) + ' m²\n' +
+          'A_table = ' + S.panPerTab + ' × ' + fx(g.aPan, 3) + ' = ' + fx(g.aTab, 3) + ' m²\n' +
+          'A_trib  = ' + fx(g.aTab, 3) + ' ÷ ' + S.legsPerTab + ' = ' + fx(g.aTrib, 3) + ' m² per leg\n' +
+          'Tables  = ceil(' + S.nPan + ' ÷ ' + S.panPerTab + ') = ' + g.nTab + '\n' +
+          'A_total = ' + S.nPan + ' × ' + fx(g.aPan, 3) + ' = ' + fx(g.aTotal, 2) + ' m² (plan projection ' + fx(g.plan, 2) + ' m²)',
+    result: 'A<sub>trib</sub> = ' + fx(g.aTrib, 3) + ' m² per support',
+    why: 'Load is shared equally between legs. That is only true for a regular table — if the frame is irregular, or an end leg picks up more than its share, factor the end reactions up by hand.'
+  });
+  assume('check', 'Wind and dead load are distributed equally over ' + S.legsPerTab + ' legs per table. For a continuous beam over unequal spans the end legs commonly carry more; check the real frame analysis before finalising foundation sizes.', 'Engineering judgment');
+
+  const dlLeg = g.dlLeg;
+  h += step({
+    lbl: 'Dead load per support',
+    formula: 'DL<sub>leg</sub> = (n<sub>panels/table</sub> × W<sub>panel</sub> + W<sub>structure/table</sub>) × g ÷ n<sub>legs</sub>',
+    ref: 'IS 875 (Part 1) : 1987 — dead loads',
+    inputs: S.panPerTab + ' panels × ' + fx(S.pWt, 1) + ' kg + ' + fx(S.structWt, 1) + ' kg steel, over ' + S.legsPerTab + ' legs',
+    work: 'W_table = ' + S.panPerTab + ' × ' + fx(S.pWt, 1) + ' + ' + fx(S.structWt, 1) + ' = ' +
+          fx(+S.panPerTab * +S.pWt + +S.structWt, 1) + ' kg\n' +
+          '        = ' + fx(+S.panPerTab * +S.pWt + +S.structWt, 1) + ' × 9.81 ÷ 1000 = ' + fx(g.dlTable, 3) + ' kN\n' +
+          'DL_leg  = ' + fx(g.dlTable, 3) + ' ÷ ' + S.legsPerTab + ' = ' + fx(dlLeg, 3) + ' kN',
+    result: 'DL<sub>leg</sub> = ' + fx(dlLeg, 3) + ' kN',
+    alt: '= ' + fx(dlLeg * 1000 / G, 1) + ' kgf per leg',
+    why: 'Dead load is the only thing holding the array down in the uplift case, so the steel weight must come from the real fabrication BOQ, not an estimate.'
+  });
+
+  const mk = (p, label, cls) => {
+    const F = p * g.aTrib / 1000;                       // kN normal to panel
+    return { F, v: F * r4.cos, hz: F * r4.sin, p, label, cls };
+  };
+  const W = { up: mk(upP), dn: mk(dnP) };
+  [['up', 'UPLIFT', 'up'], ['dn', 'DOWNFORCE', 'dn']].forEach(([k, nm, cls]) => {
+    const w = W[k];
+    h += step({
+      cls,
+      lbl: nm + ' — wind force per support',
+      formula: 'F<sub>w</sub> = p<sub>net</sub> × A<sub>trib</sub> &nbsp;(normal to panel), then resolved vertically and horizontally',
+      ref: CODE + ', Cl. 7.3.3.14',
+      inputs: 'p<sub>net</sub> = ' + fx(w.p, 1) + ' N/m² &nbsp;·&nbsp; A<sub>trib</sub> = ' + fx(g.aTrib, 3) + ' m² &nbsp;·&nbsp; α = ' + fx(r4.tilt, 1) + '°',
+      work: 'F_w = ' + fx(w.p, 1) + ' × ' + fx(g.aTrib, 3) + ' ÷ 1000 = ' + fx(w.F, 3) + ' kN normal to panel\n' +
+            'F_v = ' + fx(w.F, 3) + ' × cos ' + fx(r4.tilt, 1) + '° = ' + fx(w.v, 3) + ' kN vertical\n' +
+            'F_h = ' + fx(w.F, 3) + ' × sin ' + fx(r4.tilt, 1) + '° = ' + fx(w.hz, 3) + ' kN horizontal',
+      result: 'F<sub>v</sub> = ' + fx(w.v, 3) + ' kN, F<sub>h</sub> = ' + fx(Math.abs(w.hz), 3) + ' kN',
+      alt: 'per support leg'
+    });
+  });
+
+  /* load combinations */
+  const wsUp   = 0.9 * dlLeg + W.up.v;                     // uplift positive-up if negative result
+  const wsDn   = dlLeg + W.dn.v;
+  const lsUp   = 0.9 * dlLeg + 1.5 * W.up.v;
+  const lsDn   = 1.5 * (dlLeg + W.dn.v);
+  const netUp  = Math.max(0, -wsUp);
+  const netUpL = Math.max(0, -lsUp);
+  h += '<div class="scrollx"><table class="t"><thead><tr><th>Load combination</th><th>Basis</th><th class="n">Vertical at leg (kN)</th><th>Effect</th></tr></thead><tbody>' +
+    '<tr><td>DL + WL<sub>down</sub></td><td>Working / allowable stress</td><td class="n">' + fx(wsDn, 3) + '</td><td>compression into support</td></tr>' +
+    '<tr class="hi"><td>0.9 DL + WL<sub>up</sub></td><td>Working / allowable stress</td><td class="n">' + fx(wsUp, 3) + '</td><td>' + (wsUp < 0 ? '<b>net uplift ' + fx(netUp, 3) + ' kN</b>' : 'no net uplift') + '</td></tr>' +
+    '<tr><td>1.5 (DL + WL<sub>down</sub>)</td><td>Limit state, IS 800 : 2007 Table 4</td><td class="n">' + fx(lsDn, 3) + '</td><td>factored compression</td></tr>' +
+    '<tr class="hi"><td>0.9 DL + 1.5 WL<sub>up</sub></td><td>Limit state, IS 800 : 2007 Table 4</td><td class="n">' + fx(lsUp, 3) + '</td><td>' + (lsUp < 0 ? '<b>factored uplift ' + fx(netUpL, 3) + ' kN</b>' : 'no net uplift') + '</td></tr>' +
+    '</tbody></table></div>';
+  h += step({
+    lbl: 'Governing reactions at one support',
+    formula: 'Downward: DL + WL<sub>down</sub> &nbsp;;&nbsp; Uplift: 0.9 DL + WL<sub>up</sub> (dead load factored down to 0.9)',
+    ref: 'IS 800 : 2007, Cl. 5.3 and Table 4 (load combinations); IS 875 (Part 5) : 1987',
+    inputs: 'DL<sub>leg</sub> = ' + fx(dlLeg, 3) + ' kN, WL<sub>up,v</sub> = ' + fx(W.up.v, 3) + ' kN, WL<sub>down,v</sub> = ' + fx(W.dn.v, 3) + ' kN',
+    work: 'Downward (working) = ' + fx(dlLeg, 3) + ' + ' + fx(W.dn.v, 3) + ' = ' + fx(wsDn, 3) + ' kN\n' +
+          'Uplift  (working)  = 0.9 × ' + fx(dlLeg, 3) + ' + (' + fx(W.up.v, 3) + ') = ' + fx(wsUp, 3) + ' kN' +
+          (wsUp < 0 ? '  → net uplift of ' + fx(netUp, 3) + ' kN' : '  → no net uplift') + '\n' +
+          'Horizontal (either case) = ' + fx(Math.max(Math.abs(W.up.hz), Math.abs(W.dn.hz)), 3) + ' kN',
+    result: 'Down ' + fx(wsDn, 3) + ' kN &nbsp;|&nbsp; Uplift ' + fx(netUp, 3) + ' kN &nbsp;|&nbsp; Horizontal ' + fx(Math.max(Math.abs(W.up.hz), Math.abs(W.dn.hz)), 3) + ' kN',
+    alt: 'working (allowable stress) values, per leg',
+    why: 'Dead load is reduced to 0.9 in the uplift case because overestimating it would hide an uplift problem.'
+  });
+  if (netUp > 0) h += flag('warn', '<b>Net uplift of ' + fx(netUp, 3) + ' kN per leg</b> (' + fx(netUpL, 3) + ' kN factored). Self-weight alone does not hold this array down — the fixing, ballast or foundation has to take tension. Uplift, not downforce, will govern the fixing design.');
+  else h += flag('good', 'No net uplift at working loads — dead load exceeds the wind uplift at every leg. Still check the factored case and the individual fixings.');
+
+  /* load path */
+  h += '<h4 style="font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin:18px 0 6px">Load path — panel to foundation</h4>';
+  h += '<ol class="path">' +
+    '<li><b>Panel laminate and frame</b> — wind pressure over ' + fx(g.aPan, 3) + ' m² per panel <span class="q">p<sub>net</sub> = ' + fx(upP, 1) + ' / ' + fx(dnP, 1) + ' N/m²</span></li>' +
+    '<li><b>Module clamps</b> at the frame — the tension path starts here; clamp pull-out is the most common rooftop failure <span class="q">check against clamp manufacturer allowable</span></li>' +
+    '<li><b>Purlin / rail</b> spanning between rafters — carries ' + fx(g.aTrib, 3) + ' m² tributary <span class="q">bending + uplift</span></li>' +
+    '<li><b>Rafter / table frame</b> — collects the purlin reactions into the legs</li>' +
+    '<li><b>Support leg</b> (' + S.legsPerTab + ' per table) <span class="q">' + fx(wsDn, 3) + ' kN down, ' + fx(netUp, 3) + ' kN up, ' + fx(Math.max(Math.abs(W.up.hz), Math.abs(W.dn.hz)), 3) + ' kN horizontal</span></li>' +
+    '<li><b>Base plate and anchor / holding-down bolts</b> — tension and shear transfer <span class="q">governed by the uplift case</span></li>' +
+    (S.mount === 'Rooftop'
+      ? '<li><b>Roof slab or purlin of the host building</b> — bearing, anchor pull-out and slab punching <span class="q">verify against the building’s own structural drawings</span></li>'
+      : '<li><b>Pedestal and footing</b> — bearing, uplift and overturning <span class="q">Module 6</span></li>' +
+        '<li><b>Founding soil</b> <span class="q">SBC from the geotechnical report</span></li>') +
+    '</ol>';
+
+  return { ok: true, g, dlLeg, W, wsDn, wsUp, lsDn, lsUp, netUp, netUpL,
+           hz: Math.max(Math.abs(W.up.hz), Math.abs(W.dn.hz)),
+           html: mod(5, 'Load per support point &amp; load path', h) };
+}
+
+/* =============================================================================
+   MODULE 6 — FOUNDATION / FIXING CHECK
+   ========================================================================== */
+function m6(r5) {
+  const T = 'Foundation / fixing check';
+  if (!r5.ok) return { html: mod(6, T, stopBlock('depends on Module 5',
+    [{ t: 'Module 5 has not completed', why: 'support reactions are not yet established' }])) };
+  if (!filled('mount')) return { html: mod(6, T, stopBlock('mounting type not selected',
+    [{ t: 'Mounting type', why: 'a roof fixing and a soil footing are entirely different checks' }])) };
+
+  const down = r5.wsDn, up = r5.netUp, hz = r5.hz;
+
+  /* ---------------- GROUND MOUNT ---------------- */
+  if (S.mount === 'Ground-mount') {
+    const miss = need(['soilRpt']);
+    if (miss.length) return { html: mod(6, T, stopBlock('bearing capacity not established',
+      [{ t: 'Geotechnical report status', why: 'there is no acceptable default safe bearing capacity — it must come from a site soil test' }],
+      'Soil is the one value this tool will never invent. Presumed bearing values from a code table are for preliminary sizing only and are not a substitute for a borehole at this plot.')) };
+
+    const ph = S.soilRpt === 'no';
+    const m2s = need(['sbc', 'ftgD', 'soilDen']);
+    if (m2s.length) return { html: mod(6, T, stopBlock('foundation inputs incomplete',
+      m2s.map(k => ({ t: nlabel(k), why: ({
+        sbc: 'required to size the footing for bearing',
+        ftgD: 'sets the overburden available to resist uplift',
+        soilDen: 'from the same soil report — used for the overburden weight'
+      })[k] })))) };
+
+    const sbc = +S.sbc, D = +S.ftgD, gs = +S.soilDen, fos = +S.fosUp || 1.5;
+    let h = '';
+    if (ph) {
+      h += '<div class="phbanner"><b>PLACEHOLDER SOIL VALUE — NOT VALID FOR CONSTRUCTION</b>' +
+           '<span>No geotechnical report has been provided. SBC = ' + fx(sbc, 0) + ' kN/m² has been used only to show the shape of the calculation. Every number in this module is provisional until a borehole is done at this plot.</span></div>';
+      assume('ph', 'Safe bearing capacity of ' + fx(sbc, 0) + ' kN/m² is a PLACEHOLDER — no soil test report exists for this site. Footing sizes below cannot be built to.', 'No geotechnical investigation on record');
+      assume('ph', 'Bulk soil density of ' + fx(gs, 1) + ' kN/m³ is likewise unverified and affects the uplift resistance directly.', 'No geotechnical investigation on record');
+    } else {
+      assume('check', 'SBC = ' + fx(sbc, 0) + ' kN/m² taken from: ' + esc(S.sbcRef || '(reference not entered)') + '. Confirm the borehole is representative of this footing location and that the depth matches.', 'Geotechnical report');
+    }
+
+    const aReq = down / sbc, bBear = Math.sqrt(aReq);
+    h += step({
+      lbl: 'Bearing check — footing size required',
+      formula: 'A<sub>req</sub> = P<sub>down</sub> ÷ SBC &nbsp;;&nbsp; B = √A<sub>req</sub> for a square pad',
+      ref: 'IS 1904 : 1986 (foundations, general); SBC from site-specific geotechnical report',
+      inputs: 'P<sub>down</sub> = ' + fx(down, 3) + ' kN per leg &nbsp;·&nbsp; SBC = ' + fx(sbc, 0) + ' kN/m²' + (ph ? ' <b>(PLACEHOLDER)</b>' : ''),
+      work: 'A_req = ' + fx(down, 3) + ' ÷ ' + fx(sbc, 0) + ' = ' + fx(aReq, 4) + ' m²\n' +
+            'B     = √' + fx(aReq, 4) + ' = ' + fx(bBear, 3) + ' m',
+      result: 'B ≥ ' + fx(bBear, 3) + ' m square for bearing',
+      alt: '≈ ' + fx(Math.ceil(bBear * 20) / 20 * 1000, 0) + ' mm rounded up to the next 50 mm',
+      why: 'Axial bearing only. Any moment at the base from the horizontal load will push the edge pressure above the average and needs a separate eccentricity check.'
+    });
+
+    let bGov = bBear, upNote = '';
+    if (up > 0) {
+      const wR = b => b * b * D * gs;
+      const fosAt = wR(bBear) / up;
+      const bUp = Math.sqrt(fos * up / (D * gs));
+      bGov = Math.max(bBear, bUp);
+      h += step({
+        cls: 'up',
+        lbl: 'Uplift check — resistance from footing and overburden',
+        formula: 'W<sub>resist</sub> = B² × D × γ<sub>soil</sub> &nbsp;;&nbsp; FoS = W<sub>resist</sub> ÷ T<sub>uplift</sub> ≥ ' + fx(fos, 1),
+        ref: 'IS 1904 : 1986; IS 456 : 2000, Cl. 20 (stability). FoS is a project decision, not a code default.',
+        inputs: 'T<sub>uplift</sub> = ' + fx(up, 3) + ' kN &nbsp;·&nbsp; D = ' + fx(D, 2) + ' m &nbsp;·&nbsp; γ<sub>soil</sub> = ' + fx(gs, 1) + ' kN/m³',
+        work: 'At the bearing-governed size B = ' + fx(bBear, 3) + ' m:\n' +
+              '  W_resist = ' + fx(bBear, 3) + '² × ' + fx(D, 2) + ' × ' + fx(gs, 1) + ' = ' + fx(wR(bBear), 3) + ' kN\n' +
+              '  FoS      = ' + fx(wR(bBear), 3) + ' ÷ ' + fx(up, 3) + ' = ' + fx(fosAt, 2) +
+              (fosAt >= fos ? '  ≥ ' + fx(fos, 1) + '  OK' : '  < ' + fx(fos, 1) + '  NOT ADEQUATE') + '\n\n' +
+              'Size required for uplift:\n' +
+              '  B_uplift = √( ' + fx(fos, 1) + ' × ' + fx(up, 3) + ' ÷ (' + fx(D, 2) + ' × ' + fx(gs, 1) + ') ) = ' + fx(bUp, 3) + ' m',
+        result: (fosAt >= fos ? 'Adequate — FoS = ' + fx(fosAt, 2) : 'Governed by uplift — B ≥ ' + fx(bUp, 3) + ' m'),
+        why: 'The whole block B × B × D is taken at soil density, not concrete density. Concrete is heavier, so this understates the resistance — deliberately conservative. Refine it once the real pedestal and pad geometry are fixed.'
+      });
+      assume('check', 'Uplift resistance modelled as a single block B × B × D at soil bulk density, ignoring the heavier concrete pedestal and any shear on the failure surface. Conservative, but re-run it against the real footing detail.', 'Simplification made by this tool');
+      assume('check', 'Factor of safety against uplift taken as ' + fx(fos, 1) + '. This is a project/engineering decision — confirm it against your own practice and any client specification.', 'Not a code-mandated value');
+      upNote = ' and ' + fx(bUp, 3) + ' m for uplift';
+    }
+
+    h += step({
+      cls: 'dn',
+      lbl: 'Governing footing size',
+      formula: 'B<sub>governing</sub> = max(B<sub>bearing</sub>, B<sub>uplift</sub>)',
+      ref: 'Governing of the two checks above',
+      inputs: 'B<sub>bearing</sub> = ' + fx(bBear, 3) + ' m' + upNote,
+      work: 'B_governing = ' + fx(bGov, 3) + ' m  →  adopt ' + fx(Math.ceil(bGov * 20) / 20, 2) + ' m × ' + fx(Math.ceil(bGov * 20) / 20, 2) + ' m × ' + fx(D, 2) + ' m deep',
+      result: 'Adopt ' + fx(Math.ceil(bGov * 20) / 20, 2) + ' m × ' + fx(Math.ceil(bGov * 20) / 20, 2) + ' m, ' + fx(D, 2) + ' m deep',
+      alt: 'subject to the checks below still outstanding'
+    });
+
+    h += flag('warn', '<b>Not checked by this tool — you must complete these:</b><ul style="margin:6px 0 0 16px">' +
+      '<li><b>Sliding</b> — horizontal load ' + fx(hz, 3) + ' kN per leg. Needs the soil–concrete friction coefficient and any passive resistance you are willing to count.</li>' +
+      '<li><b>Overturning and base eccentricity</b> — needs the moment arm from the panel centroid to the footing base, and the frame geometry.</li>' +
+      '<li><b>Structural design of the footing and pedestal</b> — reinforcement, punching shear, one-way shear to IS 456 : 2000.</li>' +
+      '<li><b>Group and edge effects</b>, differential settlement across the array, and frost/shrinkage depth.</li></ul>');
+    return { html: mod(6, T, h), ph };
+  }
+
+  /* ---------------- ROOFTOP ---------------- */
+  const miss = need(['fixType']);
+  if (miss.length) return { html: mod(6, T, stopBlock('roof fixing method not selected',
+    [{ t: 'Fixing to roof', why: 'anchored and ballasted fixings are checked completely differently' }])) };
+
+  let h = '';
+  if (S.fixType === 'anchored') {
+    if (!filled('anchCap')) return { html: mod(6, T, stopBlock('anchor capacity not supplied',
+      [{ t: 'Allowable tension per anchor point', why: 'must come from the anchor manufacturer’s approval data for the real substrate, embedment and edge distance — a generic catalogue value is not enough' }])) };
+    const cap = +S.anchCap, util = up / cap * 100;
+    h += step({
+      cls: up > 0 ? 'up' : '',
+      lbl: 'Anchor tension check',
+      formula: 'T<sub>anchor</sub> ≤ T<sub>allowable</sub> &nbsp;;&nbsp; utilisation = T ÷ T<sub>allow</sub>',
+      ref: 'Anchor manufacturer’s approval data (ETA / equivalent) for the actual substrate',
+      inputs: 'T<sub>uplift</sub> = ' + fx(up, 3) + ' kN per leg &nbsp;·&nbsp; T<sub>allowable</sub> = ' + fx(cap, 2) + ' kN',
+      work: 'Utilisation = ' + fx(up, 3) + ' ÷ ' + fx(cap, 2) + ' = ' + fx(util / 100, 3) + ' = ' + fx(util, 1) + '%' +
+            (util <= 100 ? '  ≤ 100%  OK' : '  > 100%  NOT ADEQUATE'),
+      result: fx(util, 1) + '% of allowable anchor tension',
+      why: 'Uplift per leg from Module 5. Combined tension and shear must also be checked to the manufacturer’s interaction rule — this tool checks tension alone.'
+    });
+    if (util > 100) h += flag('crit', '<b>Anchor overstressed.</b> Increase the number of fixing points, upgrade the anchor, or reduce the tributary area per leg.');
+    h += flag('warn', 'Also outstanding: combined tension + shear interaction (horizontal ' + fx(hz, 3) + ' kN per leg), edge distance and spacing rules, concrete cone breakout, waterproofing at every penetration, and confirmation that the anchor is embedded in structural concrete rather than screed.');
+    assume('check', 'Anchor allowable tension of ' + fx(cap, 2) + ' kN is as supplied. Confirm it corresponds to the real slab grade, embedment depth, edge distance and to a cracked-concrete assumption.', 'Manufacturer data');
+  } else {
+    const fos = +S.fosUp || 1.5;
+    const need_ = (fos * Math.abs(r5.W.up.v)) / 0.9 - r5.dlLeg;
+    const wb = Math.max(0, need_);
+    h += step({
+      cls: 'up',
+      lbl: 'Ballast required per support (no penetration)',
+      formula: '0.9 × (DL<sub>leg</sub> + W<sub>ballast</sub>) ≥ FoS × |WL<sub>up,v</sub>| &nbsp;→&nbsp; W<sub>ballast</sub> ≥ FoS × |WL<sub>up,v</sub>| ÷ 0.9 − DL<sub>leg</sub>',
+      ref: 'Stability against uplift — IS 456 : 2000, Cl. 20 principle. FoS is a project decision.',
+      inputs: 'DL<sub>leg</sub> = ' + fx(r5.dlLeg, 3) + ' kN &nbsp;·&nbsp; WL<sub>up,v</sub> = ' + fx(r5.W.up.v, 3) + ' kN &nbsp;·&nbsp; FoS = ' + fx(fos, 1),
+      work: 'W_ballast ≥ ' + fx(fos, 1) + ' × ' + fx(Math.abs(r5.W.up.v), 3) + ' ÷ 0.9 − ' + fx(r5.dlLeg, 3) + '\n' +
+            '          = ' + fx(fos * Math.abs(r5.W.up.v) / 0.9, 3) + ' − ' + fx(r5.dlLeg, 3) + ' = ' + fx(need_, 3) + ' kN\n' +
+            (wb > 0 ? '          = ' + fx(wb * 1000 / G, 0) + ' kgf of ballast per leg'
+                    : '          → no additional ballast needed for uplift at this factor of safety'),
+      result: wb > 0 ? fx(wb, 3) + ' kN (' + fx(wb * 1000 / G, 0) + ' kgf) of ballast per leg' : 'No additional ballast required',
+      why: 'Ballast must sit on the structure so that it actually restrains the frame, and the added weight must then be re-checked against the roof slab capacity below.'
+    });
+    h += flag('warn', 'Ballast also has to resist <b>sliding</b> under ' + fx(hz, 3) + ' kN horizontal per leg — friction between the ballast tray and the roof finish is a separate check with its own coefficient, which this tool does not assume.');
+    assume('check', 'Ballast requirement uses FoS = ' + fx(fos, 1) + ' against uplift with dead load factored to 0.9. Confirm the factor against your practice; a ballasted roof array has no second line of defence.', 'Not a code-mandated value');
+  }
+
+  /* roof slab capacity */
+  const g = r5.g;
+  const wTot = (+S.nPan * +S.pWt + g.nTab * +S.structWt) * G / 1000;       // kN
+  const q = wTot / g.plan;
+  if (filled('slabLL')) {
+    const cap = +S.slabLL, u = q / cap * 100;
+    h += step({
+      cls: u <= 100 ? 'dn' : 'up',
+      lbl: 'Distributed load added to the roof slab',
+      formula: 'q<sub>added</sub> = W<sub>total array</sub> ÷ plan area covered, checked against the slab’s spare imposed capacity',
+      ref: 'IS 875 (Part 2) : 1987 — imposed loads; host building’s own structural drawings',
+      inputs: S.nPan + ' panels × ' + fx(S.pWt, 1) + ' kg + ' + g.nTab + ' tables × ' + fx(S.structWt, 1) + ' kg over ' + fx(g.plan, 2) + ' m² plan',
+      work: 'W_total = (' + S.nPan + ' × ' + fx(S.pWt, 1) + ' + ' + g.nTab + ' × ' + fx(S.structWt, 1) + ') × 9.81 ÷ 1000 = ' + fx(wTot, 2) + ' kN\n' +
+            'q_added = ' + fx(wTot, 2) + ' ÷ ' + fx(g.plan, 2) + ' = ' + fx(q, 3) + ' kN/m²\n' +
+            'Utilisation = ' + fx(q, 3) + ' ÷ ' + fx(cap, 2) + ' = ' + fx(u, 1) + '%' + (u <= 100 ? '  OK' : '  EXCEEDS SPARE CAPACITY'),
+      result: fx(q, 3) + ' kN/m² added — ' + fx(u, 1) + '% of the declared spare capacity',
+      why: 'This is the smeared average. The load actually arrives at discrete legs, so the slab must also be checked locally for punching and for the bending it sees at those points.'
+    });
+    if (u > 100) h += flag('crit', '<b>Roof slab spare capacity exceeded on the distributed check alone.</b> Refer back to the building’s structural engineer before proceeding.');
+    assume('check', 'Spare imposed capacity of ' + fx(cap, 2) + ' kN/m² was declared for the slab. Confirm it against the original design drawings, and against anything else already added to that roof since construction.', 'IS 875 (Part 2) : 1987');
+  } else {
+    h += stopBlock('roof slab capacity not checked',
+      [{ t: 'Spare imposed load capacity of the roof slab', why: 'must come from the building’s own structural drawings — an assumed slab capacity is exactly the kind of guess that collapses roofs' }],
+      'The array adds about ' + fx(q, 3) + ' kN/m² smeared over ' + fx(g.plan, 2) + ' m². That figure is shown for information only and has not been checked against anything.');
+    assume('ph', 'Roof slab capacity has NOT been verified. The array adds roughly ' + fx(q, 3) + ' kN/m² distributed, plus concentrated reactions of ' + fx(r5.wsDn, 3) + ' kN at each leg.', 'No structural drawing of the host building on record');
+  }
+  h += flag('warn', 'Not checked here: punching shear and local bending in the slab under each leg, the condition and residual capacity of an existing roof, and waterproofing integrity around every fixing.');
+  return { html: mod(6, T, h) };
+}
+
+/* =============================================================================
+   DURABILITY NOTE (informative — not a calculation)
+   ========================================================================== */
+function mDur(r1) {
+  const coastal = r1.ok && r1.coastal;
+  let h = flag('info', '<b>Informative note — no calculation performed.</b> Recorded here because the structure material forms part of the design basis.');
+  h += '<div class="scrollx"><table class="t"><tbody>' +
+    '<tr><td>Structure material</td><td><b>' + esc(S.material || '—') + '</b></td></tr>' +
+    '<tr><td>Specified zinc coating</td><td><b>' + esc(S.zincCoat || 'not specified') + '</b></td></tr>' +
+    '<tr><td>Exposure</td><td><b>' + (coastal ? 'Coastal / marine — site is ' + fx(S.distCoast, 0) + ' km from the coastline' : 'Inland — ' + (filled('distCoast') ? fx(S.distCoast, 0) + ' km from the coastline' : 'coastal distance not entered')) + '</b></td></tr>' +
+    '</tbody></table></div>';
+  h += flag(coastal ? 'warn' : 'info', coastal
+    ? '<b>Coastal exposure.</b> Chloride-laden air in the Saurashtra coastal belt attacks galvanising far faster than inland Rajkot. Specify the zinc coating mass to <b>IS 4759</b> for the actual member thickness, review it against the exposure rather than a standard spec, and detail all site-cut ends and drilled holes for repair. Fastener metallurgy and bimetallic contact between the aluminium module frame and the steel structure also need a decision.'
+    : 'Specify the zinc coating mass to <b>IS 4759</b> for the member thickness in use, and detail the treatment of site-cut ends and drilled holes. Bimetallic contact between aluminium module frames and steel members needs isolating.');
+  assume('info', 'Durability and corrosion protection are recorded for information only. No coating life, section loss or fastener compatibility calculation has been carried out.', 'IS 4759 — hot-dip zinc coatings');
+  return mod('D', 'Durability note &mdash; ' + esc(S.material || 'structure material'), h);
+}
+
+/* =============================================================================
+   ASSUMPTIONS REGISTER + DISCLAIMER
+   ========================================================================== */
+const DISCLAIMER = 'Draft calculation for engineer review — not a substitute for final sign-off where regulatory certification is required.';
+
+function assumptions() {
+  if (!A.length) return mod('A', 'Assumptions', flag('info',
+    'No calculation has run yet, so no judgment calls have been made. Assumptions appear here as the modules complete.'));
+  const order = { ph: 0, check: 1, info: 2 };
+  const list = A.slice().sort((a, b) => order[a.sev] - order[b.sev]);
+  const nPh = A.filter(a => a.sev === 'ph').length;
+  let h = '';
+  if (nPh) h += flag('crit', '<b>' + nPh + ' placeholder value' + (nPh > 1 ? 's are' : ' is') + ' in use.</b> This sheet cannot be issued for construction until ' + (nPh > 1 ? 'they are' : 'it is') + ' replaced with tested or documented data.');
+  h += '<div class="asm"><h4>Assumptions &amp; judgment calls — check each one</h4><ol>' +
+    list.map(a => '<li><span class="sv ' + a.sev + '">' +
+      ({ ph: 'PLACEHOLDER', check: 'CHECK', info: 'NOTE' }[a.sev]) + '</span>' + a.text +
+      (a.ref ? '<span class="ref">' + esc(a.ref) + '</span>' : '') + '</li>').join('') +
+    '</ol></div>';
+  return mod('A', 'Assumptions', h);
+}
+
+function header() {
+  const bits = [];
+  if (S.project) bits.push(esc(S.project));
+  if (S.siteAddr) bits.push(esc(S.siteAddr));
+  if (S.kWp) bits.push(fx(S.kWp, 2) + ' kWp');
+  if (S.mount) bits.push(esc(S.mount));
+  if (S.engineer) bits.push('Reviewed by ' + esc(S.engineer));
+  bits.push(S.calcDate ? new Date(S.calcDate + 'T00:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }) : '');
+  $('#hd_meta').innerHTML = bits.filter(Boolean).join(' &nbsp;·&nbsp; ') || 'Xeron Energy · Rajkot, Saurashtra, Gujarat';
+}
+
+function render() {
+  A = [];
+  header();
+  const r1 = m1();
+  const r2 = m2(r1);
+  const r3 = m3(r2, r1);
+  const r4 = m4(r3);
+  const r5 = m5(r4);
+  const r6 = m6(r5);
+  const basis = mod('0', 'Basis of this calculation', 
+    flag('warn', '<b>This is a drafting and second-opinion tool.</b> It shows the arithmetic of a wind and foundation check so a qualified engineer can review it quickly. It does not certify anything, it does not know this site, and it stops rather than assume any safety-critical value.') +
+    '<div class="scrollx"><table class="t"><tbody>' +
+    '<tr><td style="width:38%">Wind loading standard</td><td><b>' + CODE + '</b></td></tr>' +
+    '<tr><td>Dead / imposed loads</td><td>IS 875 (Part 1) : 1987, IS 875 (Part 2) : 1987</td></tr>' +
+    '<tr><td>Load combinations</td><td>IS 800 : 2007, Cl. 5.3 &amp; Table 4; IS 875 (Part 5) : 1987</td></tr>' +
+    '<tr><td>Foundations / concrete</td><td>IS 1904 : 1986, IS 456 : 2000</td></tr>' +
+    '<tr><td>Corrosion protection</td><td>IS 4759 (informative note only)</td></tr>' +
+    '<tr><td>Prepared by</td><td>Xeron Energy — Rajkot, Saurashtra, Gujarat</td></tr>' +
+    '</tbody></table></div>' +
+    flag('warn', '<b>Transcribed tables.</b> Table 1 (k₁), Table 2 (k₂) and Table 4 (K<sub>a</sub>) of ' + CODE +
+      ' are held inside this tool and interpolated automatically. Every one of those lookups is shown in full in the working below &mdash; ' +
+      'spot-check the row and column actually used against your own controlled copy of the standard before you sign anything. ' +
+      'The wind speed map, the pressure coefficient tables and all soil, anchor and host-building capacities are <b>not</b> held here and are never inferred: ' +
+      'the tool stops and asks for them.'));
+
+  $('#sheet').innerHTML = basis + r1.html + r2.html + r3.html + r4.html + r5.html + r6.html + mDur(r1) +
+    assumptions() +
+    '<div class="disc"><b>' + DISCLAIMER + '</b>' +
+    '<span>Wind figures are drawn from ' + CODE + ' and must be re-checked against a controlled copy of the standard. ' +
+    'Soil, anchor and host-building capacities must come from site-specific test data and the building’s own drawings. ' +
+    'Xeron Energy — Deep Solanki, +91 83205 45680.</span></div>';
+}
+
+/* =============================================================================
+   FORM
+   ========================================================================== */
+function fieldHTML(f) {
+  const id = 'f_' + f.k, v = S[f.k] == null ? '' : S[f.k];
+  const bad = required(f) && !filled(f.k);
+  let ctl;
+  if (f.t === 'sel') {
+    ctl = '<select id="' + id + '" data-k="' + f.k + '">' + f.opts.map(o =>
+      '<option value="' + esc(o) + '"' + (String(v) === String(o) ? ' selected' : '') + '>' +
+      (o === '' ? '— select —' : esc((f.labels && f.labels[o]) || o)) + '</option>').join('') + '</select>';
+  } else if (f.t === 'chk') {
+    return '<div class="fld chk' + (bad ? ' bad' : '') + '"><input type="checkbox" id="' + id + '" data-k="' + f.k + '"' +
+      (v ? ' checked' : '') + '><label for="' + id + '">' + f.l + (required(f) ? ' <span class="rq">&lowast;</span>' : '') + '</label></div>';
+  } else if (f.t === 'num') {
+    ctl = '<div class="ir"><input class="mono" type="number" inputmode="decimal" id="' + id + '" data-k="' + f.k + '" value="' + esc(v) + '"' +
+      (f.step ? ' step="' + f.step + '"' : '') + (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + '>' +
+      (f.u ? '<span class="u">' + f.u + '</span>' : '') + '</div>';
+    if (!f.u) ctl = ctl.replace('class="ir"', 'class="ir" style="display:block"').replace(/border-radius:7px 0 0 7px/, '');
+  } else {
+    ctl = '<input type="' + (f.t === 'date' ? 'date' : 'text') + '" id="' + id + '" data-k="' + f.k + '" value="' + esc(v) + '"' +
+      (f.ph ? ' placeholder="' + esc(f.ph) + '"' : '') + '>';
+  }
+  return '<div class="fld' + (bad ? ' bad' : '') + '"><label for="' + id + '">' + f.l +
+    (required(f) ? ' <span class="rq">&lowast;</span>' : '') + '</label>' + ctl +
+    (f.hlp ? '<div class="hlp">' + f.hlp + '</div>' : '') + '</div>';
+}
+
+function renderForm() {
+  const open = new Set($$('.grp[open]').map(d => d.id));
+  $('#form').innerHTML = FORM.map((g, i) => {
+    const vis = g.fields.filter(shown);
+    const missing = vis.filter(f => required(f) && !filled(f.k)).length;
+    const isOpen = open.size ? open.has(g.id) : i < 3;
+    return '<details class="grp" id="' + g.id + '"' + (isOpen ? ' open' : '') + '>' +
+      '<summary>' + g.title +
+      (missing ? '<span class="miss">' + missing + ' missing</span>' : '<span class="ok">&#10003;</span>') +
+      '</summary><div class="gb">' + vis.map(fieldHTML).join('') + '</div></details>';
+  }).join('');
+}
+
+$('#form').addEventListener('input', e => {
+  const k = e.target.dataset.k; if (!k) return;
+  S[k] = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+  save();
+  const f = FIELD[k];
+  if (f && (f.t === 'sel' || f.t === 'chk')) { renderForm(); }
+  else { $$('.grp').forEach(g => { const gg = FORM.find(x => x.id === g.id); if (!gg) return;
+           const n = gg.fields.filter(shown).filter(x => required(x) && !filled(x.k)).length;
+           const s = g.querySelector('summary');
+           const badge = s.querySelector('.miss, .ok');
+           if (badge) badge.outerHTML = n ? '<span class="miss">' + n + ' missing</span>' : '<span class="ok">&#10003;</span>'; }); }
+  render();
+});
+$('#form').addEventListener('change', e => { if (e.target.dataset.k) { renderForm(); render(); } });
+
+/* ---- worked example ------------------------------------------------------ */
+const DEMO = {
+  project:'Shreeji Textiles Pvt Ltd', siteAddr:'Metoda GIDC, Rajkot', coords:'22.2145, 70.6820',
+  engineer:'—', calcDate:new Date().toLocaleDateString('en-CA'),
+  mount:'Rooftop', roofType:'RCC flat slab', hBldg:'9.0', hArr:'2.4', tilt:'12',
+  material:'Hot-dip galvanised MS', zincCoat:'80 µm to IS 4759',
+  pL:'2278', pW:'1134', pWt:'28.5', nPan:'90', kWp:'49.5', panPerTab:'10', legsPerTab:'6', structWt:'145',
+  vb:'39', vbSrc:'EXAMPLE ONLY — replace with the value you read from Fig. 1 / Annex A', vbOk:true,
+  distCoast:'95', terrain:'3', life:'50', slope:'le3', kd:'1.00', kaMode:'unity', kc:'1.00',
+  cpModel:'free', cpRef:'EXAMPLE ONLY — replace with the actual table, tilt and wind direction',
+  cpUpTop:'-1.00', cpUpBot:'0.40', cpDnTop:'0.60', cpDnBot:'-0.30',
+  fixType:'anchored', anchCap:'4.5', slabLL:'1.50', fosUp:'1.5'
+};
+$('#b_demo').addEventListener('click', () => {
+  if (!confirm('Load the worked example? This replaces everything currently entered.')) return;
+  Object.keys(S).forEach(k => S[k] = '');
+  Object.assign(S, DEMO); save(); renderForm(); render();
+  toast('Example loaded — every value in it is illustrative, not a design');
+});
+$('#b_clear').addEventListener('click', () => {
+  if (!confirm('Clear all inputs?')) return;
+  Object.keys(S).forEach(k => S[k] = '');
+  S.kd='1.00'; S.kc='1.00'; S.kaMode='unity'; S.fosUp='1.5'; S.material='Hot-dip galvanised MS';
+  S.calcDate = new Date().toLocaleDateString('en-CA');
+  save(); renderForm(); render(); toast('Cleared');
+});
+$('#b_print').addEventListener('click', () => window.print());
+
+renderForm();
+render();
+</script>
+</body>
+</html>
