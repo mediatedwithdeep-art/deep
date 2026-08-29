@@ -1,0 +1,1520 @@
+<title>Two Rails, One Spine</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&display=swap">
+<style>
+/* ═══════════════════════════════════════════════════════════════
+   TWO RAILS, ONE SPINE — Real Estate + Solar EPC Business OS
+   Visual system: a control panel for two lines of business.
+   Rail A (property) = ink blue.  Rail B (solar) = burnt amber.
+   The shared spine is graphite — deliberately the quiet element.
+   ═══════════════════════════════════════════════════════════════ */
+
+:root{
+  color-scheme: light;
+  --paper:#E9ECEA; --surface:#F4F6F5; --surface-2:#FCFDFC; --sunken:#DCE0DD;
+  --ink:#121A17; --ink-2:#454F4A; --ink-3:#6F7A74;
+  --rule:#C9D0CB; --rule-strong:#A9B2AC;
+  --re:#234F91; --re-soft:#DDE5F3; --re-edge:#3D6AAC;
+  --sol:#B0561A; --sol-soft:#F5E4D3; --sol-edge:#C9762F;
+  --good:#1B6B4B; --good-bg:#D8E9E0;
+  --warn:#8A6008; --warn-bg:#F1E7CB;
+  --crit:#A4382A; --crit-bg:#F2DDD8;
+  --shadow:0 1px 0 rgba(18,26,23,.06);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#0F1412; --surface:#161C19; --surface-2:#1D2521; --sunken:#090D0B;
+    --ink:#E5EAE6; --ink-2:#A2ADA7; --ink-3:#7A857F;
+    --rule:#29322D; --rule-strong:#3C4741;
+    --re:#84A9E6; --re-soft:#16233A; --re-edge:#4E76B4;
+    --sol:#E5915C; --sol-soft:#31200F; --sol-edge:#A9642F;
+    --good:#4EB489; --good-bg:#12291F;
+    --warn:#D2A045; --warn-bg:#2E2512;
+    --crit:#E1705E; --crit-bg:#331A15;
+    --shadow:0 1px 0 rgba(0,0,0,.35);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#0F1412; --surface:#161C19; --surface-2:#1D2521; --sunken:#090D0B;
+  --ink:#E5EAE6; --ink-2:#A2ADA7; --ink-3:#7A857F;
+  --rule:#29322D; --rule-strong:#3C4741;
+  --re:#84A9E6; --re-soft:#16233A; --re-edge:#4E76B4;
+  --sol:#E5915C; --sol-soft:#31200F; --sol-edge:#A9642F;
+  --good:#4EB489; --good-bg:#12291F;
+  --warn:#D2A045; --warn-bg:#2E2512;
+  --crit:#E1705E; --crit-bg:#331A15;
+  --shadow:0 1px 0 rgba(0,0,0,.35);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"Public Sans","Helvetica Neue",Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.62; -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,.disp{
+  font-family:Newsreader,"Iowan Old Style",Georgia,serif;
+  font-weight:600; margin:0; text-wrap:balance; letter-spacing:-.005em;
+}
+h4,h5{margin:0}
+p{margin:0}
+a{color:var(--re)}
+:focus-visible{outline:2px solid var(--re); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+
+.wrap{max-width:1180px; margin:0 auto; padding:0 26px}
+@media(max-width:640px){.wrap{padding:0 15px}}
+
+/* ── the bus: a two-tone strip that stands for the two rails ── */
+.bus{
+  height:7px; display:flex;
+  border-bottom:1px solid var(--rule-strong);
+}
+.bus i{flex:1; display:block}
+.bus i:first-child{background:var(--re)}
+.bus i:last-child{background:var(--sol)}
+
+/* ── header ─────────────────────────────────────────────────── */
+header.tb{background:var(--surface); border-bottom:1px solid var(--rule-strong)}
+.tb-in{display:flex; flex-wrap:wrap; gap:34px; align-items:flex-end; padding:56px 0 34px}
+.tb-main{flex:1 1 480px; min-width:0}
+.eyebrow{
+  font-family:"JetBrains Mono",ui-monospace,monospace; font-size:11px; font-weight:500;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-3);
+}
+h1{font-size:clamp(38px,6.6vw,74px); line-height:1.0; letter-spacing:-.022em; margin:16px 0 0; font-weight:600}
+h1 em{font-style:italic; font-weight:400; color:var(--ink-2)}
+.lede{margin-top:20px; max-width:62ch; font-size:17.5px; color:var(--ink-2)}
+.plate{
+  flex:0 0 auto; min-width:264px; border:1px solid var(--rule-strong); background:var(--surface-2);
+}
+.plate div{
+  display:flex; justify-content:space-between; gap:20px; padding:8px 13px;
+  border-bottom:1px solid var(--rule); font-family:"JetBrains Mono",monospace; font-size:11.5px;
+}
+.plate div:last-child{border-bottom:0}
+.plate b{font-weight:500; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase; font-size:10.5px}
+.plate span{font-weight:500; color:var(--ink)}
+
+.keyrow{display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); border-top:1px solid var(--rule-strong)}
+.keyrow div{padding:20px 18px 24px 0; border-right:1px solid var(--rule)}
+.keyrow div:last-child{border-right:0}
+.keyrow .n{
+  font-family:Newsreader,Georgia,serif; font-size:38px; font-weight:500; line-height:1;
+  letter-spacing:-.02em; font-variant-numeric:tabular-nums;
+}
+.keyrow .l{
+  font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); margin-top:8px;
+}
+@media(max-width:640px){.keyrow div{padding:14px 0 16px; border-right:0; border-bottom:1px solid var(--rule)}}
+
+/* ── sections ───────────────────────────────────────────────── */
+section{padding:62px 0; border-bottom:1px solid var(--rule)}
+.shead{display:flex; gap:18px; align-items:baseline; margin-bottom:12px; flex-wrap:wrap}
+.scode{
+  font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:600; letter-spacing:.1em;
+  color:var(--surface-2); background:var(--ink); padding:4px 8px; white-space:nowrap;
+}
+h2{font-size:clamp(26px,3.6vw,40px); line-height:1.08; letter-spacing:-.018em}
+.sdek{max-width:68ch; color:var(--ink-2); margin-top:14px; font-size:16.5px}
+h3{font-size:20px; line-height:1.24}
+h4{
+  font-family:"JetBrains Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3);
+}
+
+/* ── chips ──────────────────────────────────────────────────── */
+.chip{
+  display:inline-block; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:600;
+  letter-spacing:.08em; text-transform:uppercase; padding:2.5px 7px; border:1px solid;
+  white-space:nowrap; vertical-align:middle;
+}
+.chip.re{color:var(--re); border-color:var(--re-edge); background:var(--re-soft)}
+.chip.sol{color:var(--sol); border-color:var(--sol-edge); background:var(--sol-soft)}
+.chip.both{color:var(--ink); border-color:var(--rule-strong); background:var(--sunken)}
+.chip.g{color:var(--good); border-color:var(--good); background:var(--good-bg)}
+.chip.w{color:var(--warn); border-color:var(--warn); background:var(--warn-bg)}
+.chip.c{color:var(--crit); border-color:var(--crit); background:var(--crit-bg)}
+
+/* ── figures ────────────────────────────────────────────────── */
+figure{margin:30px 0 0; border:1px solid var(--rule-strong); background:var(--surface)}
+figure .fbody{padding:26px 22px; overflow-x:auto}
+figure svg{display:block; max-width:100%; height:auto; margin:0 auto; color:var(--ink)}
+figcaption{
+  border-top:1px solid var(--rule); padding:11px 16px; color:var(--ink-3);
+  font-family:"JetBrains Mono",monospace; font-size:11px; line-height:1.55;
+}
+
+/* ── cards ──────────────────────────────────────────────────── */
+.grid{display:grid; gap:1px; background:var(--rule); border:1px solid var(--rule-strong); margin-top:28px}
+.g2{grid-template-columns:repeat(2,1fr)}
+.g3{grid-template-columns:repeat(3,1fr)}
+@media(max-width:900px){.g3{grid-template-columns:1fr}}
+@media(max-width:700px){.g2{grid-template-columns:1fr}}
+.card{background:var(--surface); padding:22px 20px; display:flex; flex-direction:column; gap:9px}
+.card p{color:var(--ink-2); font-size:14.5px}
+.card .num{
+  font-family:"JetBrains Mono",monospace; font-size:10.5px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3);
+}
+
+/* ── the three-column rail device ───────────────────────────── */
+.rails{display:grid; grid-template-columns:1fr 1.05fr 1fr; gap:1px; background:var(--rule);
+  border:1px solid var(--rule-strong); margin-top:28px}
+.rails > div{background:var(--surface); padding:20px 18px}
+.rails .spine{background:var(--sunken)}
+.rails h4{margin-bottom:10px}
+.rails ul{margin:0; padding-left:17px; color:var(--ink-2); font-size:14.5px}
+.rails li{margin-bottom:6px}
+.rails li:last-child{margin-bottom:0}
+.railhead{border-top:3px solid; padding-top:14px!important}
+.railhead.a{border-color:var(--re)}
+.railhead.b{border-color:var(--sol)}
+.railhead.s{border-color:var(--ink-3)}
+@media(max-width:800px){.rails{grid-template-columns:1fr}}
+
+/* ── tables ─────────────────────────────────────────────────── */
+.tw{margin-top:28px; border:1px solid var(--rule-strong); background:var(--surface); overflow-x:auto}
+table{border-collapse:collapse; width:100%; min-width:720px; font-size:14px}
+th{
+  text-align:left; font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:600;
+  letter-spacing:.11em; text-transform:uppercase; color:var(--ink-3);
+  padding:11px 14px; border-bottom:1px solid var(--rule-strong); background:var(--surface-2);
+  vertical-align:bottom; white-space:nowrap;
+}
+td{padding:13px 14px; border-bottom:1px solid var(--rule); vertical-align:top; color:var(--ink-2)}
+tr:last-child td{border-bottom:0}
+td strong{color:var(--ink); font-weight:600}
+td.mono,.mono{font-family:"JetBrains Mono",monospace; font-variant-numeric:tabular-nums; font-size:12.5px}
+tbody tr.re-row td:first-child{box-shadow:inset 3px 0 0 var(--re)}
+tbody tr.sol-row td:first-child{box-shadow:inset 3px 0 0 var(--sol)}
+tbody tr.both-row td:first-child{box-shadow:inset 3px 0 0 var(--ink-3)}
+
+/* ── numbered stage list ────────────────────────────────────── */
+.stages{border:1px solid var(--rule-strong); margin-top:28px; background:var(--surface)}
+.stage{display:grid; grid-template-columns:60px 1fr; border-bottom:1px solid var(--rule)}
+.stage:last-child{border-bottom:0}
+.stage .idx{
+  background:var(--sunken); border-right:1px solid var(--rule);
+  font-family:"JetBrains Mono",monospace; font-size:13px; font-weight:600; color:var(--ink-3);
+  display:flex; align-items:flex-start; justify-content:center; padding-top:19px;
+  font-variant-numeric:tabular-nums;
+}
+.stage .body{padding:18px 20px; display:flex; flex-direction:column; gap:10px}
+.stage .top{display:flex; gap:12px; align-items:baseline; flex-wrap:wrap}
+.stage .top h3{font-size:18px}
+.stage p{color:var(--ink-2); font-size:14.5px; max-width:78ch}
+.kv{display:grid; grid-template-columns:repeat(auto-fit,minmax(230px,1fr)); gap:12px; margin-top:2px}
+.kv > div{border-left:2px solid var(--rule-strong); padding-left:11px}
+.kv b{
+  display:block; font-family:"JetBrains Mono",monospace; font-size:9.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--ink-3); margin-bottom:3px;
+}
+.kv span{font-size:13.5px; color:var(--ink-2)}
+@media(max-width:640px){.stage{grid-template-columns:1fr}.stage .idx{justify-content:flex-start;padding:10px 0 6px 18px;border-right:0;border-bottom:1px solid var(--rule)}}
+
+/* ── callout ────────────────────────────────────────────────── */
+.note{
+  margin-top:28px; border:1px solid var(--rule-strong); border-left:4px solid var(--ink);
+  background:var(--surface-2); padding:18px 20px; color:var(--ink-2); font-size:14.5px; max-width:80ch;
+}
+.note b{color:var(--ink)}
+.note.warn{border-left-color:var(--warn); background:var(--warn-bg)}
+.note.warn b{color:var(--ink)}
+
+/* ── pull quote ─────────────────────────────────────────────── */
+.pull{
+  font-family:Newsreader,Georgia,serif; font-size:clamp(20px,2.8vw,29px); line-height:1.32;
+  font-style:italic; color:var(--ink); max-width:24ch; letter-spacing:-.01em;
+}
+
+/* ── the loop track ─────────────────────────────────────────── */
+.loop{display:grid; grid-template-columns:repeat(5,1fr); gap:1px;
+  background:var(--rule); border:1px solid var(--rule-strong); margin-top:28px}
+.loop > div{background:var(--surface); padding:16px 15px 18px; display:flex; flex-direction:column; gap:7px}
+.loop .st{
+  font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--ink-3); display:flex; gap:8px; align-items:center;
+}
+.loop .st i{font-style:normal; color:var(--ink); font-weight:600}
+.loop h3{font-size:16.5px}
+.loop .re-l,.loop .sol-l{font-size:13px; color:var(--ink-2); padding-left:10px; border-left:2px solid}
+.loop .re-l{border-color:var(--re)}
+@media(max-width:1040px){.loop{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:520px){.loop{grid-template-columns:1fr}}
+.loop .sol-l{border-color:var(--sol)}
+
+/* ── agent roster ───────────────────────────────────────────── */
+.agents{display:grid; grid-template-columns:repeat(3,1fr); gap:1px;
+  background:var(--rule); border:1px solid var(--rule-strong); margin-top:24px}
+.agent.wide{grid-column:span 2}
+@media(max-width:1000px){.agents{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:680px){.agents{grid-template-columns:1fr}.agent.wide{grid-column:auto}}
+.agent{background:var(--surface); padding:19px 18px; display:flex; flex-direction:column; gap:10px}
+.agent .ahead{display:flex; justify-content:space-between; gap:10px; align-items:flex-start}
+.agent h3{font-size:17px}
+.agent .lv{
+  font-family:"JetBrains Mono",monospace; font-size:10px; font-weight:600; letter-spacing:.06em;
+  border:1px solid var(--rule-strong); color:var(--ink-2); padding:2.5px 6px; white-space:nowrap;
+  background:var(--surface-2);
+}
+.agent dl{margin:0; display:flex; flex-direction:column; gap:8px}
+.agent dt{
+  font-family:"JetBrains Mono",monospace; font-size:9.5px; letter-spacing:.11em; text-transform:uppercase;
+  color:var(--ink-3);
+}
+.agent dd{margin:2px 0 0; font-size:13.8px; color:var(--ink-2)}
+.agent dd.stop{color:var(--ink); border-left:2px solid var(--crit); padding-left:9px}
+
+/* ── command centre mock ────────────────────────────────────── */
+.cc{margin-top:30px; border:1px solid var(--rule-strong); background:var(--surface-2); overflow:hidden}
+.cc-bar{
+  display:flex; justify-content:space-between; align-items:center; gap:14px; flex-wrap:wrap;
+  padding:11px 16px; border-bottom:1px solid var(--rule-strong); background:var(--surface);
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-3);
+}
+.cc-bar b{color:var(--ink); font-weight:600; letter-spacing:.06em}
+.cc-kpi{display:grid; grid-template-columns:repeat(auto-fit,minmax(148px,1fr)); gap:1px; background:var(--rule);
+  border-bottom:1px solid var(--rule-strong)}
+.cc-kpi > div{background:var(--surface-2); padding:14px 15px 15px}
+.cc-kpi .l{font-family:"JetBrains Mono",monospace; font-size:9.5px; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--ink-3)}
+.cc-kpi .v{font-family:Newsreader,Georgia,serif; font-size:27px; font-weight:500; line-height:1.15;
+  margin-top:6px; font-variant-numeric:tabular-nums}
+.cc-kpi .d{font-family:"JetBrains Mono",monospace; font-size:11px; margin-top:3px; color:var(--ink-3)}
+.cc-kpi .d.up{color:var(--good)} .cc-kpi .d.dn{color:var(--crit)}
+.cc-cols{display:grid; grid-template-columns:1.25fr 1fr; gap:1px; background:var(--rule)}
+@media(max-width:820px){.cc-cols{grid-template-columns:1fr}}
+.pane{background:var(--surface-2); padding:0}
+.pane h4{padding:11px 15px; border-bottom:1px solid var(--rule); background:var(--surface)}
+.row{display:flex; gap:12px; padding:12px 15px; border-bottom:1px solid var(--rule); align-items:flex-start}
+.row:last-child{border-bottom:0}
+.row .stripe{width:3px; align-self:stretch; flex:0 0 3px; background:var(--rule-strong)}
+.row .stripe.re{background:var(--re)} .row .stripe.sol{background:var(--sol)}
+.row .stripe.crit{background:var(--crit)} .row .stripe.warn{background:var(--warn)}
+.row .m{flex:1; min-width:0}
+.row .t{font-size:14px; color:var(--ink); font-weight:500}
+.row .s{font-size:12.5px; color:var(--ink-3); margin-top:2px}
+.row .a{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.05em; color:var(--ink-2);
+  border:1px solid var(--rule-strong); padding:3px 7px; white-space:nowrap; background:var(--surface)}
+.row .amt{font-family:"JetBrains Mono",monospace; font-size:12.5px; font-variant-numeric:tabular-nums;
+  color:var(--ink); white-space:nowrap}
+.xq{display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--rule)}
+.xq .row{border-bottom:0; background:var(--surface-2)}
+@media(max-width:760px){.xq{grid-template-columns:1fr}}
+
+/* command-centre sub-parts */
+.cc-stack{display:flex; flex-direction:column; gap:1px; background:var(--rule)}
+.pane-body{padding:14px 15px 16px; display:flex; flex-direction:column; gap:13px}
+.fun{display:flex; flex-direction:column; gap:7px}
+.fun .fr{display:grid; grid-template-columns:1fr 44px; gap:10px; align-items:center}
+.fun .fn{font-size:13px; color:var(--ink-2)}
+.fun .fc{font-family:"JetBrains Mono",monospace; font-size:12.5px; text-align:right;
+  font-variant-numeric:tabular-nums; color:var(--ink)}
+.bar{height:6px; background:var(--sunken); border:1px solid var(--rule); margin-top:4px}
+.bar i{display:block; height:100%}
+.bar i.re{background:var(--re)} .bar i.sol{background:var(--sol)}
+.railtag{font-family:"JetBrains Mono",monospace; font-size:10px; letter-spacing:.11em;
+  text-transform:uppercase; padding-bottom:3px; border-bottom:2px solid; display:inline-block}
+.railtag.a{color:var(--re); border-color:var(--re)}
+.railtag.b{color:var(--sol); border-color:var(--sol)}
+
+/* ── phases ─────────────────────────────────────────────────── */
+.phases{margin-top:28px; border:1px solid var(--rule-strong); background:var(--surface)}
+.phase{display:grid; grid-template-columns:132px 1fr; border-bottom:1px solid var(--rule)}
+.phase:last-child{border-bottom:0}
+.phase .when{
+  background:var(--sunken); border-right:1px solid var(--rule); padding:18px 14px;
+  font-family:"JetBrains Mono",monospace; font-size:11px; color:var(--ink-2); letter-spacing:.04em;
+}
+.phase .when b{display:block; color:var(--ink); font-size:12.5px; margin-bottom:4px; letter-spacing:.08em}
+.phase .what{padding:18px 20px; display:flex; flex-direction:column; gap:9px}
+.phase .what h3{font-size:17.5px}
+.phase ul{margin:0; padding-left:17px; color:var(--ink-2); font-size:14.2px}
+.phase li{margin-bottom:5px}
+.phase .live{
+  font-family:"JetBrains Mono",monospace; font-size:11.5px; color:var(--ink);
+  border-top:1px dashed var(--rule-strong); padding-top:9px; margin-top:3px;
+}
+@media(max-width:640px){.phase{grid-template-columns:1fr}.phase .when{border-right:0;border-bottom:1px solid var(--rule)}}
+
+/* ── footer ─────────────────────────────────────────────────── */
+footer{padding:46px 0 60px; color:var(--ink-3); font-size:13.5px}
+footer .fg{display:flex; gap:26px; flex-wrap:wrap; justify-content:space-between; align-items:flex-end}
+footer .mono{font-size:11.5px; letter-spacing:.05em}
+</style>
+
+<div class="bus"><i></i><i></i></div>
+
+<header class="tb">
+  <div class="wrap">
+    <div class="tb-in">
+      <div class="tb-main">
+        <div class="eyebrow">Operating blueprint · Real Estate + Solar EPC</div>
+        <h1>Two rails,<br><em>one spine</em></h1>
+        <p class="lede">Property and rooftop solar look like two companies. They share one
+        customer list, one month's cash, one phone number and one reputation. This is the operating
+        system that runs both from a single command center &mdash; specialised AI agents on each
+        rail, one shared brain underneath, and a short, deliberate list of moments where a human
+        still has to sign.</p>
+      </div>
+      <div class="plate">
+        <div><b>Rail A</b><span>Real Estate</span></div>
+        <div><b>Rail B</b><span>Solar EPC</span></div>
+        <div><b>Spine</b><span>One CRM · one ledger</span></div>
+        <div><b>Region</b><span>Gujarat · India</span></div>
+        <div><b>Status</b><span>Design v1</span></div>
+      </div>
+    </div>
+    <div class="keyrow">
+      <div><div class="n">22</div><div class="l">AI agents</div></div>
+      <div><div class="n">10</div><div class="l">Loop stages</div></div>
+      <div><div class="n">9</div><div class="l">Human sign-offs</div></div>
+      <div><div class="n">2</div><div class="l">Cross-sell directions</div></div>
+      <div><div class="n">1</div><div class="l">Customer record</div></div>
+    </div>
+  </div>
+</header>
+
+<section id="thesis">
+ <div class="wrap">
+  <div class="shead"><span class="scode">01</span><h2>Why these two belong on one system</h2></div>
+  <p class="sdek">Real estate and solar EPC have different physics. A flat is one transaction with a
+  long tail of paperwork; a rooftop plant is a small project with procurement, labour and a 25-year
+  promise. What they share is everything expensive: the person, the money, and your attention.</p>
+
+  <div class="grid g3">
+    <div class="card">
+      <div class="num">Shared asset 01</div>
+      <h3>One person, two needs</h3>
+      <p>A buyer who registers a 3&nbsp;BHK will pay an electricity bill in that flat within ninety
+      days. A factory owner who signs a 150&nbsp;kW rooftop is a person who buys industrial land.
+      Two CRMs make that invisible. One record makes it a queue.</p>
+    </div>
+    <div class="card">
+      <div class="num">Shared asset 02</div>
+      <h3>One month's cash</h3>
+      <p>Brokerage lands in lumps; EPC eats working capital in advance against a milestone you
+      have not billed yet. Separate books mean you find out on the 28th. One ledger means the
+      system tells you on the 8th which solar PO the brokerage is actually funding.</p>
+    </div>
+    <div class="card">
+      <div class="num">Shared asset 03</div>
+      <h3>One queue of attention</h3>
+      <p>You cannot be in two pipelines. The point of the command center is not more dashboards
+      &mdash; it is a single ranked list of the things only you can decide, with everything else
+      already drafted and waiting for a yes.</p>
+    </div>
+  </div>
+
+  <figure>
+    <div class="fbody">
+      <svg viewBox="0 0 1000 452" role="img" aria-label="Diagram: five stages of the real estate rail above and five stages of the solar EPC rail below, with every stage reading from and writing to one shared spine of identity, conversation, quotation, money and analytics services in the middle.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- RAIL A -->
+        <text x="24" y="30" font-family="JetBrains Mono, monospace" font-size="11.5" letter-spacing="1.6" fill="currentColor" style="fill:var(--re)">RAIL A — REAL ESTATE</text>
+        <g>
+          <rect x="24"  y="46" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="24"  y="46" width="168" height="3" style="fill:var(--re)"/>
+          <text x="108" y="72" text-anchor="middle" font-size="13.5" fill="currentColor">Lead &amp; enquiry</text>
+          <text x="108" y="89" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">portal · walk-in · referral</text>
+
+          <rect x="220" y="46" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="220" y="46" width="168" height="3" style="fill:var(--re)"/>
+          <text x="304" y="72" text-anchor="middle" font-size="13.5" fill="currentColor">Match &amp; shortlist</text>
+          <text x="304" y="89" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">budget · locality · loan</text>
+
+          <rect x="416" y="46" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="416" y="46" width="168" height="3" style="fill:var(--re)"/>
+          <text x="500" y="72" text-anchor="middle" font-size="13.5" fill="currentColor">Site visit</text>
+          <text x="500" y="89" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">route · slot · feedback</text>
+
+          <rect x="612" y="46" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="612" y="46" width="168" height="3" style="fill:var(--re)"/>
+          <text x="696" y="72" text-anchor="middle" font-size="13.5" fill="currentColor">Negotiate &amp; book</text>
+          <text x="696" y="89" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">token · allotment</text>
+
+          <rect x="808" y="46" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="808" y="46" width="168" height="3" style="fill:var(--re)"/>
+          <text x="892" y="72" text-anchor="middle" font-size="13.5" fill="currentColor">Docs &amp; registry</text>
+          <text x="892" y="89" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">sale deed · possession</text>
+        </g>
+
+        <!-- connectors A -->
+        <g stroke="currentColor" stroke-opacity=".45" marker-start="url(#ar)" marker-end="url(#ar)">
+          <line x1="108" y1="106" x2="108" y2="192"/>
+          <line x1="304" y1="106" x2="304" y2="192"/>
+          <line x1="500" y1="106" x2="500" y2="192"/>
+          <line x1="696" y1="106" x2="696" y2="192"/>
+          <line x1="892" y1="106" x2="892" y2="192"/>
+        </g>
+
+        <!-- SPINE -->
+        <rect x="24" y="196" width="952" height="92" fill="var(--sunken)" stroke="currentColor" stroke-opacity=".55"/>
+        <text x="40" y="221" font-family="JetBrains Mono, monospace" font-size="11.5" letter-spacing="1.6" fill="currentColor">THE SPINE — ONE RECORD, ONE LEDGER, ONE INBOX</text>
+        <g font-size="12.5" fill="currentColor" text-anchor="middle">
+          <rect x="40"  y="234" width="172" height="38" fill="var(--surface)" stroke="currentColor" stroke-opacity=".3"/>
+          <text x="126" y="258">Customer identity</text>
+          <rect x="228" y="234" width="172" height="38" fill="var(--surface)" stroke="currentColor" stroke-opacity=".3"/>
+          <text x="314" y="258">Conversation</text>
+          <rect x="416" y="234" width="172" height="38" fill="var(--surface)" stroke="currentColor" stroke-opacity=".3"/>
+          <text x="502" y="258">Quotation engine</text>
+          <rect x="604" y="234" width="172" height="38" fill="var(--surface)" stroke="currentColor" stroke-opacity=".3"/>
+          <text x="690" y="258">Money &amp; ledger</text>
+          <rect x="792" y="234" width="168" height="38" fill="var(--surface)" stroke="currentColor" stroke-opacity=".3"/>
+          <text x="876" y="258">Analytics</text>
+        </g>
+
+        <!-- connectors B -->
+        <g stroke="currentColor" stroke-opacity=".45" marker-start="url(#ar)" marker-end="url(#ar)">
+          <line x1="108" y1="292" x2="108" y2="378"/>
+          <line x1="304" y1="292" x2="304" y2="378"/>
+          <line x1="500" y1="292" x2="500" y2="378"/>
+          <line x1="696" y1="292" x2="696" y2="378"/>
+          <line x1="892" y1="292" x2="892" y2="378"/>
+        </g>
+
+        <!-- RAIL B -->
+        <g>
+          <rect x="24"  y="382" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="24"  y="435" width="168" height="3" style="fill:var(--sol)"/>
+          <text x="108" y="404" text-anchor="middle" font-size="13.5" fill="currentColor">Lead &amp; bill</text>
+          <text x="108" y="421" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">upload · read · size</text>
+
+          <rect x="220" y="382" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="220" y="435" width="168" height="3" style="fill:var(--sol)"/>
+          <text x="304" y="404" text-anchor="middle" font-size="13.5" fill="currentColor">Survey &amp; design</text>
+          <text x="304" y="421" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">shadow · layout · SLD</text>
+
+          <rect x="416" y="382" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="416" y="435" width="168" height="3" style="fill:var(--sol)"/>
+          <text x="500" y="404" text-anchor="middle" font-size="13.5" fill="currentColor">BOQ &amp; quote</text>
+          <text x="500" y="421" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">subsidy · net metering</text>
+
+          <rect x="612" y="382" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="612" y="435" width="168" height="3" style="fill:var(--sol)"/>
+          <text x="696" y="404" text-anchor="middle" font-size="13.5" fill="currentColor">Procure &amp; install</text>
+          <text x="696" y="421" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">PO · crew · QC</text>
+
+          <rect x="808" y="382" width="168" height="56" fill="var(--surface-2)" stroke="currentColor" stroke-opacity=".32"/>
+          <rect x="808" y="435" width="168" height="3" style="fill:var(--sol)"/>
+          <text x="892" y="404" text-anchor="middle" font-size="13.5" fill="currentColor">Commission &amp; AMC</text>
+          <text x="892" y="421" text-anchor="middle" font-size="10.5" fill="currentColor" fill-opacity=".62">meter · generation</text>
+        </g>
+        <text x="24" y="452" font-family="JetBrains Mono, monospace" font-size="11.5" letter-spacing="1.6" fill="currentColor" style="fill:var(--sol)">RAIL B — SOLAR EPC</text>
+      </svg>
+    </div>
+    <figcaption>Every stage on both rails reads from and writes to the same five services. Nothing
+    on a rail owns a customer, a price or a rupee &mdash; the spine does. Double-headed arrows are
+    literal: a stage both pulls context out and pushes events back, which is what makes the
+    cross-sell engine in section&nbsp;06 possible at all.</figcaption>
+  </figure>
+ </div>
+</section>
+
+<section id="loop">
+ <div class="wrap">
+  <div class="shead"><span class="scode">02</span><h2>The loop the whole business runs on</h2></div>
+  <p class="sdek">Ten stages, one direction, and it does not end at the sale. Stages 8&ndash;10 are
+  where a one-deal business becomes a compounding one: the same customer, acquired once, sold twice,
+  and turned into the cheapest lead source you will ever have.</p>
+
+  <div class="loop">
+    <div>
+      <div class="st"><i>01</i> Attract</div><h3>Be findable</h3>
+      <div class="re-l">Project reels, locality guides, site boards</div>
+      <div class="sol-l">Bill-shock content, plant walkthroughs, factory case studies</div>
+    </div>
+    <div>
+      <div class="st"><i>02</i> Capture</div><h3>Land in one inbox</h3>
+      <div class="re-l">Portal, walk-in, channel partner</div>
+      <div class="sol-l">Bill upload, IndiaMART, referral from an existing plant</div>
+    </div>
+    <div>
+      <div class="st"><i>03</i> Analyze</div><h3>Score before you spend</h3>
+      <div class="re-l">Budget, loan headroom, timeline, decision-maker</div>
+      <div class="sol-l">Units/month, sanctioned load, roof, ownership, connection type</div>
+    </div>
+    <div>
+      <div class="st"><i>04</i> Recommend</div><h3>Give one clear answer</h3>
+      <div class="re-l">Three properties, ranked, with the reason written down</div>
+      <div class="sol-l">One kW number, one payback figure, one BOQ</div>
+    </div>
+    <div>
+      <div class="st"><i>05</i> Follow up</div><h3>Outlast the silence</h3>
+      <div class="re-l">Visit reminders, new-inventory alerts on their filter</div>
+      <div class="sol-l">Next bill arrives &rarr; re-send the same maths against it</div>
+    </div>
+    <div>
+      <div class="st"><i>06</i> Convert</div><h3>Close on terms, not price</h3>
+      <div class="re-l">Booking form, token, agreement</div>
+      <div class="sol-l">Work order, advance, signed technical annexure</div>
+    </div>
+    <div>
+      <div class="st"><i>07</i> Execute</div><h3>Do what was promised</h3>
+      <div class="re-l">Loan file, registry, possession</div>
+      <div class="sol-l">Procurement, install, net metering, commissioning</div>
+    </div>
+    <div>
+      <div class="st"><i>08</i> Retain</div><h3>Stay useful after payment</h3>
+      <div class="re-l">Possession snags, rental and resale desk</div>
+      <div class="sol-l">Generation monitoring, cleaning cycle, AMC</div>
+    </div>
+    <div>
+      <div class="st"><i>09</i> Cross-sell</div><h3>Use what you already know</h3>
+      <div class="re-l">New flat &rarr; rooftop at the first bill</div>
+      <div class="sol-l">Factory owner &rarr; industrial land, shed, warehouse</div>
+    </div>
+    <div>
+      <div class="st"><i>10</i> Refer</div><h3>Ask at the moment of proof</h3>
+      <div class="re-l">Possession day, not booking day</div>
+      <div class="sol-l">First bill after commissioning, with the delta highlighted</div>
+    </div>
+  </div>
+
+  <div class="note"><b>The rule that makes the loop real:</b> a stage may only advance when its
+  exit condition is recorded as data &mdash; a score, a signed file, a payment, a meter reading.
+  &ldquo;I spoke to him, he sounded positive&rdquo; is not an exit condition, and an AI that
+  accepts it will quietly fill your pipeline with ghosts.</div>
+ </div>
+</section>
+
+<section id="pipeline">
+ <div class="wrap">
+  <div class="shead"><span class="scode">03</span><h2>Twelve stages, end to end</h2></div>
+  <p class="sdek">The same twelve stages carry a flat buyer and a 150&nbsp;kW rooftop. What changes
+  is the evidence each stage demands. Each stage below names what the AI does, what it looks like
+  on each rail, where a human has to sign, and the exact condition that lets the deal move on.</p>
+
+  <div class="stages">
+
+    <div class="stage"><div class="idx">01</div><div class="body">
+      <div class="top"><h3>Lead generation</h3><span class="chip both">Shared</span><span class="chip w">Gate G1</span></div>
+      <p>Content and ad spend are managed against cost per <em>qualified</em> lead, not cost per
+      lead. The system knows which creative produced leads that later signed, because the lead
+      keeps the same identity all the way to the ledger.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Project reels, locality guides, site boards, channel partners</span></div>
+        <div><b>Solar EPC</b><span>Bill-shock explainers, factory case studies, marketplace listings</span></div>
+        <div><b>Human gate</b><span>Monthly budget, and any public claim about price, returns or generation</span></div>
+        <div><b>Done when</b><span>Spend is attributed to a campaign with a live cost-per-qualified-lead</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">02</div><div class="body">
+      <div class="top"><h3>Lead capture</h3><span class="chip both">Shared</span><span class="chip g">No gate</span></div>
+      <p>Every channel &mdash; ad form, website, WhatsApp, missed call, walk-in register, partner
+      referral &mdash; lands in the same inbox within a minute, deduplicated by phone number. If
+      that number already exists on the other rail, the record is linked and flagged before anyone
+      picks up the phone.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Enquiry mapped to project, unit type and budget band</span></div>
+        <div><b>Solar EPC</b><span>Bill photo requested in the first reply, before any price talk</span></div>
+        <div><b>Human gate</b><span>None. Speed is the whole point of this stage</span></div>
+        <div><b>Done when</b><span>One customer record exists with source, rail and a first reply sent</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">03</div><div class="body">
+      <div class="top"><h3>AI qualification</h3><span class="chip both">Shared</span><span class="chip g">No gate</span></div>
+      <p>A conversational qualifier asks the four or five questions that actually predict a close,
+      then writes a score with its reasoning attached. The score is never the output on its own
+      &mdash; the reason is, because that is what a human can overrule.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Budget, loan headroom, timeline, who else decides, locality lock</span></div>
+        <div><b>Solar EPC</b><span>Units/month, sanctioned load, phase, roof type &amp; area, who owns the roof</span></div>
+        <div><b>Human gate</b><span>AI may not mark a high-value lead dead; it can only recommend it</span></div>
+        <div><b>Done when</b><span>Score, reason and next action are on the record</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">04</div><div class="body">
+      <div class="top"><h3>Site &amp; data analysis</h3><span class="chip re">Rail A</span><span class="chip sol">Rail B</span></div>
+      <p>The rails diverge hardest here. Property analysis is about fit and logistics; solar
+      analysis is about twelve months of consumption and a roof that has to hold steel for
+      twenty-five years.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Visit slots batched by locality, route ordered, structured feedback captured on the spot</span></div>
+        <div><b>Solar EPC</b><span>Bill read into a 12-month unit history, sizing against consumption and roof area, shadow and structure notes from the survey</span></div>
+        <div><b>Human gate</b><span>G4 &mdash; an engineer signs the structural and electrical reading before design</span></div>
+        <div><b>Done when</b><span>Rail A: dated visit feedback. Rail B: a survey record an engineer has signed</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">05</div><div class="body">
+      <div class="top"><h3>Solution &amp; quotation</h3><span class="chip both">Shared engine</span><span class="chip c">Gate G3</span></div>
+      <p>One quotation engine, two templates, one price book. The AI assembles from a rate library
+      it is not allowed to invent numbers outside of; anything it cannot source from the library it
+      must leave blank and flag, rather than guess.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Ranked shortlist, payment plan, indicative EMI, all-in cost including stamp duty and registration</span></div>
+        <div><b>Solar EPC</b><span>BOQ, &#8377;/W, subsidy applied per current scheme, net-metering assumption, payback and year-one savings</span></div>
+        <div><b>Human gate</b><span>Every quotation is sent by a human. No exceptions, at any value</span></div>
+        <div><b>Done when</b><span>A versioned quote is on the record with the margin it was approved at</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">06</div><div class="body">
+      <div class="top"><h3>Follow-up</h3><span class="chip both">Shared</span><span class="chip g">No gate</span></div>
+      <p>The unglamorous stage that decides the year. Cadence is set per rail and per score, runs
+      on approved WhatsApp templates within policy, and stops itself &mdash; on a reply, on a stop
+      request, or after the sequence ends without engagement.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>New inventory matching their saved filter; price or possession changes on a project they saw</span></div>
+        <div><b>Solar EPC</b><span>Their next bill arrives &rarr; the same savings maths, re-run against the real number</span></div>
+        <div><b>Human gate</b><span>None per message; humans own the template library and the stop rules</span></div>
+        <div><b>Done when</b><span>Reply received, or the sequence closes and the lead is re-scored</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">07</div><div class="body">
+      <div class="top"><h3>Negotiation</h3><span class="chip both">Shared</span><span class="chip c">Gate G2</span></div>
+      <p>The AI never holds the discount. It holds the <em>floor</em> &mdash; the margin below which
+      this deal stops being worth doing &mdash; and a ranked list of trades to offer before price:
+      payment terms, scope, timeline, inclusions, AMC years.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Payment schedule, parking, fit-out allowance, possession date before rate</span></div>
+        <div><b>Solar EPC</b><span>AMC years, module or inverter tier, structure height, phasing before &#8377;/W</span></div>
+        <div><b>Human gate</b><span>Any price below the floor, or any term outside the standard book</span></div>
+        <div><b>Done when</b><span>Final terms and the approved margin are recorded against the deal</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">08</div><div class="body">
+      <div class="top"><h3>Deal closing</h3><span class="chip re">Rail A</span><span class="chip sol">Rail B</span><span class="chip c">Gate G3</span></div>
+      <p>Documents get drafted automatically and signed manually. This is the line the system is
+      built to never cross on its own.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Booking form, token receipt, agreement to sale, stamp duty and registration scheduling</span></div>
+        <div><b>Solar EPC</b><span>Work order, advance invoice, signed technical annexure with make and model locked</span></div>
+        <div><b>Human gate</b><span>A named person signs every binding document; the AI only prepares it</span></div>
+        <div><b>Done when</b><span>Signed document plus first payment are both on the record</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">09</div><div class="body">
+      <div class="top"><h3>Execution</h3><span class="chip re">Rail A</span><span class="chip sol">Rail B</span><span class="chip w">Gates G5, G9</span></div>
+      <p>The longest stage and the one that eats reputation when it slips. The system's job is to
+      hold every dependency, chase the ones that are late, and tell the customer before they have
+      to ask.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Loan file tracking, document checklist, registration appointment, possession handover</span></div>
+        <div><b>Solar EPC</b><span>Purchase orders, dispatch tracking, crew scheduling, installation checklist with photos, net-metering application, inspection, commissioning</span></div>
+        <div><b>Human gate</b><span>Purchase orders above threshold; every statutory filing and subsidy claim</span></div>
+        <div><b>Done when</b><span>Rail A: possession letter issued. Rail B: meter installed and plant exporting</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">10</div><div class="body">
+      <div class="top"><h3>Payment</h3><span class="chip both">Shared ledger</span><span class="chip w">Gate G7</span></div>
+      <p>One ledger for both rails, because that is the only way to see whether this month works.
+      Milestone invoices raise themselves; collection reminders escalate on a schedule; subsidy and
+      retention amounts are tracked as receivables with their own ageing, not forgotten.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Token, instalments against the payment plan, brokerage invoice and receipt</span></div>
+        <div><b>Solar EPC</b><span>Advance, dispatch, installation and commissioning milestones; retention; subsidy claim status</span></div>
+        <div><b>Human gate</b><span>Every outbound payment and every refund is released by a human</span></div>
+        <div><b>Done when</b><span>Invoice, receipt and ledger entry reconcile, with nothing sitting unmatched</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">11</div><div class="body">
+      <div class="top"><h3>Customer support</h3><span class="chip both">Shared</span><span class="chip g">No gate</span></div>
+      <p>Support is not a cost centre here &mdash; it is the input to stages 09 and 10 of the loop.
+      Every ticket is a data point about whether this customer will buy again or send someone.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Snag list after possession, rental and resale desk, documentation copies on request</span></div>
+        <div><b>Solar EPC</b><span>Generation tracked against the promise, cleaning cycle, AMC visits, breakdown SLA</span></div>
+        <div><b>Human gate</b><span>None routine; anything that becomes a claim or a complaint escalates</span></div>
+        <div><b>Done when</b><span>Ticket closed with the customer confirming, not with the team marking it done</span></div>
+      </div>
+    </div></div>
+
+    <div class="stage"><div class="idx">12</div><div class="body">
+      <div class="top"><h3>Referral</h3><span class="chip both">Shared</span><span class="chip w">Gate G8</span></div>
+      <p>Asked once, at the moment the customer has proof in their hand &mdash; and never in the
+      same message as a cross-sell. Mixing the two makes both feel like a pitch.</p>
+      <div class="kv">
+        <div><b>Real estate</b><span>Possession day, and again at the first anniversary</span></div>
+        <div><b>Solar EPC</b><span>The first bill after commissioning, with the before-and-after side by side</span></div>
+        <div><b>Human gate</b><span>Referral incentives and anything offered to an active customer</span></div>
+        <div><b>Done when</b><span>A named referral enters stage 02 with the referrer attached to it</span></div>
+      </div>
+    </div></div>
+
+  </div>
+ </div>
+</section>
+
+<section id="agents">
+ <div class="wrap">
+  <div class="shead"><span class="scode">04</span><h2>The agent roster</h2></div>
+  <p class="sdek">Twenty-two agents: twelve on the shared spine, five on each rail. Each one is
+  defined by three things &mdash; what it watches, what it is allowed to do, and the line it must
+  stop at. An agent without a stated stopping line is not an agent, it is a liability.</p>
+
+  <h4 style="margin-top:34px">Spine &mdash; serves both rails</h4>
+  <div class="agents">
+
+    <div class="agent"><div class="ahead"><h3>Router</h3><span class="lv">L3</span></div>
+      <dl><dt>Watches</dt><dd>Every inbound message, form, call and walk-in entry</dd>
+      <dt>Does</dt><dd>Dedupes by phone, assigns the rail, links an existing record on the other rail, opens the first reply within a minute</dd>
+      <dt>Stops at</dt><dd class="stop">Merging two records that disagree on identity &mdash; it flags instead</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Qualifier</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>New and re-activated leads on both rails</dd>
+      <dt>Does</dt><dd>Runs the rail-specific question set, writes a score with its reasoning, sets the next action</dd>
+      <dt>Stops at</dt><dd class="stop">Declaring a high-value lead dead; it can only recommend closure</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Conversation</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>WhatsApp threads, call transcripts, missed calls</dd>
+      <dt>Does</dt><dd>Replies from the approved template library, books slots, transcribes and summarises calls onto the record</dd>
+      <dt>Stops at</dt><dd class="stop">Any message containing a price, a date commitment or a guarantee</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Quotation engine</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Deals that have cleared analysis on either rail</dd>
+      <dt>Does</dt><dd>Assembles the quote from the rate library, versions it, shows the margin it lands at</dd>
+      <dt>Stops at</dt><dd class="stop">Sending. Every quotation leaves under a human's name</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Nurture</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Silence &mdash; and the events that make silence worth breaking</dd>
+      <dt>Does</dt><dd>Runs cadences per rail and score, pauses on reply, re-scores when a sequence ends</dd>
+      <dt>Stops at</dt><dd class="stop">Contacting anyone who asked to stop, or exceeding the per-week message ceiling</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Negotiation coach</h3><span class="lv">L0</span></div>
+      <dl><dt>Watches</dt><dd>Live deals where the customer has pushed back on price</dd>
+      <dt>Does</dt><dd>Shows the margin floor, the trades to offer before price, and what this customer already values</dd>
+      <dt>Stops at</dt><dd class="stop">Everything. It advises the human in the room and never speaks to the customer</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Finance &amp; collections</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Invoices, receipts, milestone triggers, ageing, subsidy and retention receivables</dd>
+      <dt>Does</dt><dd>Raises milestone invoices, escalates reminders on schedule, projects the next 30 days of cash across both rails</dd>
+      <dt>Stops at</dt><dd class="stop">Any money leaving the business, and any refund</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Ops &amp; task</h3><span class="lv">L3</span></div>
+      <dl><dt>Watches</dt><dd>Every commitment made to a customer or a vendor</dd>
+      <dt>Does</dt><dd>Turns commitments into owned, dated tasks; reassigns when someone is overloaded; escalates what has slipped</dd>
+      <dt>Stops at</dt><dd class="stop">Changing a customer-facing date without the owner confirming</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Analyst</h3><span class="lv">L3</span></div>
+      <dl><dt>Watches</dt><dd>The whole spine &mdash; both pipelines, the ledger, the calendar</dd>
+      <dt>Does</dt><dd>Builds the daily command screen, cost per qualified lead by source, stage conversion, margin drift</dd>
+      <dt>Stops at</dt><dd class="stop">Reporting a number it cannot trace to a source record</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Content &amp; marketing</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Campaign performance, which creatives produced closes, seasonal demand</dd>
+      <dt>Does</dt><dd>Drafts the calendar, ad copy variants, listing text, case studies from real completed jobs</dd>
+      <dt>Stops at</dt><dd class="stop">Publishing, spending, or writing any claim about price, returns or generation</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Cross-sell matchmaker</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Both rails for the trigger conditions in section&nbsp;06</dd>
+      <dt>Does</dt><dd>Builds a ranked daily queue with the signal, the timing window and the drafted opening</dd>
+      <dt>Stops at</dt><dd class="stop">First contact. A human approves every crossing between rails</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Support &amp; referral</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Tickets, SLA clocks, satisfaction after closure, moments of proof</dd>
+      <dt>Does</dt><dd>Routes and answers routine tickets, times the referral ask, tracks referrals back to their source</dd>
+      <dt>Stops at</dt><dd class="stop">Anything that reads as a claim, a complaint or a compensation request</dd></dl></div>
+  </div>
+
+  <h4 style="margin-top:38px">Rail A &mdash; real estate specialists</h4>
+  <div class="agents">
+    <div class="agent"><div class="ahead"><h3>Inventory</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Available units, builder stock, resale listings, price and possession changes</dd>
+      <dt>Does</dt><dd>Keeps one clean inventory record per unit, flags stale listings, writes listing copy</dd>
+      <dt>Stops at</dt><dd class="stop">Publishing any listing without the registration details the law requires on it</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Match</h3><span class="lv">L3</span></div>
+      <dl><dt>Watches</dt><dd>Every open buyer requirement against live inventory</dd>
+      <dt>Does</dt><dd>Ranks three properties per buyer with the reason for each and the reason others were dropped</dd>
+      <dt>Stops at</dt><dd class="stop">Ranking on commission. The match reason must be about the buyer</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Site-visit coordinator</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Visit requests, team availability, locality clustering</dd>
+      <dt>Does</dt><dd>Batches visits by area, orders the route, sends reminders, collects structured feedback the same day</dd>
+      <dt>Stops at</dt><dd class="stop">Committing an owner or tenant's time without their confirmation</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Documentation</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Every booked deal's document checklist and its deadlines</dd>
+      <dt>Does</dt><dd>Prepares booking forms and agreements from templates, tracks the loan file, schedules registration, chases what is missing</dd>
+      <dt>Stops at</dt><dd class="stop">Legal advice, and any document that is signed or filed</dd></dl></div>
+
+    <div class="agent wide"><div class="ahead"><h3>Channel partner</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Partner-sourced leads, conversion by partner, payout status</dd>
+      <dt>Does</dt><dd>Attributes leads correctly, computes payouts, tells you which partners are worth the desk space</dd>
+      <dt>Stops at</dt><dd class="stop">Approving a payout or changing a commission rate</dd></dl></div>
+  </div>
+
+  <h4 style="margin-top:38px">Rail B &mdash; solar EPC specialists</h4>
+  <div class="agents">
+    <div class="agent"><div class="ahead"><h3>Bill analyst</h3><span class="lv">L3</span></div>
+      <dl><dt>Watches</dt><dd>Uploaded electricity bills, consumer numbers, tariff category</dd>
+      <dt>Does</dt><dd>Reads the bill into a 12-month unit history, separates fixed from energy charges, finds the load pattern</dd>
+      <dt>Stops at</dt><dd class="stop">A low-confidence read. It asks for a clearer photo instead of guessing units</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Sizing &amp; design</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Consumption history, roof area and type, shadow notes, sanctioned load and phase</dd>
+      <dt>Does</dt><dd>Proposes kW, module and inverter configuration, string layout, structure type, cable runs</dd>
+      <dt>Stops at</dt><dd class="stop">Issuing a design. An engineer signs the electrical and structural design, every time</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>BOQ &amp; costing</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>The rate library, live vendor prices, past job actuals against estimates</dd>
+      <dt>Does</dt><dd>Builds the BOQ line by line, lands a &#8377;/W, shows the margin and where past jobs of this shape leaked cost</dd>
+      <dt>Stops at</dt><dd class="stop">Any line item it cannot source from the rate library &mdash; it leaves it blank and flags it</dd></dl></div>
+
+    <div class="agent"><div class="ahead"><h3>Subsidy &amp; compliance</h3><span class="lv">L1</span></div>
+      <dl><dt>Watches</dt><dd>Scheme rules, DISCOM procedures, approved-model requirements, application status</dd>
+      <dt>Does</dt><dd>Checks eligibility, prepares the net-metering and subsidy paperwork, tracks inspection dates</dd>
+      <dt>Stops at</dt><dd class="stop">Filing anything statutory, and quoting a subsidy amount not confirmed against the current scheme</dd></dl></div>
+
+    <div class="agent wide"><div class="ahead"><h3>Project &amp; commissioning</h3><span class="lv">L2</span></div>
+      <dl><dt>Watches</dt><dd>Purchase orders, dispatch, crew calendar, installation checklists, generation after handover</dd>
+      <dt>Does</dt><dd>Sequences procurement against install dates, enforces the photo checklist, opens AMC and monitors output versus the promise</dd>
+      <dt>Stops at</dt><dd class="stop">Releasing a purchase order above the threshold, or signing off a commissioning it cannot evidence</dd></dl></div>
+  </div>
+ </div>
+</section>
+
+<section id="autonomy">
+ <div class="wrap">
+  <div class="shead"><span class="scode">05</span><h2>How much each agent is allowed to do</h2></div>
+  <p class="sdek">Autonomy is a setting, not a personality. Every agent starts at L1 and earns its way
+  up on evidence. Nothing that touches money, law or a promise to a customer ever goes above L2.</p>
+
+  <div class="grid g2">
+    <div class="card"><div class="num">L0 &mdash; Observe</div><h3>Reads, reports, never acts</h3>
+      <p>It builds the view and hands it to a person. The negotiation coach lives here permanently,
+      because the thing it advises on is judgement.</p></div>
+    <div class="card"><div class="num">L1 &mdash; Draft</div><h3>Prepares work, a human sends it</h3>
+      <p>Quotes, designs, BOQs, documents, ad copy. The agent does ninety per cent of the effort
+      and none of the committing. Every new agent starts here.</p></div>
+    <div class="card"><div class="num">L2 &mdash; Act within limits</div><h3>Acts inside a written boundary</h3>
+      <p>A named template list, a value cap, a time window, a message ceiling. Everything is logged
+      and reversible, and stepping outside the boundary is an escalation, not a judgement call.</p></div>
+    <div class="card"><div class="num">L3 &mdash; Act and report</div><h3>Runs its domain, reviewed weekly</h3>
+      <p>Only for work where a mistake costs a correction, not a rupee or a reputation: routing,
+      matching, task-keeping, reading a bill, building a dashboard.</p></div>
+  </div>
+
+  <div class="grid g3" style="margin-top:1px">
+    <div class="card"><div class="num">Promotion</div><h3>Earning a level</h3>
+      <p>An agent moves up after a fixed run &mdash; say fifty decisions &mdash; where the human
+      approved its draft essentially unchanged. The number is the evidence; a feeling that
+      &ldquo;it seems good now&rdquo; is not.</p></div>
+    <div class="card"><div class="num">Demotion</div><h3>Falling back</h3>
+      <p>One customer-visible error, one margin breach, or one compliance miss drops the agent a
+      level automatically. It climbs back the same way it climbed the first time.</p></div>
+    <div class="card"><div class="num">Ceiling</div><h3>The permanent cap</h3>
+      <p>Money out, a signature, a statutory filing, a price below the floor, and first contact
+      across rails stay at L1 forever. No amount of good behaviour unlocks them.</p></div>
+  </div>
+ </div>
+</section>
+
+<section id="crosssell">
+ <div class="wrap">
+  <div class="shead"><span class="scode">06</span><h2>The cross-sell engine</h2></div>
+  <p class="sdek">This is the only section that could not exist if the two businesses ran on
+  separate systems. A cross-sell is not a broadcast &mdash; it is a specific signal, a specific
+  window, and one message. Get the timing wrong and you spend the trust you earned on the first
+  deal.</p>
+
+  <figure>
+    <div class="fbody">
+      <svg viewBox="0 0 1000 316" role="img" aria-label="Diagram: two timelines. A real estate customer's timeline runs booking, registration, possession, first electricity bill, opening a thirty to ninety day window for a rooftop solar offer. A solar customer's timeline runs survey, commissioning, proven savings, and an expansion signal, opening a window for a land or shed offer.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
+            <path d="M0 0 L10 5 L0 10 z" fill="currentColor"/>
+          </marker>
+        </defs>
+
+        <!-- DIRECTION 1 -->
+        <text x="24" y="26" font-family="JetBrains Mono, monospace" font-size="11.5" letter-spacing="1.5" style="fill:var(--re)">REAL ESTATE CUSTOMER &#8594; SOLAR OFFER</text>
+        <rect x="556" y="60" width="248" height="46" style="fill:var(--re-soft)"/>
+        <text x="680" y="52" text-anchor="middle" font-size="11" font-family="JetBrains Mono, monospace" style="fill:var(--re)">OFFER WINDOW · 30–90 DAYS</text>
+        <line x1="40" y1="83" x2="944" y2="83" stroke="currentColor" stroke-opacity=".5" marker-end="url(#ar2)"/>
+        <g fill="currentColor" font-size="12.5" text-anchor="middle">
+          <circle cx="80"  cy="83" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="80"  y="128">Booking</text>
+          <circle cx="250" cy="83" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="250" y="128">Registration</text>
+          <circle cx="420" cy="83" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="420" y="128">Possession</text>
+          <circle cx="592" cy="83" r="5.5" style="fill:var(--re)"/>
+          <text x="592" y="128" style="fill:var(--re)">First bill</text>
+          <text x="592" y="145" font-size="10.5" fill-opacity=".65">the trigger</text>
+          <circle cx="880" cy="83" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="880" y="128">Rooftop order</text>
+        </g>
+
+        <line x1="24" y1="176" x2="976" y2="176" stroke="currentColor" stroke-opacity=".25"/>
+
+        <!-- DIRECTION 2 -->
+        <text x="24" y="212" font-family="JetBrains Mono, monospace" font-size="11.5" letter-spacing="1.5" style="fill:var(--sol)">SOLAR CUSTOMER &#8594; PROPERTY OFFER</text>
+        <rect x="556" y="246" width="288" height="46" style="fill:var(--sol-soft)"/>
+        <text x="700" y="238" text-anchor="middle" font-size="11" font-family="JetBrains Mono, monospace" style="fill:var(--sol)">OFFER WINDOW · AT THE EXPANSION SIGNAL</text>
+        <line x1="40" y1="269" x2="944" y2="269" stroke="currentColor" stroke-opacity=".5" marker-end="url(#ar2)"/>
+        <g fill="currentColor" font-size="12.5" text-anchor="middle">
+          <circle cx="80"  cy="269" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="80"  y="314">Site survey</text>
+          <circle cx="250" cy="269" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="250" y="314">Commissioning</text>
+          <circle cx="420" cy="269" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="420" y="314">Savings proven</text>
+          <circle cx="592" cy="269" r="5.5" style="fill:var(--sol)"/>
+          <text x="592" y="314" style="fill:var(--sol)">Load growing</text>
+          <circle cx="900" cy="269" r="4" fill="currentColor" fill-opacity=".5"/>
+          <text x="900" y="314">Land enquiry</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption>The two directions are not mirror images. Rail A&rarr;B is triggered by a
+    <em>document</em> the system already holds &mdash; the first bill in the customer's own name.
+    Rail B&rarr;A is triggered by something a person said to your engineer on a roof, which is why
+    survey notes are a structured field and not a text box.</figcaption>
+  </figure>
+
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th style="width:88px">Direction</th><th>What the system sees</th><th>When it fires</th>
+        <th>The offer</th><th>Why it converts</th>
+      </tr></thead>
+      <tbody>
+        <tr class="re-row">
+          <td><span class="chip re">A &rarr; B</span></td>
+          <td><strong>Flat registered, possession taken, first bill above roughly 250 units a month</strong></td>
+          <td class="mono">30&ndash;90 days after the first bill</td>
+          <td>Rooftop sized to that bill, subsidy applied, instalment set near what they already pay the DISCOM</td>
+          <td>The bill is fresh, the flat is still half-empty, and you are the person who handed them the keys</td>
+        </tr>
+        <tr class="re-row">
+          <td><span class="chip re">A &rarr; B</span></td>
+          <td><strong>Bungalow, row house or villa &mdash; the customer owns the roof outright</strong></td>
+          <td class="mono">At possession</td>
+          <td>Rooftop with a hybrid inverter, sold on backup as much as on savings</td>
+          <td>No society permission to chase, and interiors are already being drilled into</td>
+        </tr>
+        <tr class="re-row">
+          <td><span class="chip re">A &rarr; B</span></td>
+          <td><strong>Shop, office or commercial unit sold; commercial tariff on the connection</strong></td>
+          <td class="mono">60 days after handover</td>
+          <td>Commercial rooftop, framed as return on capital, not as a monthly saving</td>
+          <td>Commercial tariff is higher, so the same system pays back faster and the buyer thinks in ROI already</td>
+        </tr>
+        <tr class="re-row">
+          <td><span class="chip re">A &rarr; B</span></td>
+          <td><strong>A whole project handed over &mdash; one builder, many units, a forming society</strong></td>
+          <td class="mono">At society formation</td>
+          <td>Common-area solar: lifts, pumps, corridor lighting. One order, not forty conversations</td>
+          <td>A single decision-maker, a visible common bill, and a committee that wants a win to show</td>
+        </tr>
+        <tr class="sol-row">
+          <td><span class="chip sol">B &rarr; A</span></td>
+          <td><strong>Survey notes or load data show the unit expanding &mdash; sanctioned load raised, a shift added, a shed mentioned</strong></td>
+          <td class="mono">At the signal, not on a schedule</td>
+          <td>Industrial plot, shed or warehouse in the same belt, with the power situation already understood</td>
+          <td>They told your engineer months before they will call a broker, and you know their actual load</td>
+        </tr>
+        <tr class="sol-row">
+          <td><span class="chip sol">B &rarr; A</span></td>
+          <td><strong>Residential solar customer, plant performing at or above the promise</strong></td>
+          <td class="mono">12 months after commissioning</td>
+          <td>Investment property or plot &mdash; positioned as the next asset, not the next purchase</td>
+          <td>You have twelve months of delivering exactly what you said you would. That is the entire pitch</td>
+        </tr>
+        <tr class="sol-row">
+          <td><span class="chip sol">B &rarr; A</span></td>
+          <td><strong>The person paying for the plant is the landlord, not the occupant</strong></td>
+          <td class="mono">At survey</td>
+          <td>A conversation about the rest of the portfolio: leasing, resale, or the next shed</td>
+          <td>Anyone who owns one rented shed usually owns or wants more, and nobody has asked them</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid g2">
+    <div class="card">
+      <div class="num">Suppression rules</div>
+      <h3>When the engine must stay quiet</h3>
+      <p>No cross-sell while a ticket or complaint is open on the first deal. None until the first
+      deal is fully delivered &mdash; possession taken or plant exporting. Never in the same message
+      as a referral ask. At most one attempt per customer per six months, and if they say no, the
+      record says no for a year.</p>
+    </div>
+    <div class="card">
+      <div class="num">Approval</div>
+      <h3>A human opens every crossing</h3>
+      <p>The matchmaker builds the queue and drafts the opening line; a person reads the name,
+      remembers the deal, and either sends it or kills it. This is deliberately the slowest step in
+      the system. A wrongly-timed cross-sell costs a customer, and customers here are worth more
+      than any single order.</p>
+    </div>
+  </div>
+
+  <div class="note warn"><b>On the numbers:</b> the windows above are starting positions, not
+  findings. Run the engine for two quarters with the timing logged, then replace every figure in
+  this table with what your own data says &mdash; especially the 250-unit threshold and the 30-90
+  day window, which will move with the locality and the season.</div>
+ </div>
+</section>
+
+<section id="command">
+ <div class="wrap">
+  <div class="shead"><span class="scode">07</span><h2>The command center</h2></div>
+  <p class="sdek">One screen, opened once a day, that answers three questions in order: what needs
+  me, what is at risk, and does this month work. Everything else is a report you can go and find.
+  If a number on this screen has never changed a decision, it should not be on this screen.</p>
+
+  <div class="cc">
+    <div class="cc-bar">
+      <span><b>COMMAND CENTER</b> &nbsp;·&nbsp; Friday, 07:40</span>
+      <span>12 items need a human &nbsp;·&nbsp; 4 of them today</span>
+    </div>
+
+    <div class="cc-kpi">
+      <div><div class="l">Cash in, next 30d</div><div class="v">&#8377;41.2L</div><div class="d up">&#9650; &#8377;6.4L vs plan</div></div>
+      <div><div class="l">Cash out, next 30d</div><div class="v">&#8377;33.8L</div><div class="d">2 POs pending release</div></div>
+      <div><div class="l">Qualified leads</div><div class="v">17</div><div class="d">9 property · 8 solar</div></div>
+      <div><div class="l">Deals at risk</div><div class="v">5</div><div class="d dn">&#9660; 2 slipped this week</div></div>
+      <div><div class="l">Cross-sell queue</div><div class="v">6</div><div class="d">awaiting your yes</div></div>
+    </div>
+
+    <div class="cc-cols">
+      <div class="pane">
+        <h4>Needs you now &mdash; ranked by what it costs to wait</h4>
+        <div class="row"><span class="stripe crit"></span><div class="m">
+          <div class="t">Release PO &mdash; 120 modules, Shreeji Textiles 110&nbsp;kW</div>
+          <div class="s">Install crew booked Monday. Vendor holds the price until 6pm today.</div>
+        </div><span class="amt">&#8377;18.4L</span><span class="a">Release</span></div>
+
+        <div class="row"><span class="stripe re"></span><div class="m">
+          <div class="t">Approve quote &mdash; Patel, 3 BHK, Kalawad Road</div>
+          <div class="s">Drafted at 4.2% below the floor to match a competing offer. Reason attached.</div>
+        </div><span class="amt">&#8377;72L</span><span class="a">Review</span></div>
+
+        <div class="row"><span class="stripe warn"></span><div class="m">
+          <div class="t">Net-metering file &mdash; 3 applications past their follow-up date</div>
+          <div class="s">Two customers have asked twice. Drafted status message waiting to send.</div>
+        </div><span class="a">Open</span></div>
+
+        <div class="row"><span class="stripe sol"></span><div class="m">
+          <div class="t">Sign design &mdash; Mehta Industries, 150&nbsp;kW, elevated structure</div>
+          <div class="s">Shadow analysis flags 6% loss from the water tank. Two layouts prepared.</div>
+        </div><span class="a">Sign</span></div>
+
+        <div class="row"><span class="stripe crit"></span><div class="m">
+          <div class="t">Collection &mdash; Rajwadi commissioning milestone, 34 days overdue</div>
+          <div class="s">Third reminder sent. AMC start is being held back until this clears.</div>
+        </div><span class="amt">&#8377;4.7L</span><span class="a">Call</span></div>
+
+        <div class="row"><span class="stripe re"></span><div class="m">
+          <div class="t">Registration slot &mdash; Joshi, tomorrow 11:00</div>
+          <div class="s">Stamp duty paid. One document still missing from the buyer.</div>
+        </div><span class="a">Confirm</span></div>
+      </div>
+
+      <div class="pane">
+          <h4>Both pipelines, this week</h4>
+          <div class="pane-body">
+            <div>
+              <span class="railtag a">Rail A · Real Estate</span>
+              <div class="fun" style="margin-top:11px">
+                <div><div class="fr"><span class="fn">Qualified</span><span class="fc">34</span></div><div class="bar"><i class="re" style="width:100%"></i></div></div>
+                <div><div class="fr"><span class="fn">Visited</span><span class="fc">19</span></div><div class="bar"><i class="re" style="width:56%"></i></div></div>
+                <div><div class="fr"><span class="fn">Negotiating</span><span class="fc">7</span></div><div class="bar"><i class="re" style="width:21%"></i></div></div>
+                <div><div class="fr"><span class="fn">Booked</span><span class="fc">3</span></div><div class="bar"><i class="re" style="width:9%"></i></div></div>
+              </div>
+            </div>
+            <div>
+              <span class="railtag b">Rail B · Solar EPC</span>
+              <div class="fun" style="margin-top:11px">
+                <div><div class="fr"><span class="fn">Bill analysed</span><span class="fc">28</span></div><div class="bar"><i class="sol" style="width:100%"></i></div></div>
+                <div><div class="fr"><span class="fn">Surveyed</span><span class="fc">14</span></div><div class="bar"><i class="sol" style="width:50%"></i></div></div>
+                <div><div class="fr"><span class="fn">Quoted</span><span class="fc">11</span></div><div class="bar"><i class="sol" style="width:39%"></i></div></div>
+                <div><div class="fr"><span class="fn">Ordered</span><span class="fc">4</span></div><div class="bar"><i class="sol" style="width:14%"></i></div></div>
+              </div>
+            </div>
+          </div>
+      </div>
+    </div>
+
+    <div class="pane" style="border-top:1px solid var(--rule-strong)">
+      <h4>Cross-sell queue &mdash; drafted, waiting on gate G8</h4>
+      <div class="xq">
+        <div class="row"><span class="stripe re"></span><div class="m">
+          <div class="t">Nirav Bhatt &mdash; first bill, 410 units</div>
+          <div class="s">Possession 8 weeks ago. 3&nbsp;kW draft ready.</div>
+        </div><span class="a">Send</span></div>
+        <div class="row"><span class="stripe sol"></span><div class="m">
+          <div class="t">Mehta Industries &mdash; load raised to 220&nbsp;kVA</div>
+          <div class="s">Survey note: &ldquo;looking for a shed nearby.&rdquo;</div>
+        </div><span class="a">Send</span></div>
+        <div class="row"><span class="stripe re"></span><div class="m">
+          <div class="t">Vrundavan Residency &mdash; society formed</div>
+          <div class="s">Common-area load estimated. 22&nbsp;kW draft ready.</div>
+        </div><span class="a">Send</span></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note"><b>Why the money row sits at the top:</b> in an EPC business the failure mode
+  is not losing deals, it is winning one you cannot fund. Cash-in against cash-out for the next
+  thirty days, across both rails, is the single number that should decide whether you chase the
+  next order this week or collect the last one.</div>
+ </div>
+</section>
+
+<section id="gates">
+ <div class="wrap">
+  <div class="shead"><span class="scode">08</span><h2>Where a human must sign</h2></div>
+  <p class="sdek">Nine gates. They are not there because the AI is unreliable &mdash; they are there
+  because these are the decisions that are expensive to reverse, and because your name, not the
+  system's, is on the document.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr>
+        <th style="width:56px">Gate</th><th>The moment</th><th>What the AI has already done</th>
+        <th>Who signs</th><th>If nobody signs</th>
+      </tr></thead>
+      <tbody>
+        <tr class="both-row"><td class="mono">G1</td>
+          <td><strong>Ad spend and public claims</strong></td>
+          <td>Drafted creatives and copy, allocated budget by cost per qualified lead, flagged every claim about price, returns or generation</td>
+          <td>Founder / marketing owner</td>
+          <td>Campaign stays paused. Nothing publishes on its own</td></tr>
+        <tr class="both-row"><td class="mono">G2</td>
+          <td><strong>Price below the margin floor</strong></td>
+          <td>Computed the floor, listed the non-price trades to offer first, showed what this discount does to the month</td>
+          <td>Founder</td>
+          <td>The quote holds at floor price. The AI does not soften it while waiting</td></tr>
+        <tr class="both-row"><td class="mono">G3</td>
+          <td><strong>Any binding document leaves</strong> &mdash; quotation, agreement, work order</td>
+          <td>Assembled it from templates and the rate library, versioned it, attached the approved margin</td>
+          <td>Founder or deal owner</td>
+          <td>It sits in the outbox. The customer is told a person is reviewing it</td></tr>
+        <tr class="sol-row"><td class="mono">G4</td>
+          <td><strong>Solar system design</strong> &mdash; sizing, structure, electrical</td>
+          <td>Proposed kW, layout, string design, structure and cable runs with the shadow losses stated</td>
+          <td>Electrical engineer</td>
+          <td>No BOQ, no quote, no procurement. The chain stops here by design</td></tr>
+        <tr class="both-row"><td class="mono">G5</td>
+          <td><strong>Purchase order above threshold</strong></td>
+          <td>Compared vendor quotes, checked stock and lead time against the install date, drafted the PO</td>
+          <td>Founder / procurement owner</td>
+          <td>Crew scheduling is held back automatically rather than booked on hope</td></tr>
+        <tr class="both-row"><td class="mono">G6</td>
+          <td><strong>Cancellation, refund or writing a deal off</strong></td>
+          <td>Assembled the full history, the amounts involved and what recovery looks like</td>
+          <td>Founder</td>
+          <td>Deal stays open and keeps appearing in the queue until decided</td></tr>
+        <tr class="both-row"><td class="mono">G7</td>
+          <td><strong>Money leaving the business</strong></td>
+          <td>Matched the invoice to the milestone and the delivery evidence, checked the ledger</td>
+          <td>Founder / finance owner</td>
+          <td>Payment does not go out. Vendor is told the release date, not left silent</td></tr>
+        <tr class="both-row"><td class="mono">G8</td>
+          <td><strong>First contact across rails</strong> &mdash; and any referral incentive</td>
+          <td>Ranked the queue, named the trigger and window, drafted the opening message</td>
+          <td>Founder</td>
+          <td>Nothing is sent. The opportunity expires quietly rather than being auto-sent</td></tr>
+        <tr class="both-row"><td class="mono">G9</td>
+          <td><strong>Statutory filings</strong> &mdash; net metering, subsidy claims, tax, registration</td>
+          <td>Prepared the forms, checked eligibility against the current scheme, tracked the deadline</td>
+          <td>Named accountable person per filing</td>
+          <td>It escalates daily and never silently lapses. Missed filings are the most expensive kind</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="note"><b>A gate is a queue, not a wall.</b> Every gate above must have a named owner, a
+  target response time, and a visible cost of waiting on the command screen. A gate nobody clears
+  is worse than no gate at all &mdash; the work still happens, it just happens outside the system
+  where nothing is recorded.</div>
+ </div>
+</section>
+
+<section id="spine">
+ <div class="wrap">
+  <div class="shead"><span class="scode">09</span><h2>What actually makes it one system</h2></div>
+  <p class="sdek">Not the dashboard. Three unglamorous things underneath it, and if any one of them
+  is wrong the rest of this document is decoration.</p>
+
+  <div class="rails">
+    <div class="railhead a">
+      <h4>Requirement 01</h4>
+      <h3 style="margin-bottom:8px">One identity per human</h3>
+      <ul>
+        <li>The <em>person</em> is the root record. Deals hang off them, not the other way round.</li>
+        <li>Phone number is the key, normalised to one format, matched before anything else happens.</li>
+        <li>A person can hold a property deal and a solar deal at once without becoming two customers.</li>
+        <li>Family and company links are explicit &mdash; the man who bought the flat and the firm that bought the plant may be the same wallet.</li>
+      </ul>
+    </div>
+    <div class="railhead s spine">
+      <h4>Requirement 02</h4>
+      <h3 style="margin-bottom:8px">One identity per place</h3>
+      <ul>
+        <li>A flat, a plot, a factory roof and a shed are all <em>sites</em>: an address, a geocode, an owner link.</li>
+        <li>A property you sold and a roof you later fit are the same site, with two deals against it.</li>
+        <li>This is what lets the system notice, unprompted, that the roof it just surveyed is a building it sold.</li>
+        <li>Without it, cross-sell is a manual memory exercise and stays one forever.</li>
+      </ul>
+    </div>
+    <div class="railhead b">
+      <h4>Requirement 03</h4>
+      <h3 style="margin-bottom:8px">One ledger, both rails</h3>
+      <ul>
+        <li>Every rupee carries a rail, a deal, a milestone and a date it is expected on.</li>
+        <li>Brokerage received and a module PO due sit in the same 30-day view, not two apps.</li>
+        <li>Subsidy and retention are receivables with their own ageing, never treated as arrived.</li>
+        <li>Margin is computed from actuals after the job, not from the estimate that won it.</li>
+      </ul>
+    </div>
+  </div>
+
+  <div class="grid g3">
+    <div class="card"><div class="num">Discipline 01</div><h3>Every write is signed</h3>
+      <p>Each change carries who or what made it, when, and on what basis. When an agent is wrong,
+      you need to find every record it touched in one query &mdash; not reconstruct it from
+      memory.</p></div>
+    <div class="card"><div class="num">Discipline 02</div><h3>Degrade, never drop</h3>
+      <p>If the messaging API is down, the bill is unreadable or a vendor portal is offline, the
+      work falls into a human queue with the reason attached. The one unacceptable outcome is a
+      lead or a commitment quietly disappearing.</p></div>
+    <div class="card"><div class="num">Discipline 03</div><h3>Rules are config, not code</h3>
+      <p>Subsidy rates, tariff slabs, margin floors, cadence ceilings and PO thresholds live in one
+      table with a &ldquo;verified on&rdquo; date. Anything that changes by government notification
+      must be changeable by you in a minute.</p></div>
+  </div>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th style="width:180px">What plugs in</th><th>How it connects</th><th>What breaks, and the fallback</th></tr></thead>
+      <tbody>
+        <tr><td><strong>WhatsApp Business Platform</strong></td>
+          <td>Official API for templated outbound and free-form replies inside the service window</td>
+          <td>Template rejection or a quality-rating drop throttles you. Fallback: cadence ceilings, and a human queue when a template is refused</td></tr>
+        <tr><td><strong>Telephony &amp; IVR</strong></td>
+          <td>Call recording and transcription written onto the customer record automatically</td>
+          <td>Consent and calling-preference rules apply to outbound. Fallback: manual call logging, which people skip &mdash; so make the recorded path the easy one</td></tr>
+        <tr><td><strong>Lead sources</strong></td>
+          <td>Meta and Google lead forms, website, property portals, marketplaces, walk-in register</td>
+          <td>Every source has a different schema. Normalise at the router or the CRM fills with junk</td></tr>
+        <tr><td><strong>Accounting &amp; GST</strong></td>
+          <td>Invoices and receipts sync both ways; the ledger is the source of truth for pipeline cash</td>
+          <td>Two systems drifting apart. Fallback: a daily unmatched-entries report that someone actually clears</td></tr>
+        <tr><td><strong>Payments &amp; e-sign</strong></td>
+          <td>Collection links on invoices; digital signature on documents where it is legally accepted</td>
+          <td>Registration and several filings still need physical presence. The system schedules those, it does not replace them</td></tr>
+        <tr><td><strong>Inverter monitoring</strong></td>
+          <td>Vendor portals or APIs pulled per plant into one generation view</td>
+          <td>Every brand differs and some have no API. Fallback: monthly manual reading, still recorded against the plant</td></tr>
+        <tr><td><strong>DISCOM &amp; scheme portals</strong></td>
+          <td>Application status tracked as a task with a deadline and an owner</td>
+          <td>Assume no API. This stays a human workflow the system chases, and pretending otherwise is how filings lapse</td></tr>
+      </tbody>
+    </table>
+  </div>
+ </div>
+</section>
+
+<section id="build">
+ <div class="wrap">
+  <div class="shead"><span class="scode">10</span><h2>How to actually get there</h2></div>
+  <p class="sdek">Six months, six phases, in this order. The sequence matters more than the speed:
+  every phase depends on the one before it being genuinely finished, and the cross-sell engine
+  &mdash; the reason for the whole exercise &mdash; comes last because it needs everything else to
+  be true first.</p>
+
+  <div class="phases">
+    <div class="phase"><div class="when"><b>WEEKS 1&ndash;2</b>Phase 0</div><div class="what">
+      <h3>One record</h3>
+      <ul>
+        <li>Both businesses migrated into one customer database, phone number as the key</li>
+        <li>Duplicates merged by hand &mdash; this is tedious and it is the whole foundation</li>
+        <li>Sites created for every property sold and every plant installed to date</li>
+        <li>No AI yet. Deliberately</li>
+      </ul>
+      <div class="live">Live at the end: you can answer &ldquo;have we ever dealt with this number, on either side?&rdquo; in one search.</div>
+    </div></div>
+
+    <div class="phase"><div class="when"><b>WEEKS 3&ndash;6</b>Phase 1</div><div class="what">
+      <h3>Capture and conversation</h3>
+      <ul>
+        <li>Every channel routed into one inbox; router live at L3, qualifier at L1</li>
+        <li>WhatsApp Business Platform connected with an approved template library</li>
+        <li>Rail-specific qualification question sets written and tested on real leads</li>
+        <li>Call transcription writing onto the record</li>
+      </ul>
+      <div class="live">Live at the end: no lead is unanswered for more than a minute, and every lead has a score with a reason.</div>
+    </div></div>
+
+    <div class="phase"><div class="when"><b>WEEKS 7&ndash;10</b>Phase 2</div><div class="what">
+      <h3>The quote engine</h3>
+      <ul>
+        <li>Rate library built for both rails, with margin floors written down for the first time</li>
+        <li>Bill analyst live; sizing and BOQ agents drafting at L1</li>
+        <li>Property matching live with reasons attached to every recommendation</li>
+        <li>Gates G2, G3 and G4 enforced from day one of this phase</li>
+      </ul>
+      <div class="live">Live at the end: a quote takes minutes instead of a day, and you know the margin before you send it.</div>
+    </div></div>
+
+    <div class="phase"><div class="when"><b>WEEKS 11&ndash;14</b>Phase 3</div><div class="what">
+      <h3>Money</h3>
+      <ul>
+        <li>One ledger across both rails; milestone invoicing and collections automated to L2</li>
+        <li>Subsidy and retention tracked as ageing receivables</li>
+        <li>Command screen v1 &mdash; the approvals queue and the 30-day cash view, nothing else</li>
+      </ul>
+      <div class="live">Live at the end: on the 8th you know whether the month works, and which order is funding which.</div>
+    </div></div>
+
+    <div class="phase"><div class="when"><b>WEEKS 15&ndash;20</b>Phase 4</div><div class="what">
+      <h3>Execution</h3>
+      <ul>
+        <li>Project and commissioning agent live: procurement sequencing, photo checklists, net-metering tracking</li>
+        <li>Documentation agent live on the property rail; ops and task agent across both</li>
+        <li>First autonomy promotions granted on evidence, first demotions actually enforced</li>
+      </ul>
+      <div class="live">Live at the end: nothing promised to a customer exists only in someone's head.</div>
+    </div></div>
+
+    <div class="phase"><div class="when"><b>WEEKS 21&ndash;26</b>Phase 5</div><div class="what">
+      <h3>The reason you built it</h3>
+      <ul>
+        <li>Cross-sell matchmaker switched on with the triggers from section 06 and all suppression rules active</li>
+        <li>Support, AMC and referral timing live; referrals attributed back to their source</li>
+        <li>Every placeholder figure in this document replaced with your own measured numbers</li>
+      </ul>
+      <div class="live">Live at the end: the second sale to an existing customer costs a phone call, and the referral engine has something true to say.</div>
+    </div></div>
+  </div>
+
+  <div class="note"><b>The honest warning about Phase 0:</b> teams skip the merge because it is
+  boring and start with the AI because it is exciting. Every system that fails, fails here. An
+  agent reasoning over two spellings of the same customer will confidently tell you things that
+  are not true, and you will believe it, because it is on a dashboard.</div>
+ </div>
+</section>
+
+<section id="risks">
+ <div class="wrap">
+  <div class="shead"><span class="scode">11</span><h2>Where this breaks</h2></div>
+  <p class="sdek">Eight failure modes, ranked by how quietly they happen. None of them are exotic.
+  Every one has been the reason a system like this got abandoned somewhere.</p>
+
+  <div class="grid g2">
+    <div class="card"><span class="chip c">Highest risk</span>
+      <h3>Dirty data at the start</h3>
+      <p>Two rails, two spellings, one phone number written three ways. An agent reasoning over
+      that will produce fluent, confident, wrong answers &mdash; and they will look authoritative
+      because they arrive in a dashboard. <b>Fix:</b> Phase 0 is not optional, and no agent goes
+      live on a record set that has not been merged by hand.</p></div>
+
+    <div class="card"><span class="chip c">Highest risk</span>
+      <h3>A confidently misread bill</h3>
+      <p>OCR reads 340 units as 40, the plant is sized at a third of what the customer needs, and
+      you find out at the first bill after commissioning &mdash; when it is a 25-year problem.
+      <b>Fix:</b> the bill analyst reports confidence, refuses low-confidence reads, and sizing is
+      cross-checked against sanctioned load before any quote leaves.</p></div>
+
+    <div class="card"><span class="chip w">Expensive</span>
+      <h3>A subsidy that changed last month</h3>
+      <p>Scheme rules, caps, approved-model lists and DISCOM procedures move by notification. A
+      quote that promises the old number is a loss you have already committed to in writing.
+      <b>Fix:</b> scheme rules live in config with a &ldquo;verified on&rdquo; date, and any quote
+      built on a stale entry is blocked, not warned.</p></div>
+
+    <div class="card"><span class="chip w">Expensive</span>
+      <h3>A rate library nobody updates</h3>
+      <p>Module, inverter, steel and cable prices move. A three-month-old rate library sells at a
+      loss with total confidence, and the BOQ agent will not notice because it has no other truth.
+      <b>Fix:</b> costing compares every job's actuals against its estimate, and a drift beyond a
+      set threshold forces a library review before the next quote.</p></div>
+
+    <div class="card"><span class="chip w">Expensive</span>
+      <h3>Over-promised generation</h3>
+      <p>A generous number in a quotation becomes a 25-year expectation, and the first cloudy month
+      turns into a dispute. <b>Fix:</b> quote conservatively with the losses stated, record actual
+      generation against the promise on every plant, and let the support agent surface the gap
+      before the customer does.</p></div>
+
+    <div class="card"><span class="chip w">Expensive</span>
+      <h3>Cross-sell spam</h3>
+      <p>The engine works so well that it gets pointed at everyone, and the customers who would
+      have referred you stop replying. The cost never shows up as a line item &mdash; it shows up
+      as a pipeline that stops filling itself. <b>Fix:</b> the suppression rules in section 06 are
+      hard limits, not defaults, and G8 stays at L1 permanently.</p></div>
+
+    <div class="card"><span class="chip w">Structural</span>
+      <h3>One person holding nine gates</h3>
+      <p>Every approval routes to the founder, the founder travels, and the whole system's
+      throughput becomes one inbox. The team then works around it, and the records stop being true.
+      <b>Fix:</b> every gate gets a named deputy and a response-time target, and the command screen
+      shows what waiting is costing.</p></div>
+
+    <div class="card"><span class="chip w">Structural</span>
+      <h3>The screen nobody opens</h3>
+      <p>It happens the moment the screen shows numbers instead of decisions. A dashboard that
+      reports is a dashboard you stop visiting; a queue that blocks work is one you clear daily.
+      <b>Fix:</b> the command center opens on the approvals queue, and any metric that has not
+      changed a decision in a quarter comes off it.</p></div>
+  </div>
+
+  <div class="note warn"><b>Messaging and calling rules are a live constraint, not a footnote.</b>
+  Outbound WhatsApp runs on approved templates with a quality rating you can lose; outbound calling
+  is bound by consent and calling-preference regulation; property advertising carries its own
+  disclosure requirements. Build the cadence ceilings and the disclosure fields in from Phase 1 &mdash;
+  retrofitting compliance onto a running automation is far more painful than designing with it.</div>
+ </div>
+</section>
+
+<section id="close" style="border-bottom:0">
+ <div class="wrap">
+  <div class="shead"><span class="scode">12</span><h2>The one sentence version</h2></div>
+  <div style="display:flex; gap:40px; flex-wrap:wrap; align-items:flex-start; margin-top:24px">
+    <p class="pull" style="flex:1 1 320px">Acquire the customer once. Sell them twice. Let them
+    bring the third.</p>
+    <div style="flex:1 1 380px; display:flex; flex-direction:column; gap:14px">
+      <p style="color:var(--ink-2)">Everything above is machinery for that sentence. The agents
+      exist so the second sale costs a phone call instead of an ad budget. The gates exist so the
+      second sale never costs you the first customer. The shared spine exists because the moment
+      that makes a cross-sell possible &mdash; a first electricity bill, a sentence said to an
+      engineer on a roof &mdash; is invisible to a business that runs two systems.</p>
+      <p style="color:var(--ink-2)">Build Phase 0 properly, keep the nine gates honest, and replace
+      every placeholder number in this document with a measured one by the end of the second
+      quarter. That is the whole plan.</p>
+    </div>
+  </div>
+ </div>
+</section>
+
+<div class="bus"><i></i><i></i></div>
+<footer>
+  <div class="wrap">
+    <div class="fg">
+      <div>
+        <div class="eyebrow">Two Rails, One Spine</div>
+        <p style="margin-top:8px; max-width:52ch">An operating blueprint for running a real estate
+        business and a solar EPC business as one AI-first company.</p>
+      </div>
+      <div class="mono" style="text-align:right">
+        <div>DESIGN v1 &nbsp;·&nbsp; 22 AGENTS &nbsp;·&nbsp; 9 GATES</div>
+        <div style="margin-top:5px">Figures are worked starting positions, not findings</div>
+      </div>
+    </div>
+  </div>
+</footer>
