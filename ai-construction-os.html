@@ -1,0 +1,1619 @@
+<title>AI Construction Operating System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wdth,wght@100..125,400..800&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+/* ─────────────────────────────────────────────────────────────
+   AI CONSTRUCTION OS — drawing-set visual system
+   Light = concrete/vellum. Dark = night site.
+   Hi-vis (#D6E035) is a MARKER fill only, never body text.
+   ───────────────────────────────────────────────────────────── */
+:root{
+  color-scheme: light;
+  --paper:#ECECE6; --surface:#F5F5F1; --surface-2:#FBFBF8; --sunken:#E2E2DB;
+  --ink:#14181A; --ink-2:#474F53; --ink-3:#757D80;
+  --rule:#D2D3CA; --rule-strong:#B5B7AC;
+  --steel:var(--steel); --steel-soft:#DBE8EC; --steel-line:#2E7285;
+  --hivis:#D6E035; --hivis-ink:#14181A; --hivis-edge:#A9B21F;
+  --good:#1E7A52; --warn:#9E6509; --crit:#B03A28;
+  --good-bg:#DCECE3; --warn-bg:#F3E7CD; --crit-bg:#F4DED9;
+  --s1:#0079A0; --s2:#C2551C; --s-base:#8A9296;
+  --shadow:0 1px 0 rgba(20,24,26,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#101315; --surface:#171B1E; --surface-2:#1E2327; --sunken:#0A0D0F;
+    --ink:#E7E9E4; --ink-2:#A3ACB0; --ink-3:#7B8589;
+    --rule:#2B3237; --rule-strong:#3E474D;
+    --steel:#6BC2D8; --steel-soft:#15323B; --steel-line:#4E9FB5;
+    --hivis:#D6E035; --hivis-ink:#101315; --hivis-edge:#8E9619;
+    --good:#4FB98A; --warn:#D3A046; --crit:#E4715C;
+    --good-bg:#132E23; --warn-bg:#312714; --crit-bg:#381C17;
+    --s1:#2E9FBE; --s2:#D9702F; --s-base:#77838A;
+    --shadow:0 1px 0 rgba(0,0,0,.3);
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#101315; --surface:#171B1E; --surface-2:#1E2327; --sunken:#0A0D0F;
+  --ink:#E7E9E4; --ink-2:#A3ACB0; --ink-3:#7B8589;
+  --rule:#2B3237; --rule-strong:#3E474D;
+  --steel:#6BC2D8; --steel-soft:#15323B; --steel-line:#4E9FB5;
+  --hivis:#D6E035; --hivis-ink:#101315; --hivis-edge:#8E9619;
+  --good:#4FB98A; --warn:#D3A046; --crit:#E4715C;
+  --good-bg:#132E23; --warn-bg:#312714; --crit-bg:#381C17;
+  --s1:#2E9FBE; --s2:#D9702F; --s-base:#77838A;
+  --shadow:0 1px 0 rgba(0,0,0,.3);
+}
+
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink);
+  font-family:"IBM Plex Sans","Segoe UI",Helvetica,Arial,sans-serif;
+  font-size:15px; line-height:1.6;
+  -webkit-font-smoothing:antialiased;
+}
+h1,h2,h3,h4,.disp{
+  font-family:Archivo,"Archivo",Helvetica,Arial,sans-serif;
+  font-variation-settings:"wdth" 116;
+  text-wrap:balance; margin:0;
+}
+p{margin:0}
+a{color:var(--steel)}
+:focus-visible{outline:2px solid var(--steel); outline-offset:2px}
+@media (prefers-reduced-motion:reduce){*{animation:none!important; transition:none!important}}
+
+/* ── layout shell ───────────────────────────────────────────── */
+.sheet{max-width:1240px; margin:0 auto; padding:0 24px}
+@media(max-width:640px){.sheet{padding:0 14px}}
+
+.tape{
+  height:9px; border-block:1px solid var(--rule-strong);
+  background:repeating-linear-gradient(115deg,var(--hivis) 0 14px, var(--sunken) 14px 28px);
+}
+.rule{height:1px; background:var(--rule); border:0; margin:0}
+
+/* ── title block header ─────────────────────────────────────── */
+header.tb{background:var(--surface); border-bottom:1px solid var(--rule-strong)}
+.tb-top{display:flex; flex-wrap:wrap; gap:28px; align-items:flex-end; padding:52px 0 30px}
+.tb-main{flex:1 1 460px; min-width:0}
+.eyebrow{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:500;
+  letter-spacing:.18em; text-transform:uppercase; color:var(--ink-3);
+}
+h1{font-size:clamp(36px,6.2vw,68px); font-weight:800; line-height:.98; letter-spacing:-.02em; margin:14px 0 0}
+h1 .lo{font-weight:500; color:var(--ink-2); display:block; font-variation-settings:"wdth" 104}
+.lede{margin-top:18px; max-width:60ch; font-size:17px; color:var(--ink-2)}
+.stamp{
+  flex:0 0 auto; border:1px solid var(--rule-strong); background:var(--surface-2);
+  padding:0; min-width:250px;
+}
+.stamp div{display:flex; justify-content:space-between; gap:18px; padding:7px 12px; border-bottom:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:11.5px}
+.stamp div:last-child{border-bottom:0}
+.stamp b{font-weight:500; color:var(--ink-3); letter-spacing:.06em; text-transform:uppercase; font-size:10.5px}
+.stamp span{font-weight:500; color:var(--ink)}
+
+.keyrow{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); border-top:1px solid var(--rule-strong)}
+.keyrow div{padding:18px 0 22px; border-right:1px solid var(--rule)}
+.keyrow div:last-child{border-right:0}
+.keyrow .n{font-family:Archivo; font-variation-settings:"wdth" 112; font-size:34px; font-weight:700; line-height:1; letter-spacing:-.02em; font-variant-numeric:tabular-nums}
+.keyrow .l{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-top:7px}
+@media(max-width:640px){.keyrow div{padding:14px 0 16px; border-right:0; border-bottom:1px solid var(--rule)}}
+
+/* ── sections ───────────────────────────────────────────────── */
+section{padding:60px 0; border-bottom:1px solid var(--rule)}
+.shead{display:flex; gap:20px; align-items:baseline; margin-bottom:10px}
+.scode{
+  font-family:"IBM Plex Mono",monospace; font-size:11px; font-weight:600; letter-spacing:.1em;
+  color:var(--hivis-ink); background:var(--hivis); padding:3px 8px; white-space:nowrap;
+  border:1px solid var(--hivis-edge);
+}
+h2{font-size:clamp(24px,3.4vw,36px); font-weight:700; letter-spacing:-.015em; line-height:1.05}
+.sdek{max-width:70ch; color:var(--ink-2); margin-top:12px; font-size:16px}
+h3{font-size:19px; font-weight:700; letter-spacing:-.01em}
+h4{font-size:11px; font-family:"IBM Plex Mono",monospace; font-variation-settings:normal; font-weight:600;
+   letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3)}
+
+/* ── figures ────────────────────────────────────────────────── */
+figure{margin:28px 0 0; border:1px solid var(--rule-strong); background:var(--surface)}
+.scroll{overflow-x:auto; padding:20px 20px 8px}
+figure svg{display:block; width:100%; height:auto}
+figcaption{
+  border-top:1px solid var(--rule); padding:11px 16px; font-size:13px; color:var(--ink-2);
+  background:var(--surface-2);
+}
+figcaption b{font-weight:600; color:var(--ink)}
+.legend{display:flex; flex-wrap:wrap; gap:18px; padding:12px 16px; border-top:1px solid var(--rule);
+  font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-2)}
+.legend i{display:inline-flex; align-items:center; gap:7px; font-style:normal}
+.legend svg{width:34px; height:10px; flex:0 0 auto}
+
+/* ── stage sheets ───────────────────────────────────────────── */
+.stages{display:grid; gap:0; margin-top:34px; border-top:1px solid var(--rule-strong)}
+.stage{border-bottom:1px solid var(--rule-strong); background:var(--surface)}
+.stage-hd{display:flex; flex-wrap:wrap; gap:16px 20px; align-items:baseline; padding:20px 22px 14px}
+.stage-no{
+  font-family:Archivo; font-variation-settings:"wdth" 112; font-weight:800; font-size:30px; line-height:1;
+  font-variant-numeric:tabular-nums; color:var(--ink-3); flex:0 0 auto; min-width:44px;
+}
+.stage-t{flex:1 1 260px; min-width:0}
+.stage-t h3{font-size:22px}
+.stage-t .purpose{color:var(--ink-2); font-size:15px; margin-top:5px; max-width:62ch}
+.lvl{
+  flex:0 0 auto; font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600;
+  letter-spacing:.09em; text-transform:uppercase; padding:4px 9px; border:1px solid var(--rule-strong);
+  color:var(--ink-2); background:var(--surface-2); white-space:nowrap;
+}
+.lvl.l3{background:var(--hivis); color:var(--hivis-ink); border-color:var(--hivis-edge)}
+.stage-body{display:grid; grid-template-columns:1.35fr 1fr; gap:0; border-top:1px solid var(--rule)}
+@media(max-width:860px){.stage-body{grid-template-columns:1fr}}
+.agents{padding:18px 22px; border-right:1px solid var(--rule)}
+@media(max-width:860px){.agents{border-right:0; border-bottom:1px solid var(--rule)}}
+.agents ul{list-style:none; margin:12px 0 0; padding:0; display:grid; gap:11px}
+.agents li{padding-left:20px; position:relative; font-size:14.5px; color:var(--ink-2); line-height:1.55}
+.agents li::before{
+  content:""; position:absolute; left:0; top:.55em; width:10px; height:10px;
+  background:var(--hivis); border:1px solid var(--hivis-edge);
+}
+.agents li b{color:var(--ink); font-weight:600}
+.side{padding:18px 22px; display:grid; gap:16px; align-content:start; background:var(--surface-2)}
+.io{font-size:13.5px; color:var(--ink-2); line-height:1.5}
+.io span{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-3)}
+.gate{border-left:3px solid var(--steel); padding:2px 0 2px 12px; font-size:13.5px; color:var(--ink-2)}
+.gate b{color:var(--ink); font-weight:600; display:block; font-size:12px; font-family:"IBM Plex Mono",monospace;
+  letter-spacing:.09em; text-transform:uppercase; color:var(--steel); margin-bottom:3px}
+.kpi-line{font-family:"IBM Plex Mono",monospace; font-size:12px; color:var(--ink-2); line-height:1.6}
+.kpi-line em{font-style:normal; color:var(--ink); font-weight:500}
+
+/* ── tables ─────────────────────────────────────────────────── */
+.tw{overflow-x:auto; border:1px solid var(--rule-strong); margin-top:28px; background:var(--surface)}
+table{border-collapse:collapse; width:100%; min-width:660px; font-size:14px}
+th,td{text-align:left; padding:11px 14px; border-bottom:1px solid var(--rule); vertical-align:top}
+thead th{
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; font-weight:600; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--ink-3); background:var(--surface-2); white-space:nowrap;
+  border-bottom:1px solid var(--rule-strong);
+}
+tbody tr:last-child td{border-bottom:0}
+td b{font-weight:600}
+td.mono,th.mono{font-family:"IBM Plex Mono",monospace; font-size:12px; font-variant-numeric:tabular-nums; white-space:nowrap}
+
+/* ── chips / pills ──────────────────────────────────────────── */
+.pill{
+  display:inline-flex; align-items:center; gap:6px; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; font-weight:600; letter-spacing:.07em; text-transform:uppercase;
+  padding:2px 7px; border:1px solid currentColor; white-space:nowrap;
+}
+.pill.good{color:var(--good); background:var(--good-bg)}
+.pill.warn{color:var(--warn); background:var(--warn-bg)}
+.pill.crit{color:var(--crit); background:var(--crit-bg)}
+.pill.flat{color:var(--ink-3); background:var(--surface-2)}
+.dot{width:7px; height:7px; flex:0 0 auto; background:currentColor; border-radius:50%}
+
+/* ── ladder ─────────────────────────────────────────────────── */
+.ladder{display:grid; gap:0; margin-top:28px; border:1px solid var(--rule-strong)}
+.rung{display:grid; grid-template-columns:88px 1fr 250px; gap:0; border-bottom:1px solid var(--rule); background:var(--surface)}
+.rung:last-child{border-bottom:0}
+@media(max-width:760px){.rung{grid-template-columns:1fr}}
+.rung .lv{
+  padding:16px 14px; border-right:1px solid var(--rule); background:var(--surface-2);
+  font-family:Archivo; font-variation-settings:"wdth" 112; font-weight:800; font-size:22px; letter-spacing:-.01em;
+}
+.rung.hi .lv{background:var(--hivis); color:var(--hivis-ink)}
+.rung .wh{padding:16px 18px}
+.rung .wh b{display:block; font-size:15px; font-weight:700}
+.rung .wh p{color:var(--ink-2); font-size:14px; margin-top:4px}
+.rung .ex{padding:16px 18px; border-left:1px solid var(--rule); font-size:13px; color:var(--ink-2);
+  font-family:"IBM Plex Mono",monospace; line-height:1.55}
+@media(max-width:760px){.rung .ex{border-left:0; border-top:1px solid var(--rule)}
+  .rung .lv{border-right:0; border-bottom:1px solid var(--rule)}}
+
+/* ── dashboard ──────────────────────────────────────────────── */
+.dash{border:1px solid var(--rule-strong); background:var(--surface); margin-top:28px}
+.dash-bar{display:flex; flex-wrap:wrap; gap:10px 18px; align-items:center; justify-content:space-between;
+  padding:13px 18px; border-bottom:1px solid var(--rule-strong); background:var(--surface-2)}
+.dash-bar .who{font-family:"IBM Plex Mono",monospace; font-size:11.5px; color:var(--ink-2); letter-spacing:.04em}
+.dash-bar .who b{color:var(--ink); font-weight:600}
+.live{display:inline-flex; align-items:center; gap:7px; font-family:"IBM Plex Mono",monospace;
+  font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-2)}
+.live .d{width:8px; height:8px; background:var(--good); border-radius:50%; animation:pulse 2.4s ease-in-out infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.35}}
+.tiles{display:grid; grid-template-columns:repeat(auto-fit,minmax(196px,1fr))}
+.tile{padding:16px 18px 14px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.tile .lab{font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3)}
+.tile .val{font-family:Archivo; font-variation-settings:"wdth" 112; font-size:31px; font-weight:700; line-height:1.1;
+  letter-spacing:-.02em; margin-top:8px; font-variant-numeric:tabular-nums}
+.tile .val small{font-size:15px; font-weight:600; color:var(--ink-2)}
+.tile .sub{display:flex; align-items:center; gap:9px; margin-top:9px; flex-wrap:wrap}
+.tile .note{font-size:12.5px; color:var(--ink-2); margin-top:9px; line-height:1.45}
+.spark{display:block; width:100%; height:auto; margin-top:11px}
+
+.charts{display:grid; grid-template-columns:1.25fr 1fr; gap:0}
+@media(max-width:900px){.charts{grid-template-columns:1fr}}
+.chart{padding:18px 18px 14px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule)}
+.chart:last-child{border-right:0}
+.chart .ct{font-size:15px; font-weight:700; font-family:Archivo; font-variation-settings:"wdth" 112}
+.chart .cs{font-size:12.5px; color:var(--ink-2); margin-top:3px}
+.chart svg{display:block; width:100%; height:auto; margin-top:14px; overflow:visible}
+.ckey{display:flex; flex-wrap:wrap; gap:14px; margin-top:10px; font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-2)}
+.ckey i{display:inline-flex; align-items:center; gap:6px; font-style:normal}
+.ckey svg{width:26px; height:8px; margin:0}
+details{margin-top:12px; font-size:13px}
+summary{cursor:pointer; font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-3)}
+summary:hover{color:var(--ink)}
+details table{min-width:0; margin-top:10px; font-size:12.5px}
+details th,details td{padding:5px 9px}
+
+/* alert stream */
+.stream{border-top:1px solid var(--rule-strong)}
+.stream-hd{padding:13px 18px; border-bottom:1px solid var(--rule); background:var(--surface-2);
+  font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase; color:var(--ink-3)}
+.alert{display:grid; grid-template-columns:74px 8px 1fr 190px; gap:0; border-bottom:1px solid var(--rule); align-items:stretch}
+.alert:last-child{border-bottom:0}
+@media(max-width:760px){.alert{grid-template-columns:64px 8px 1fr}
+  .alert .act{grid-column:1/-1; border-left:0; border-top:1px solid var(--rule)}}
+.alert .ts{padding:13px 12px; font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3); font-variant-numeric:tabular-nums}
+.alert .sev{background:var(--ink-3)}
+.alert.c .sev{background:var(--crit)} .alert.w .sev{background:var(--warn)} .alert.g .sev{background:var(--good)}
+.alert .msg{padding:13px 14px; font-size:14px}
+.alert .msg b{font-weight:600}
+.alert .msg span{display:block; color:var(--ink-2); font-size:12.5px; margin-top:2px}
+.alert .act{padding:13px 14px; border-left:1px solid var(--rule); font-family:"IBM Plex Mono",monospace;
+  font-size:11px; color:var(--ink-2); line-height:1.5}
+
+/* ── generic card grid ──────────────────────────────────────── */
+.grid{display:grid; gap:0; margin-top:28px; border:1px solid var(--rule-strong);
+  grid-template-columns:repeat(auto-fit,minmax(270px,1fr))}
+.card{padding:20px 20px 22px; border-right:1px solid var(--rule); border-bottom:1px solid var(--rule); background:var(--surface)}
+.card h3{font-size:16px; margin-bottom:8px}
+.card p{font-size:14px; color:var(--ink-2)}
+.card ul{margin:10px 0 0; padding-left:18px; font-size:13.5px; color:var(--ink-2); display:grid; gap:6px}
+.card .num{font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.12em; color:var(--ink-3); display:block; margin-bottom:9px}
+
+/* ── phases ─────────────────────────────────────────────────── */
+.phase{display:grid; grid-template-columns:150px 1fr; gap:0; border-bottom:1px solid var(--rule); background:var(--surface)}
+.phase:last-child{border-bottom:0}
+@media(max-width:700px){.phase{grid-template-columns:1fr}}
+.phase .p-l{padding:18px 16px; border-right:1px solid var(--rule); background:var(--surface-2)}
+.phase .p-l .pn{font-family:Archivo; font-variation-settings:"wdth" 112; font-weight:800; font-size:19px}
+.phase .p-l .pt{font-family:"IBM Plex Mono",monospace; font-size:11px; color:var(--ink-3); margin-top:4px}
+.phase .p-r{padding:18px 20px}
+.phase .p-r b{font-weight:600}
+.phase .p-r p{font-size:14px; color:var(--ink-2); margin-top:6px}
+
+/* ── footer ─────────────────────────────────────────────────── */
+footer{background:var(--surface); border-top:1px solid var(--rule-strong); padding:36px 0 48px}
+.fgrid{display:grid; grid-template-columns:repeat(auto-fit,minmax(180px,1fr)); border:1px solid var(--rule-strong)}
+.fgrid div{padding:14px 16px; border-right:1px solid var(--rule); font-family:"IBM Plex Mono",monospace; font-size:11.5px}
+.fgrid div:last-child{border-right:0}
+.fgrid b{display:block; font-size:10px; letter-spacing:.13em; text-transform:uppercase; color:var(--ink-3); margin-bottom:5px; font-weight:500}
+.fnote{margin-top:22px; font-size:13px; color:var(--ink-3); max-width:78ch}
+
+/* tooltip */
+#tip{
+  position:fixed; z-index:50; pointer-events:none; opacity:0; transition:opacity .1s;
+  background:var(--ink); color:var(--paper); border:1px solid var(--rule-strong);
+  padding:7px 10px; font-family:"IBM Plex Mono",monospace; font-size:11.5px; line-height:1.5;
+  font-variant-numeric:tabular-nums; max-width:230px;
+}
+#tip b{color:var(--hivis); font-weight:600}
+</style>
+
+<div id="tip" role="status" aria-live="polite"></div>
+
+<header class="tb">
+  <div class="tape"></div>
+  <div class="sheet">
+    <div class="tb-top">
+      <div class="tb-main">
+        <div class="eyebrow">Drawing set · Operating model · Rev 1.0</div>
+        <h1>AI Construction<span class="lo">Operating System</span></h1>
+        <p class="lede">One nervous system for a developer who buys land, builds towers and hands over homes.
+        Twelve stages, fifty-seven agents, one command center — and eleven places where a human being
+        still has to put their name on the decision.</p>
+      </div>
+      <div class="stamp" aria-label="Title block">
+        <div><b>Scope</b><span>Ground-up residential + commercial</span></div>
+        <div><b>Region</b><span>India · RERA / ULB / BU</span></div>
+        <div><b>Ref project</b><span>Tower A+B · 248 units</span></div>
+        <div><b>Issued</b><span>2026-08-29</span></div>
+        <div><b>Status</b><span>For implementation</span></div>
+      </div>
+    </div>
+    <div class="keyrow">
+      <div><div class="n">12</div><div class="l">Stages, land to lifetime</div></div>
+      <div><div class="n">57</div><div class="l">AI agents on shift</div></div>
+      <div><div class="n">11</div><div class="l">Human sign-off gates</div></div>
+      <div><div class="n">1</div><div class="l">Command center</div></div>
+      <div><div class="n">0</div><div class="l">Documents filed unsigned</div></div>
+    </div>
+  </div>
+  <div class="tape"></div>
+</header>
+
+<main>
+
+<!-- ══════════ 01 THE SPINE ══════════ -->
+<section class="sheet" id="spine">
+  <div class="shead"><span class="scode">SH-01</span><h2>The spine</h2></div>
+  <p class="sdek">Every stage runs its own agents, but none of them holds the truth. Each stage publishes its
+  events onto one bus and takes its instructions back from one place. That single loop — not the individual
+  models — is what makes this an operating system rather than twelve disconnected pilots.</p>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1240 500" role="img" style="min-width:880px"
+           aria-label="Twelve construction stages arranged in two rows; every stage publishes telemetry down into a central AI Command Center and receives approved directives back from it.">
+        <defs>
+          <marker id="ar" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+          </marker>
+          <marker id="arS" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="5.5" markerHeight="5.5" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="var(--steel)"/>
+          </marker>
+        </defs>
+        <g color="currentColor">
+
+        <!-- ── ROW A : stages 1-6 (left to right) ── -->
+        <g font-family="'IBM Plex Sans',sans-serif">
+          <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".85">
+            <rect x="30"   y="54" width="170" height="86"/>
+            <rect x="224"  y="54" width="170" height="86"/>
+            <rect x="418"  y="54" width="170" height="86"/>
+            <rect x="612"  y="54" width="170" height="86"/>
+            <rect x="806"  y="54" width="170" height="86"/>
+            <rect x="1000" y="54" width="170" height="86"/>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".55" letter-spacing="1">
+            <text x="42" y="74">S-01</text><text x="236" y="74">S-02</text><text x="430" y="74">S-03</text>
+            <text x="624" y="74">S-04</text><text x="818" y="74">S-05</text><text x="1012" y="74">S-06</text>
+          </g>
+          <g font-size="13.5" font-weight="700" fill="currentColor" letter-spacing=".2">
+            <text x="42" y="100">LAND</text>
+            <text x="236" y="100">FEASIBILITY</text>
+            <text x="430" y="100">DESIGN</text>
+            <text x="624" y="100">APPROVALS</text>
+            <text x="818" y="100">BOQ &amp; COST</text>
+            <text x="1012" y="100">PROCUREMENT</text>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">
+            <text x="42" y="127">→ title-clear parcel</text>
+            <text x="236" y="127">→ sanctioned pro-forma</text>
+            <text x="430" y="127">→ GFC drawing set</text>
+            <text x="624" y="127">→ stamped plans</text>
+            <text x="818" y="127">→ control budget</text>
+            <text x="1012" y="127">→ awarded POs</text>
+          </g>
+          <g stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)" color="currentColor">
+            <line x1="200" y1="97" x2="222" y2="97"/><line x1="394" y1="97" x2="416" y2="97"/>
+            <line x1="588" y1="97" x2="610" y2="97"/><line x1="782" y1="97" x2="804" y2="97"/>
+            <line x1="976" y1="97" x2="998" y2="97"/>
+          </g>
+        </g>
+
+        <!-- ── COMMAND CENTER BAND ── -->
+        <rect x="30" y="210" width="1140" height="96" fill="none" stroke="currentColor" stroke-width="2.2"/>
+        <rect x="30" y="210" width="8" height="96" fill="#D6E035"/>
+        <text x="56" y="243" font-family="Archivo,sans-serif" font-size="17.5" font-weight="800"
+              letter-spacing=".3" fill="currentColor">AI CONSTRUCTION COMMAND CENTER</text>
+        <text x="56" y="266" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor" opacity=".62">one bus · one data model · one audit log</text>
+        <text x="56" y="288" font-family="'IBM Plex Mono',monospace" font-size="10.5" fill="currentColor" opacity=".62">every alert traceable to the frame or row that caused it</text>
+        <g fill="none" stroke="currentColor" stroke-width="1" opacity=".8">
+          <rect x="558" y="228" width="146" height="60"/><rect x="716" y="228" width="146" height="60"/>
+          <rect x="874" y="228" width="146" height="60"/><rect x="1032" y="228" width="124" height="60"/>
+        </g>
+        <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" text-anchor="middle" letter-spacing=".5">
+          <text x="631" y="255">EVENT</text><text x="631" y="270">BUS</text>
+          <text x="789" y="255">COMMON DATA</text><text x="789" y="270">MODEL</text>
+          <text x="947" y="255">AGENT</text><text x="947" y="270">RUNTIME</text>
+          <text x="1094" y="255">DECISION +</text><text x="1094" y="270">AUDIT LOG</text>
+        </g>
+
+        <!-- ── ROW B : stages 7-12 (right to left) ── -->
+        <g font-family="'IBM Plex Sans',sans-serif">
+          <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".85">
+            <rect x="1000" y="376" width="170" height="86"/><rect x="806" y="376" width="170" height="86"/>
+            <rect x="612"  y="376" width="170" height="86"/><rect x="418" y="376" width="170" height="86"/>
+            <rect x="224"  y="376" width="170" height="86"/><rect x="30"  y="376" width="170" height="86"/>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".55" letter-spacing="1">
+            <text x="1012" y="396">S-07</text><text x="818" y="396">S-08</text><text x="624" y="396">S-09</text>
+            <text x="430" y="396">S-10</text><text x="236" y="396">S-11</text><text x="42" y="396">S-12</text>
+          </g>
+          <g font-size="13.5" font-weight="700" fill="currentColor" letter-spacing=".2">
+            <text x="1012" y="422">CONSTRUCTION</text>
+            <text x="818" y="422">QUALITY &amp;</text><text x="818" y="437">SAFETY</text>
+            <text x="624" y="422">AI SITE</text><text x="624" y="437">MONITORING</text>
+            <text x="430" y="422">SALES &amp;</text><text x="430" y="437">MARKETING</text>
+            <text x="236" y="422">CUSTOMER</text><text x="236" y="437">HANDOVER</text>
+            <text x="42" y="422">MAINTENANCE</text>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">
+            <text x="1012" y="452">→ built structure</text><text x="818" y="452">→ signed hold points</text>
+            <text x="624" y="452">→ verified progress</text><text x="430" y="452">→ booked units</text>
+            <text x="236" y="452">→ possession + OC</text><text x="42" y="452">→ asset performance</text>
+          </g>
+          <g stroke="currentColor" stroke-width="1.4" marker-end="url(#ar)" color="currentColor">
+            <line x1="998" y1="419" x2="978" y2="419"/><line x1="804" y1="419" x2="784" y2="419"/>
+            <line x1="610" y1="419" x2="590" y2="419"/><line x1="416" y1="419" x2="396" y2="419"/>
+            <line x1="222" y1="419" x2="202" y2="419"/>
+          </g>
+        </g>
+
+        <!-- wrap: design-freeze handoff from row A to row B -->
+        <path d="M1170 97 H1206 V419 H1174" fill="none" stroke="currentColor" stroke-width="1.4"
+              marker-end="url(#ar)" color="currentColor" opacity=".9"/>
+        <text x="1176" y="447" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor"
+              opacity=".6">MOBILISE</text>
+
+        <!-- ── telemetry (dashed, into centre) + directives (solid, back out) ── -->
+        <g stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 3" opacity=".75" marker-end="url(#ar)" color="currentColor">
+          <line x1="97" y1="140" x2="97" y2="206"/><line x1="291" y1="140" x2="291" y2="206"/>
+          <line x1="485" y1="140" x2="485" y2="206"/><line x1="679" y1="140" x2="679" y2="206"/>
+          <line x1="873" y1="140" x2="873" y2="206"/><line x1="1067" y1="140" x2="1067" y2="206"/>
+          <line x1="97" y1="376" x2="97" y2="310"/><line x1="291" y1="376" x2="291" y2="310"/>
+          <line x1="485" y1="376" x2="485" y2="310"/><line x1="679" y1="376" x2="679" y2="310"/>
+          <line x1="873" y1="376" x2="873" y2="310"/><line x1="1067" y1="376" x2="1067" y2="310"/>
+        </g>
+        <g stroke="var(--steel)" stroke-width="1.6" marker-end="url(#arS)">
+          <line x1="133" y1="210" x2="133" y2="144"/><line x1="327" y1="210" x2="327" y2="144"/>
+          <line x1="521" y1="210" x2="521" y2="144"/><line x1="715" y1="210" x2="715" y2="144"/>
+          <line x1="909" y1="210" x2="909" y2="144"/><line x1="1103" y1="210" x2="1103" y2="144"/>
+          <line x1="133" y1="306" x2="133" y2="372"/><line x1="327" y1="306" x2="327" y2="372"/>
+          <line x1="521" y1="306" x2="521" y2="372"/><line x1="715" y1="306" x2="715" y2="372"/>
+          <line x1="909" y1="306" x2="909" y2="372"/><line x1="1103" y1="306" x2="1103" y2="372"/>
+        </g>
+
+        <!-- edge annotations -->
+        <text x="16" y="176" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">EVENTS ↓</text>
+        <text x="16" y="348" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">EVENTS ↑</text>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <i><svg viewBox="0 0 34 10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="3 3"/></svg>Telemetry — raw events, photos, readings, transactions</i>
+      <i><svg viewBox="0 0 34 10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="var(--steel)" stroke-width="2"/></svg>Directives — only what a human gate has approved</i>
+    </div>
+    <figcaption><b>The whole system in one picture.</b> Stages hand work forward left to right; the vertical
+    traffic is what makes it intelligent. Dashed lines carry raw reality upward every few seconds. Solid
+    steel lines carry back only decisions that cleared a gate — which is why the command center can be
+    aggressive about analysis and conservative about action.</figcaption>
+  </figure>
+</section>
+
+<!-- ══════════ 02 CORE LOOP ══════════ -->
+<section class="sheet" id="loop">
+  <div class="shead"><span class="scode">SH-02</span><h2>The core loop</h2></div>
+  <p class="sdek">The same nine steps run behind every stage — a cement pour, a vendor award, a lead follow-up.
+  What changes stage to stage is only the data and the autonomy level. The gate at step 7 is the load-bearing
+  element: anything that spends money, signs a document, stops work or touches a customer contract must
+  physically pass through a named human.</p>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1240 400" role="img" style="min-width:880px"
+           aria-label="A nine-step loop: data, monitor, analyze, predict, alert, recommend, human approval, execute, learn. A bypass arc lets only low-risk high-autonomy actions skip the human gate, and rejections feed back into learning.">
+        <defs>
+          <marker id="ar2" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g color="currentColor" font-family="'IBM Plex Sans',sans-serif">
+
+        <!-- main row -->
+        <g fill="none" stroke="currentColor" stroke-width="1.2">
+          <rect x="40" y="150" width="120" height="64"/><rect x="186" y="150" width="120" height="64"/>
+          <rect x="332" y="150" width="120" height="64"/><rect x="478" y="150" width="120" height="64"/>
+          <rect x="624" y="150" width="120" height="64"/><rect x="770" y="150" width="120" height="64"/>
+          <rect x="1062" y="150" width="120" height="64"/>
+        </g>
+        <!-- the gate -->
+        <rect x="916" y="132" width="120" height="100" fill="#D6E035" stroke="#8E9619" stroke-width="1.6"/>
+        <g font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".5">
+          <text x="52" y="168">01</text><text x="198" y="168">02</text><text x="344" y="168">03</text>
+          <text x="490" y="168">04</text><text x="636" y="168">05</text><text x="782" y="168">06</text>
+          <text x="1074" y="168">08</text>
+        </g>
+        <text x="928" y="152" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="#14181A" opacity=".6">07</text>
+        <g font-size="13" font-weight="700" fill="currentColor" letter-spacing=".3">
+          <text x="52" y="190">DATA</text><text x="198" y="190">MONITOR</text><text x="344" y="190">ANALYZE</text>
+          <text x="490" y="190">PREDICT</text><text x="636" y="190">ALERT</text><text x="782" y="190">RECOMMEND</text>
+          <text x="1074" y="190">EXECUTE</text>
+        </g>
+        <text x="928" y="176" font-size="13" font-weight="700" fill="#14181A" letter-spacing=".3">HUMAN</text>
+        <text x="928" y="192" font-size="13" font-weight="700" fill="#14181A" letter-spacing=".3">APPROVAL</text>
+        <text x="928" y="214" font-family="'IBM Plex Mono',monospace" font-size="9" fill="#14181A" opacity=".72">named signature</text>
+        <g font-family="'IBM Plex Mono',monospace" font-size="9" fill="currentColor" opacity=".55">
+          <text x="52" y="206">sensors · ERP · files</text><text x="198" y="206">continuous, 24×7</text>
+          <text x="344" y="206">actual vs plan/code</text><text x="490" y="206">cost · time · risk</text>
+          <text x="636" y="206">typed · owned · SLA</text><text x="782" y="206">options + ₹ impact</text>
+          <text x="1074" y="206">writes to systems</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.5" marker-end="url(#ar2)">
+          <line x1="160" y1="182" x2="184" y2="182"/><line x1="306" y1="182" x2="330" y2="182"/>
+          <line x1="452" y1="182" x2="476" y2="182"/><line x1="598" y1="182" x2="622" y2="182"/>
+          <line x1="744" y1="182" x2="768" y2="182"/><line x1="890" y1="182" x2="914" y2="182"/>
+          <line x1="1036" y1="182" x2="1060" y2="182"/>
+        </g>
+
+        <!-- bypass arc -->
+        <path d="M830 150 V100 H1122 V148" fill="none" stroke="currentColor" stroke-width="1.3"
+              stroke-dasharray="6 4" opacity=".7" marker-end="url(#ar2)"/>
+        <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".62" text-anchor="middle">
+          <text x="976" y="78">risk score below threshold AND</text>
+          <text x="976" y="92">autonomy level ≥ L3 → skip the gate</text>
+        </g>
+
+        <!-- learn -->
+        <rect x="478" y="312" width="284" height="58" fill="none" stroke="currentColor" stroke-width="1.6"/>
+        <rect x="478" y="312" width="6" height="58" fill="#D6E035"/>
+        <text x="500" y="332" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".5">09</text>
+        <text x="530" y="333" font-size="13" font-weight="700" fill="currentColor" letter-spacing=".3">LEARN</text>
+        <text x="500" y="354" font-family="'IBM Plex Mono',monospace" font-size="8.5" fill="currentColor" opacity=".55">every approval, override and dismissal is a label</text>
+
+        <!-- outcome return -->
+        <path d="M1122 214 V341 H766" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)" opacity=".85"/>
+        <text x="880" y="334" font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".62">outcome + actuals</text>
+        <!-- rejection return -->
+        <path d="M976 232 V270 H620 V308" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)" opacity=".85"/>
+        <text x="700" y="263" font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".62">rejected + reason</text>
+        <!-- learn to analyze -->
+        <path d="M478 341 H340 V220" fill="none" stroke="currentColor" stroke-width="1.3" marker-end="url(#ar2)" opacity=".85"/>
+        <text x="352" y="292" font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".62">retrain · reweight</text>
+        <text x="352" y="306" font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".62">tighten thresholds</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><b>Rejection is the most valuable signal in the system.</b> When a site engineer dismisses a
+    safety alert as a false positive, or a purchase head overrules a vendor ranking, the reason is captured
+    and becomes training data. A system that only learns from its successes drifts; this one learns fastest
+    from the moments a human disagreed with it.</figcaption>
+  </figure>
+
+  <div class="grid">
+    <div class="card"><span class="num">01 → 02</span><h3>Data &amp; monitor</h3>
+      <p>Cameras, drones, IoT meters, phone photos, ERP rows, portal statuses and documents land on one bus in a
+      common schema. Nothing is "in someone's WhatsApp".</p></div>
+    <div class="card"><span class="num">03 → 04</span><h3>Analyze &amp; predict</h3>
+      <p>Actual is compared to plan, model, code and contract. Then the system extrapolates: finish date, cost
+      at completion, defect likelihood, absorption — each with a confidence band, never a lone number.</p></div>
+    <div class="card"><span class="num">05 → 06</span><h3>Alert &amp; recommend</h3>
+      <p>An alert without an owner is noise. Every alert carries a severity, an owner, an SLA and the evidence
+      frame. Every recommendation carries at least two options and their rupee and day impact.</p></div>
+    <div class="card"><span class="num">07 → 09</span><h3>Approve, execute, learn</h3>
+      <p>A human signs. The system then writes the change back into P6, the ERP, the PO, the CRM — and records
+      what actually happened so the next prediction is better calibrated.</p></div>
+  </div>
+</section>
+
+<!-- ══════════ 03 COMMAND CENTER ══════════ -->
+<section class="sheet" id="cc">
+  <div class="shead"><span class="scode">SH-03</span><h2>The command center</h2></div>
+  <p class="sdek">Ten departments that today argue about whose spreadsheet is right. One layer that reads from
+  all of them, writes back to all of them, and keeps a signed record of who decided what. The value is not the
+  models — it is that legal, design, cost, site, sales and facilities are finally looking at the same object.</p>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 56 1240 446" role="img" style="min-width:900px"
+           aria-label="Ten departments exchange labelled data flows with a central command center built of five layers: ingest, common data model, agent runtime, decision engine with audit log, and eleven human gates.">
+        <defs>
+          <marker id="ar3" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+          </marker>
+          <marker id="ar3s" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="var(--steel)"/>
+          </marker>
+        </defs>
+        <g color="currentColor" font-family="'IBM Plex Sans',sans-serif">
+
+        <!-- CENTRE -->
+        <rect x="440" y="76" width="360" height="412" fill="none" stroke="currentColor" stroke-width="2.4"/>
+        <text x="620" y="102" text-anchor="middle" font-family="Archivo,sans-serif" font-size="14.5"
+              font-weight="800" letter-spacing=".4" fill="currentColor">AI COMMAND CENTER</text>
+        <g fill="none" stroke="currentColor" stroke-width="1.1" opacity=".85">
+          <rect x="460" y="116" width="320" height="58"/><rect x="460" y="186" width="320" height="58"/>
+          <rect x="460" y="256" width="320" height="58"/><rect x="460" y="326" width="320" height="58"/>
+        </g>
+        <g text-anchor="middle" fill="currentColor">
+          <text x="620" y="141" font-size="12.5" font-weight="700">INGEST &amp; NORMALISE</text>
+          <text x="620" y="159" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".55">streams · files · APIs · OCR</text>
+          <text x="620" y="211" font-size="12.5" font-weight="700">COMMON DATA MODEL</text>
+          <text x="620" y="229" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".55">one element ID from BOQ to warranty</text>
+          <text x="620" y="281" font-size="12.5" font-weight="700">AGENT RUNTIME · 57</text>
+          <text x="620" y="299" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".55">tools · memory · model registry · evals</text>
+          <text x="620" y="351" font-size="12.5" font-weight="700">DECISION ENGINE + AUDIT LOG</text>
+          <text x="620" y="369" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".55">thresholds · autonomy levels · evidence</text>
+        </g>
+        <rect x="460" y="400" width="320" height="52" fill="#D6E035" stroke="#8E9619" stroke-width="1.4"/>
+        <text x="620" y="422" text-anchor="middle" font-size="12.5" font-weight="700" fill="#14181A">HUMAN GATES · 11</text>
+        <text x="620" y="439" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="9" fill="#14181A" opacity=".72">nothing leaves here unsigned</text>
+        <text x="620" y="472" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="9" fill="currentColor" opacity=".5">every write is timestamped, attributed and reversible</text>
+
+        <!-- LEFT DEPARTMENTS -->
+        <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".9">
+          <rect x="40" y="90" width="250" height="56"/><rect x="40" y="170" width="250" height="56"/>
+          <rect x="40" y="250" width="250" height="56"/><rect x="40" y="330" width="250" height="56"/>
+          <rect x="40" y="410" width="250" height="56"/>
+        </g>
+        <g fill="currentColor" font-size="13" font-weight="600">
+          <text x="56" y="115">Land &amp; Legal</text><text x="56" y="195">Design &amp; BIM</text>
+          <text x="56" y="275">Planning &amp; Cost</text><text x="56" y="355">Procurement</text>
+          <text x="56" y="435">Site Execution</text>
+        </g>
+        <g fill="currentColor" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".5">
+          <text x="56" y="132">S-01 · S-04</text><text x="56" y="212">S-03</text>
+          <text x="56" y="292">S-02 · S-05</text><text x="56" y="372">S-06</text><text x="56" y="452">S-07 · S-09</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 3" opacity=".75" marker-end="url(#ar3)">
+          <line x1="292" y1="108" x2="436" y2="108"/><line x1="292" y1="188" x2="436" y2="188"/>
+          <line x1="292" y1="268" x2="436" y2="268"/><line x1="292" y1="348" x2="436" y2="348"/>
+          <line x1="292" y1="428" x2="436" y2="428"/>
+        </g>
+        <g stroke="var(--steel)" stroke-width="1.5" marker-end="url(#ar3s)">
+          <line x1="438" y1="130" x2="294" y2="130"/><line x1="438" y1="210" x2="294" y2="210"/>
+          <line x1="438" y1="290" x2="294" y2="290"/><line x1="438" y1="370" x2="294" y2="370"/>
+          <line x1="438" y1="450" x2="294" y2="450"/>
+        </g>
+        <g fill="currentColor" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".6">
+          <text x="300" y="104">title chain · zoning</text><text x="300" y="184">models · clashes</text>
+          <text x="300" y="264">BOQ · rates · variations</text><text x="300" y="344">quotes · POs · GRNs</text>
+          <text x="300" y="424">progress · photos · IoT</text>
+          <text x="300" y="145">parcel risk score</text><text x="300" y="225">code + VE findings</text>
+          <text x="300" y="305">forecast at completion</text><text x="300" y="385">vendor rank · buy window</text>
+          <text x="300" y="465">look-ahead + blockers</text>
+        </g>
+
+        <!-- RIGHT DEPARTMENTS -->
+        <g fill="none" stroke="currentColor" stroke-width="1.2" opacity=".9">
+          <rect x="950" y="90" width="250" height="56"/><rect x="950" y="170" width="250" height="56"/>
+          <rect x="950" y="250" width="250" height="56"/><rect x="950" y="330" width="250" height="56"/>
+          <rect x="950" y="410" width="250" height="56"/>
+        </g>
+        <g fill="currentColor" font-size="13" font-weight="600">
+          <text x="966" y="115">Quality &amp; Safety</text><text x="966" y="195">Sales &amp; CRM</text>
+          <text x="966" y="275">Finance</text><text x="966" y="355">Customer</text>
+          <text x="966" y="435">Facilities &amp; O&amp;M</text>
+        </g>
+        <g fill="currentColor" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".5">
+          <text x="966" y="132">S-08</text><text x="966" y="212">S-10</text>
+          <text x="966" y="292">S-05 · S-06</text><text x="966" y="372">S-11</text><text x="966" y="452">S-12</text>
+        </g>
+        <g stroke="currentColor" stroke-width="1.1" stroke-dasharray="3 3" opacity=".75" marker-end="url(#ar3)">
+          <line x1="948" y1="108" x2="804" y2="108"/><line x1="948" y1="188" x2="804" y2="188"/>
+          <line x1="948" y1="268" x2="804" y2="268"/><line x1="948" y1="348" x2="804" y2="348"/>
+          <line x1="948" y1="428" x2="804" y2="428"/>
+        </g>
+        <g stroke="var(--steel)" stroke-width="1.5" marker-end="url(#ar3s)">
+          <line x1="802" y1="130" x2="946" y2="130"/><line x1="802" y1="210" x2="946" y2="210"/>
+          <line x1="802" y1="290" x2="946" y2="290"/><line x1="802" y1="370" x2="946" y2="370"/>
+          <line x1="802" y1="450" x2="946" y2="450"/>
+        </g>
+        <g fill="currentColor" font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".6" text-anchor="end">
+          <text x="944" y="104">checklists · cubes · NCRs</text><text x="944" y="184">leads · visits · bookings</text>
+          <text x="944" y="264">invoices · escrow · cash</text><text x="944" y="344">queries · snags · payments</text>
+          <text x="944" y="424">asset telemetry · tickets</text>
+          <text x="944" y="145">defect + hazard alerts</text><text x="944" y="225">price + spend moves</text>
+          <text x="944" y="305">exposure · cash calls</text><text x="944" y="385">verified progress feed</text>
+          <text x="944" y="465">work orders · warranty</text>
+        </g>
+        </g>
+      </svg>
+    </div>
+    <div class="legend">
+      <i><svg viewBox="0 0 34 10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="currentColor" stroke-width="1.4" stroke-dasharray="3 3"/></svg>Department publishes → command center</i>
+      <i><svg viewBox="0 0 34 10" aria-hidden="true"><line x1="1" y1="5" x2="33" y2="5" stroke="var(--steel)" stroke-width="2"/></svg>Command center returns → department</i>
+    </div>
+    <figcaption><b>The common data model is the hard part, not the AI.</b> A column has one identity from the
+    day it is drawn to the day its warranty expires — the same ID in the BIM model, the BOQ line, the pour
+    record, the cube test, the snag and the maintenance ticket. Without that, every agent above is guessing.</figcaption>
+  </figure>
+</section>
+
+<!-- ══════════ 04 THE TWELVE STAGES ══════════ -->
+<section class="sheet" id="stages">
+  <div class="shead"><span class="scode">SH-04</span><h2>The twelve stages</h2></div>
+  <p class="sdek">Each sheet below lists the agents actually on shift, what they read, what they hand forward,
+  and the one human whose signature the stage cannot proceed without. Autonomy levels are defined in SH-08.</p>
+
+  <div class="stages">
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">01</div>
+        <div class="stage-t"><h3>Land</h3>
+          <p class="purpose">Find, price and title-check parcels faster than the market — and walk away from bad ones before the diligence bill arrives.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 4</h4>
+          <ul>
+            <li><b>Land Scout</b> — sweeps portals, auction notices, revenue records and broker feeds; scores every parcel against the buy-box (zone, FSI, road width, frontage, ₹/sq ft) and surfaces the ten worth a site visit.</li>
+            <li><b>Title Reader</b> — OCR plus language models across 7/12 extracts, sale deeds, mutation entries and encumbrance certificates; reconstructs the chain of title as a timeline and flags gaps, minor shares, unreleased mortgages and pending litigation.</li>
+            <li><b>Zoning &amp; FSI Agent</b> — reads the Development Plan and GDCR to compute permissible FSI, setbacks, margins, height cap and TDR loading, returning a buildable envelope instead of a guess.</li>
+            <li><b>Comparable Pricing Agent</b> — models registered transactions within 2 km over 24 months to produce a land price band, a trend line and the walk-away number.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Revenue records, DP/GDCR, sub-registrar transactions, listing feeds, satellite and drone imagery, ground-water and access surveys.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Parcel scorecard, title risk register, buildable-area envelope.</div>
+          <div class="gate"><b>Gate 1 — title opinion</b>Legal counsel signs the title opinion; the acquisition committee signs the shortlist. The AI never certifies title; it only tells counsel where to look first.</div>
+          <div class="kpi-line"><em>Moves:</em> parcels screened per week ↑<br>diligence spend on dud parcels ↓<br>time from lead to offer ↓</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">02</div>
+        <div class="stage-t"><h3>Feasibility &amp; ROI</h3>
+          <p class="purpose">Turn a buildable envelope into a defensible number — and show the downside honestly enough that the investment committee can actually say no.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 4</h4>
+          <ul>
+            <li><b>Massing Optimizer</b> — generates dozens of compliant massing options across the FSI envelope, trading saleable area against unit mix, parking, daylight, views and podium efficiency, and returns the Pareto front rather than one architect's favourite.</li>
+            <li><b>Financial Model Agent</b> — builds the full cashflow: land, approvals, construction, finance, marketing and overhead against a modelled sales curve. Outputs IRR, NPV, peak equity, breakeven sales percentage and payback.</li>
+            <li><b>Demand &amp; Absorption Agent</b> — estimates realistic ₹/sq ft and monthly absorption per unit type from registry data, competing launches and inventory overhang in the micro-market.</li>
+            <li><b>Risk Simulator</b> — Monte Carlo across cost inflation, approval delay, interest rate and sales slowdown; reports P10/P50/P90 IRR and the month at which equity runs out in the downside case.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Buildable envelope, historical cost per sq ft by structure type, registry velocity, competitor launch pipeline, lending terms.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Sanctioned pro-forma, chosen massing option, underwritten IRR and the assumptions it rests on.</div>
+          <div class="gate"><b>Gate 2 — go / no-go</b>Investment committee commits capital. The system writes the deck; it does not get a vote. Every assumption in the deck is clickable back to its source.</div>
+          <div class="kpi-line"><em>Moves:</em> feasibility turnaround 3 weeks → 2 days<br>options evaluated per site 3 → 40+<br>projects landing inside underwritten IRR ↑</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">03</div>
+        <div class="stage-t"><h3>Design &amp; BIM coordination</h3>
+          <p class="purpose">Catch the clash in the model at ₹0 instead of on the slab at ₹4 lakh — and freeze the design on the date the schedule assumed.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>Design Brief Agent</b> — converts the sanctioned pro-forma into a binding brief: unit mix, carpet targets, efficiency ratio, spend per sq ft by finish grade — so the architect designs to the number, not around it.</li>
+            <li><b>BIM Coordination Agent</b> — runs clash detection across architectural, structural and MEP models nightly, then does the part humans hate: collapses thousands of raw clashes into a few dozen real issues, routes each to the right consultant and chases it to closure.</li>
+            <li><b>Code Compliance Agent</b> — checks the model against NBC 2016, GDCR, fire norms (staircase width, travel distance, refuge floors), parking and accessibility, producing a floor-by-floor compliance sheet with the failing element highlighted.</li>
+            <li><b>Value Engineering Agent</b> — proposes alternates — slab system, façade build-up, block type, MEP routing — each priced with a cost, time and embodied-carbon delta.</li>
+            <li><b>Daylight &amp; Wind Agent</b> — simulates daylight factor, cross-ventilation, shadow on neighbours and terrace comfort; flags the flats that will be hard to sell before they are built.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>ARC/STR/MEP models, consultant revisions, site survey, soil report, brief and cost targets.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Coordinated federated model, GFC drawing set, compliance sheet, VE register.</div>
+          <div class="gate"><b>Gate 3 — GFC release</b>Principal architect and structural engineer sign the drawing release. No AI-coordinated model reaches site without that signature.</div>
+          <div class="kpi-line"><em>Moves:</em> clash-driven site RFIs ↓ 60–80%<br>rework hours on structure ↓<br>design freeze date actually held</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">04</div>
+        <div class="stage-t"><h3>Approvals &amp; documentation</h3>
+          <p class="purpose">Stop losing months to an incomplete file. Track every authority, every query and every deadline in one place, with a predicted sanction date.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 4</h4>
+          <ul>
+            <li><b>Approval Path Planner</b> — builds the authority-by-authority critical path — ULB plan sanction, fire NOC, AAI height clearance, SEIAA environment clearance, drainage, electrical, lift, labour registration, RERA, and finally BU / occupancy — and shows which one is actually on the critical path today.</li>
+            <li><b>Document Assembler</b> — builds each application pack straight from the model and the land records, checks it against that authority's own checklist, and flags the missing affidavit before submission rather than after the file is returned.</li>
+            <li><b>Submission Tracker</b> — watches portal status, logs every query and its response, predicts the sanction date from historical cycle times for that authority, and escalates when a file has sat idle past its 75th-percentile wait.</li>
+            <li><b>RERA Compliance Agent</b> — keeps quarterly progress reports current, prepares Form 1/2/3 certificates for escrow withdrawals, tracks agent registrations, and blocks any marketing claim that contradicts the registered disclosure.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>GFC set, land documents, consultant certificates, authority portals and circulars, historical sanction timelines.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Stamped plans, NOC register, RERA registration, a live approvals critical path.</div>
+          <div class="gate"><b>Gate 4 — statutory filing</b>Liaison head and legal sign every submission. Zero AI-generated documents are filed without a named human signature — a hard rule, not a preference.</div>
+          <div class="kpi-line"><em>Moves:</em> resubmissions from incomplete files → ~0<br>approval cycle time ↓<br>RERA non-compliance events = 0</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">05</div>
+        <div class="stage-t"><h3>BOQ, estimation &amp; cost control</h3>
+          <p class="purpose">Quantities straight from the model, rates from live indices, and a forecast at completion that refreshes daily instead of arriving six weeks after the money was spent.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>Quantity Take-off Agent</b> — extracts quantities from the federated model under IS 1200 measurement rules, item-codes them to the standard schedule of rates, and reconciles model quantities against the drawing set so a missed beam shows up as a variance, not a surprise.</li>
+            <li><b>Rate Builder</b> — assembles rate analysis per item from live material, labour and plant indices plus overhead and profit, and flags any item whose rate has drifted more than 8% from the last comparable project.</li>
+            <li><b>Estimate Confidence Agent</b> — marks the line items that historically overran, and issues a P50 and a P80 estimate instead of one falsely precise figure.</li>
+            <li><b>Budget Control Agent</b> — tracks committed, incurred and forecast-at-completion per package against the control budget, and raises the alert at 3% drift instead of the site meeting where it has become 15%.</li>
+            <li><b>Change Order Agent</b> — prices variations within hours and tags each to its cause — design change, site condition, client request, contractor claim — so the recurring cause becomes visible and fixable.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Federated model, SOR, live commodity indices, historical actuals, site instructions, GRNs and running bills.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Package-wise control budget, tender BOQ, live forecast at completion.</div>
+          <div class="gate"><b>Gate 5 — budget &amp; variation</b>Head of QS and the CFO approve the control budget. Any variation above ₹5 lakh or 2% of package value needs a named approver before it is executed.</div>
+          <div class="kpi-line"><em>Moves:</em> take-off time weeks → hours<br>estimate accuracy at completion ±3%<br>unpriced variations at closeout ↓</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">06</div>
+        <div class="stage-t"><h3>Procurement &amp; vendor selection</h3>
+          <p class="purpose">Award on delivered cost and proven reliability, not on the lowest quote from the vendor who forgot to include freight.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>Vendor Scoring Agent</b> — scores every vendor on on-time delivery, defect and rejection rate, safety record, GST filing regularity, current load and price — because the cheapest quote from a vendor with a 40% late record is not the cheapest quote.</li>
+            <li><b>RFQ &amp; Comparison Agent</b> — issues package RFQs from the BOQ and normalises incomparable quotes onto one basis: inclusions, taxes, freight, wastage allowance, payment terms and retention. Produces the comparative statement automatically.</li>
+            <li><b>Negotiation Support Agent</b> — briefs the buyer before the call with the walk-away price, the rate paid on the last three projects and today's index — so the leverage sits with the buyer, not the seller.</li>
+            <li><b>Material Price Forecaster</b> — forecasts steel, cement, aluminium and copper, and recommends when to lock a rate contract versus buy spot, flagging the buy window six weeks out.</li>
+            <li><b>Lead-time &amp; Delivery Agent</b> — ties every PO delivery date to the activity that needs it and raises an alert the day a supplier's lead time stops clearing its need-by date.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Tender BOQ, vendor master and performance history, quotes, commodity indices, construction schedule, GST and financial signals.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Comparative statements, ranked recommendation, awarded POs and rate contracts.</div>
+          <div class="gate"><b>Gate 6 — award</b>Purchase committee awards. The system ranks and justifies; it never issues a purchase order on its own. Overriding the ranking requires a recorded reason.</div>
+          <div class="kpi-line"><em>Moves:</em> procurement savings 4–9%<br>quote-to-award 21 days → 5<br>schedule-critical stockouts → 0</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">07</div>
+        <div class="stage-t"><h3>Construction &amp; scheduling</h3>
+          <p class="purpose">Keep the critical path honest, and make sure no gang arrives on a floor where the drawing, the material or the permit is missing.</p></div>
+        <div class="lvl l3">L3 · auto with veto</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>4D Schedule Agent</b> — keeps the schedule linked to the model and recalculates the critical path nightly from measured progress rather than from what was reported in the morning meeting.</li>
+            <li><b>Look-ahead Planner</b> — generates the three-week look-ahead and the daily work plan per gang, and refuses to release an activity whose constraints — drawing released, material on site, permit raised, predecessor signed — are not all clear.</li>
+            <li><b>Resource Balancer</b> — matches labour and plant against the plan and flags the shortfall a week ahead, not on the morning the crew is standing idle at the lift.</li>
+            <li><b>Delay Predictor</b> — forecasts the finish date from productivity trend, attendance, material inflow and weather, and names the specific activity driving the slip instead of reporting a project-level percentage.</li>
+            <li><b>Pour &amp; Weather Agent</b> — issues pour windows from the forecast, sets the curing regime, and holds the pour when the window closes.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Baseline schedule, measured progress from S-09, attendance, material inflow, plant availability, weather feed, drawing release register.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Daily work plans, constraint log, live finish-date forecast, recovery options.</div>
+          <div class="gate"><b>Gate 7 — baseline change</b>The project manager approves the weekly plan and any recovery plan that moves the baseline. Look-aheads publish automatically; the baseline never does.</div>
+          <div class="kpi-line"><em>Moves:</em> schedule adherence ↑<br>idle crew hours ↓<br>finish-date forecast error ±5 days</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">08</div>
+        <div class="stage-t"><h3>Quality &amp; safety</h3>
+          <p class="purpose">Find the missing cover block before the pour, and the missing harness before the fall — in seconds, not at the weekly walk.</p></div>
+        <div class="lvl l3">L3 · auto with veto</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>ITP Checklist Agent</b> — pushes the right inspection checklist to the engineer's phone at the right moment and hard-blocks the next activity until the hold point is signed with geo-tagged evidence.</li>
+            <li><b>Material QA Agent</b> — reads cube test results, batching plant logs and mill certificates, and traces a non-conforming lot back to the exact pour and element it went into.</li>
+            <li><b>Defect Vision Agent</b> — detects honeycombing, missing cover blocks, rebar spacing deviation, out-of-plumb columns, plaster cracking and level deviation from site photos and 360° walkthroughs.</li>
+            <li><b>Safety Vision Agent</b> — flags missing helmets, harnesses and vests, unprotected edges, unsafe scaffold, exclusion-zone breaches and work at height without anchorage — and alerts the safety officer within seconds of the frame.</li>
+            <li><b>Incident Learning Agent</b> — clusters near-misses to find the repeating condition behind them and proposes the control, so the same scaffold gets fixed once rather than reported five times.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Camera and drone frames, 360° walkthroughs, lab results, batching plant data, checklist submissions, near-miss reports.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Signed hold points, NCR register with evidence, hazard alerts, traceable material lots.</div>
+          <div class="gate"><b>Gate 8 — stop work</b>Only a human stops the site. The Safety Vision Agent may raise a stop-work recommendation with the frame attached; the safety officer decides, and their reason is recorded either way.</div>
+          <div class="kpi-line"><em>Moves:</em> hazard detection → response, minutes not days<br>LTIFR ↓ · rework cost ↓<br>hold points signed on time ↑</div>
+        </div></div>
+    </article>
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">09</div>
+        <div class="stage-t"><h3>AI site monitoring</h3>
+          <p class="purpose">Replace "roughly 62% done, I think" with a measurement — taken from the same site that everyone is arguing about. Detailed in SH-05.</p></div>
+        <div class="lvl l3">L3 · auto with veto</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 4</h4>
+          <ul>
+            <li><b>Progress Vision Agent</b> — compares the weekly drone point cloud and floor cameras against the BIM model and returns percent complete per element, so the progress claim, the running bill and the customer portal all quote the same number.</li>
+            <li><b>Material Wastage Agent</b> — reconciles gate deliveries against consumption and theoretical BOQ quantity to give a live wastage percentage per material, and flags the movement patterns that look like pilferage rather than waste.</li>
+            <li><b>Labour Analytics Agent</b> — counts headcount by trade from gate RFID and camera, compares gang output against plan, and catches ghost attendance where the badge is on site but the person is not.</li>
+            <li><b>Plant Utilisation Agent</b> — measures crane cycles and hook time, DG runtime against actual load, and pump and hoist idle time — the assets that quietly cost the most when idle.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Fixed CCTV, weekly drone photogrammetry, geo-tagged phone photos, 360° walkthroughs, gate RFID, batching plant, maturity sensors, crane load cells, DG and water meters, weather station.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Verified percent complete per element, wastage ledger, labour productivity, plant utilisation — all with the source frame attached.</div>
+          <div class="gate"><b>Gate 9 — acknowledge or dismiss</b>The site in-charge must act on every high-severity event with an acknowledgement or a dismissal plus reason. Dismissals are not ignored — they are labelled and fed back into training.</div>
+          <div class="kpi-line"><em>Moves:</em> progress-claim disputes ↓<br>material wastage 6–8% → 2–3%<br>detection to fix, hours not weeks</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">10</div>
+        <div class="stage-t"><h3>Sales, marketing &amp; CRM</h3>
+          <p class="purpose">Answer every lead inside a minute, in their language, and spend the marketing budget on what produced bookings — not on what produced clicks.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 6</h4>
+          <ul>
+            <li><b>Lead Scoring Agent</b> — scores every inbound lead from portals, Meta, Google, walk-ins and referrals on intent and affordability, and routes the hot ones to a human within sixty seconds.</li>
+            <li><b>Conversational Agent</b> — handles WhatsApp and voice in the buyer's language, shares the right inventory, answers the honest questions about possession date from live site data, and books the site visit — while refusing to quote any price it is not authorised to quote.</li>
+            <li><b>Channel Spend Optimiser</b> — attributes bookings back through visits to campaigns and reallocates budget to the channels that actually converted.</li>
+            <li><b>Inventory Pricing Agent</b> — recommends floor-rise, view premium and release pricing from absorption against plan, always bounded by a hard floor price.</li>
+            <li><b>Channel Partner Agent</b> — tracks broker performance, payouts and duplicate-lead disputes, so the good channel partners get paid faster than the noisy ones.</li>
+            <li><b>Content Agent</b> — renders unit walkthroughs from the BIM model and monthly progress reels from drone footage, so marketing shows the building that exists.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Ad platforms, portals, call and WhatsApp logs, site-visit records, CRM history, live inventory, verified construction progress.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Qualified pipeline, bookings, collections schedule, campaign allocation.</div>
+          <div class="gate"><b>Gate 10 — price &amp; discount</b>The sales head approves price moves and any discount beyond the standing band. No discount is ever auto-granted, and no possession date is ever promised that the schedule agent cannot support.</div>
+          <div class="kpi-line"><em>Moves:</em> first response &lt; 60 seconds<br>lead → visit ↑ · visit → booking ↑<br>cost per booking ↓</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">11</div>
+        <div class="stage-t"><h3>Customer portal &amp; handover</h3>
+          <p class="purpose">Find the snags before the customer does, and hand over a home with its whole history attached.</p></div>
+        <div class="lvl">L2 · auto-draft</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>Progress Portal Agent</b> — pushes verified progress to every buyer — the measurement from S-09, not a marketing photo — with the next milestone, the payment tied to it, and an honest possession forecast.</li>
+            <li><b>Snag Detection Agent</b> — scans each flat before handover for level, plumb, hollow tiles by acoustic response, paint finish, door operation and fitting completeness, and generates the snag list before the customer walks in.</li>
+            <li><b>Snag Closure Agent</b> — assigns each snag to a contractor with an SLA, verifies the fix from a photo, and escalates the ones that quietly reopen.</li>
+            <li><b>Handover Pack Agent</b> — assembles the digital home file: BU/occupancy certificate, as-built drawings, warranties, appliance manuals, maintenance schedule and society formation documents.</li>
+            <li><b>Demand &amp; Collection Agent</b> — raises demand letters on verified milestone completion, predicts which buyers are likely to delay, and nudges early rather than escalating late.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>Verified progress, flat-level inspection scans, contractor availability, BU certificate, warranty documents, buyer payment history.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Snag-free flats, signed possession letters, digital home file, closed collections.</div>
+          <div class="gate"><b>Gate 11 — possession</b>The site head signs the flat as snag-free and the customer signs the possession letter. The buyer's own snag list always overrides the AI's — if they find something the scan missed, the scan was wrong.</div>
+          <div class="kpi-line"><em>Moves:</em> snags caught before handover &gt; 90%<br>OC to possession days ↓<br>customer NPS ↑</div>
+        </div></div>
+    </article>
+
+    <article class="stage">
+      <div class="stage-hd"><div class="stage-no">12</div>
+        <div class="stage-t"><h3>Predictive maintenance</h3>
+          <p class="purpose">Fix the lift before it stops between floors, and make sure the developer is not paying for a defect that is still under someone else's warranty.</p></div>
+        <div class="lvl l3">L3 · auto with veto</div></div>
+      <div class="stage-body">
+        <div class="agents"><h4>Agents on shift · 5</h4>
+          <ul>
+            <li><b>Asset Twin Agent</b> — keeps the as-built model alive as an asset register: every lift, pump, DG set, STP, transformer and fire panel with its warranty, service history and responsible contractor.</li>
+            <li><b>Predictive Maintenance Agent</b> — reads vibration, current draw, runtime and cycle counts to predict failure and raise the work order before the asset fails, not after the complaint.</li>
+            <li><b>Energy &amp; Water Agent</b> — benchmarks consumption per tower against itself over time and finds the leaking line, the pump running against a closed valve and the lighting circuit nobody switched off.</li>
+            <li><b>Complaint Triage Agent</b> — turns a resident complaint into a category, severity, technician, SLA and parts list — and spots the building-wide defect hiding inside thirty individually filed complaints.</li>
+            <li><b>Warranty Recovery Agent</b> — matches every failure to its warranty window and the contractor responsible, so defect liability lands where the contract put it.</li>
+          </ul></div>
+        <div class="side">
+          <div class="io"><span>DATA IN</span><br>As-built model, IoT telemetry from lifts, pumps, DG, STP and meters, resident tickets, AMC records, warranty and defect liability periods.</div>
+          <div class="io"><span>HANDS FORWARD</span><br>Work orders, warranty claims, energy savings, and the failure patterns that go back into design as a lesson.</div>
+          <div class="gate"><b>Gate 11+ — capex</b>The facility manager approves work orders above threshold; the society committee approves capital expenditure. Routine preventive orders below threshold issue automatically.</div>
+          <div class="kpi-line"><em>Moves:</em> unplanned downtime ↓<br>warranty value recovered ₹ ↑<br>complaint SLA compliance ↑</div>
+        </div></div>
+    </article>
+
+  </div>
+</section>
+
+<!-- ══════════ 05 SITE MONITORING ══════════ -->
+<section class="sheet" id="sensing">
+  <div class="shead"><span class="scode">SH-05</span><h2>How the site is actually watched</h2></div>
+  <p class="sdek">Cameras alone produce footage nobody reviews. The value is in the four-step chain: capture
+  everything, turn pixels and readings into detections, turn detections into typed events with an owner and
+  a clock, and then make something happen — including blocking the activity downstream.</p>
+
+  <figure>
+    <div class="scroll">
+      <svg viewBox="0 0 1240 412" role="img" style="min-width:880px"
+           aria-label="Four-stage site monitoring pipeline: capture from cameras drones photos and IoT, perceive via vision models, classify into typed events with owner and SLA, act by alerting and blocking work; dismissals return to a label store for retraining.">
+        <defs>
+          <marker id="ar4" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+            <path d="M0,1 L9,5 L0,9 z" fill="currentColor"/>
+          </marker>
+        </defs>
+        <g color="currentColor" font-family="'IBM Plex Sans',sans-serif" fill="currentColor">
+
+        <!-- headers -->
+        <g>
+          <rect x="30" y="20" width="250" height="28" fill="#D6E035"/>
+          <rect x="336" y="20" width="250" height="28" fill="#D6E035"/>
+          <rect x="642" y="20" width="250" height="28" fill="#D6E035"/>
+          <rect x="948" y="20" width="250" height="28" fill="#D6E035"/>
+        </g>
+        <g text-anchor="middle" font-size="12.5" font-weight="700" fill="#14181A" letter-spacing=".6">
+          <text x="155" y="39">01 · CAPTURE</text><text x="461" y="39">02 · PERCEIVE</text>
+          <text x="767" y="39">03 · CLASSIFY</text><text x="1073" y="39">04 · ACT</text>
+        </g>
+        <g text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="9.5" opacity=".55">
+          <text x="155" y="62">continuous</text><text x="461" y="62">inference &lt; 5 s</text>
+          <text x="767" y="62">routed &lt; 30 s</text><text x="1073" y="62">on the owner's phone &lt; 60 s</text>
+        </g>
+
+        <!-- columns -->
+        <g fill="none" stroke="currentColor" stroke-width="1.3" opacity=".9">
+          <rect x="30" y="70" width="250" height="250"/><rect x="336" y="70" width="250" height="250"/>
+          <rect x="642" y="70" width="250" height="250"/><rect x="948" y="70" width="250" height="250"/>
+        </g>
+        <g fill="#D6E035" stroke="#8E9619" stroke-width=".8">
+          <rect x="46" y="89" width="8" height="8"/><rect x="46" y="123" width="8" height="8"/>
+          <rect x="46" y="157" width="8" height="8"/><rect x="46" y="191" width="8" height="8"/>
+          <rect x="46" y="225" width="8" height="8"/><rect x="46" y="259" width="8" height="8"/>
+          <rect x="46" y="293" width="8" height="8"/>
+          <rect x="352" y="89" width="8" height="8"/><rect x="352" y="123" width="8" height="8"/>
+          <rect x="352" y="157" width="8" height="8"/><rect x="352" y="191" width="8" height="8"/>
+          <rect x="352" y="225" width="8" height="8"/><rect x="352" y="259" width="8" height="8"/>
+          <rect x="352" y="293" width="8" height="8"/>
+          <rect x="658" y="89" width="8" height="8"/><rect x="658" y="123" width="8" height="8"/>
+          <rect x="658" y="157" width="8" height="8"/><rect x="658" y="191" width="8" height="8"/>
+          <rect x="658" y="225" width="8" height="8"/><rect x="658" y="259" width="8" height="8"/>
+          <rect x="658" y="293" width="8" height="8"/>
+          <rect x="964" y="89" width="8" height="8"/><rect x="964" y="123" width="8" height="8"/>
+          <rect x="964" y="157" width="8" height="8"/><rect x="964" y="191" width="8" height="8"/>
+          <rect x="964" y="225" width="8" height="8"/><rect x="964" y="259" width="8" height="8"/>
+          <rect x="964" y="293" width="8" height="8"/>
+        </g>
+        <g font-size="12" fill="currentColor">
+          <text x="64" y="98">Fixed CCTV — 14 cameras</text>
+          <text x="64" y="132">Drone flight — weekly, 3D scan</text>
+          <text x="64" y="166">Engineer photos — geo + time</text>
+          <text x="64" y="200">360° walkthrough — per floor</text>
+          <text x="64" y="234">Gate RFID — labour and trucks</text>
+          <text x="64" y="268">Batching plant + maturity probes</text>
+          <text x="64" y="302">Meters — DG, water, crane load</text>
+
+          <text x="370" y="98">Point cloud vs BIM → % complete</text>
+          <text x="370" y="132">Defect model → honeycomb, cover</text>
+          <text x="370" y="166">Safety model → PPE, edge, height</text>
+          <text x="370" y="200">Delivered vs consumed vs BOQ</text>
+          <text x="370" y="234">Headcount by trade, output/gang</text>
+          <text x="370" y="268">Maturity probes → pour readiness</text>
+          <text x="370" y="302">Crane cycles, hook and idle time</text>
+
+          <text x="676" y="98">Severity 1–4 assigned</text>
+          <text x="676" y="132">Owner and SLA attached</text>
+          <text x="676" y="166">Evidence frame linked</text>
+          <text x="676" y="200">Deduplicated against open events</text>
+          <text x="676" y="234">Escalation ladder armed</text>
+          <text x="676" y="268">Linked to element ID and activity</text>
+          <text x="676" y="302">Confidence band recorded</text>
+
+          <text x="982" y="98">Alert to owner's phone</text>
+          <text x="982" y="132">Block the dependent activity</text>
+          <text x="982" y="166">Update % complete and RA bill</text>
+          <text x="982" y="200">Raise NCR or work order</text>
+          <text x="982" y="234">Publish to customer portal</text>
+          <text x="982" y="268">Escalate on SLA breach</text>
+          <text x="982" y="302">Write to the audit trail</text>
+        </g>
+
+        <!-- flow arrows -->
+        <g stroke="currentColor" stroke-width="1.6" marker-end="url(#ar4)">
+          <line x1="282" y1="219" x2="332" y2="219"/><line x1="588" y1="219" x2="638" y2="219"/>
+          <line x1="894" y1="219" x2="944" y2="219"/>
+        </g>
+        <g font-family="'IBM Plex Mono',monospace" font-size="9" opacity=".6" text-anchor="middle">
+          <text x="307" y="210">frames</text><text x="613" y="210">detections</text><text x="919" y="210">events</text>
+        </g>
+
+        <!-- feedback -->
+        <path d="M1073 322 V380 H461 V326" fill="none" stroke="currentColor" stroke-width="1.3"
+              stroke-dasharray="5 4" opacity=".8" marker-end="url(#ar4)"/>
+        <text x="767" y="372" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="10" opacity=".62">acknowledged · dismissed + reason → label store → weekly retrain</text>
+        </g>
+      </svg>
+    </div>
+    <figcaption><b>Step 3 is where most camera projects fail.</b> A model that fires two hundred times a day
+    gets muted within a fortnight. Deduplication against already-open events, a real owner, a real SLA and a
+    tightening threshold are what keep the site engineer still reading the alerts in month six.</figcaption>
+  </figure>
+
+  <div class="grid">
+    <div class="card"><h3>Privacy is a design constraint</h3>
+      <p>Cameras on a site watch workers. Publish the monitoring policy, restrict face-level identification to
+      the gate, keep worker-level productivity aggregated to the gang, retain footage on a stated clock, and
+      involve the labour contractor before the first camera goes up. Do this badly and the cameras get
+      covered with cement bags in week two.</p></div>
+    <div class="card"><h3>Connectivity, honestly</h3>
+      <p>Sites lose network. Inference runs at the edge on a small box in the site office; only detections and
+      thumbnails are synced, not raw video. The system must degrade to store-and-forward rather than stop.</p></div>
+    <div class="card"><h3>Dust, night and monsoon</h3>
+      <p>Vision accuracy drops in dust, glare, rain and floodlight. Report confidence with every detection,
+      route low-confidence frames to a human queue instead of the alert stream, and never let a vision output
+      become a payment trigger without a human measurement check.</p></div>
+  </div>
+</section>
+
+<!-- ══════════ 06 DASHBOARD ══════════ -->
+<section class="sheet" id="dash">
+  <div class="shead"><span class="scode">SH-06</span><h2>The command screen</h2></div>
+  <p class="sdek">One screen the MD, the project head and the CFO all look at, refreshed from the same events
+  the agents are reading. Illustrative figures for a reference project — Tower A+B, 248 units, month 14 of 26.</p>
+
+  <div class="dash">
+    <div class="dash-bar">
+      <div class="who"><b>TOWER A+B</b> · 248 units · 4.62 lakh sq ft · month 14 / 26</div>
+      <div class="live"><span class="d" aria-hidden="true"></span>Live · last event 41 s ago</div>
+    </div>
+
+    <div class="tiles">
+      <div class="tile">
+        <div class="lab">Cost at completion</div>
+        <div class="val">₹214.6<small> Cr</small></div>
+        <div class="sub"><span class="pill warn"><span class="dot" aria-hidden="true"></span>+3.2% over</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">budget ₹208.0 Cr</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Cost drift climbing steadily from zero to 3.2 percent over fourteen months">
+          <polyline fill="none" stroke="var(--crit)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,27 15,25.6 30,24.3 45,24.9 60,22.9 75,20.8 90,18.8 105,17.4 120,14 135,12 150,9.2 165,7.1 180,5.8 195,5.1"/>
+          <circle cx="195" cy="5.1" r="2.6" fill="var(--crit)"/>
+        </svg>
+        <div class="note">Drift began at month 5 with façade variations. Alert fired at 1.2%.</div>
+      </div>
+
+      <div class="tile">
+        <div class="lab">Forecast finish</div>
+        <div class="val">+26<small> days</small></div>
+        <div class="sub"><span class="pill crit"><span class="dot" aria-hidden="true"></span>Behind</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">18 Nov 2027</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Schedule slip growing from zero to twenty-six days">
+          <polyline fill="none" stroke="var(--crit)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,27 15,27 30,25.2 45,24.2 60,24.2 75,21.5 90,19.6 105,18.7 120,14.1 135,12.2 150,9.5 165,6.7 180,4 195,3"/>
+          <circle cx="195" cy="3" r="2.6" fill="var(--crit)"/>
+        </svg>
+        <div class="note">Driver: blockwork on floors 8–11, waiting on shuttering release.</div>
+      </div>
+
+      <div class="tile">
+        <div class="lab">Open NCRs</div>
+        <div class="val">18</div>
+        <div class="sub"><span class="pill warn"><span class="dot" aria-hidden="true"></span>4 past SLA</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">14 within SLA</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Open non-conformance reports fluctuating between six and twenty-four">
+          <polyline fill="none" stroke="var(--warn)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,21 15,18 30,20 45,16 60,13 75,15 90,11 105,8 120,12 135,6 150,3 165,7 180,10 195,9"/>
+          <circle cx="195" cy="9" r="2.6" fill="var(--warn)"/>
+        </svg>
+        <div class="note">Peaked at 24 in month 11; closure rate now ahead of raise rate.</div>
+      </div>
+
+      <div class="tile">
+        <div class="lab">Labour on site</div>
+        <div class="val">412<small> / 470</small></div>
+        <div class="sub"><span class="pill warn"><span class="dot" aria-hidden="true"></span>88% of plan</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">short: 3 gangs</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Labour attendance against plan drifting from ninety-six to eighty-eight percent">
+          <polyline fill="none" stroke="var(--warn)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,4.9 15,8.5 30,14.1 45,10.4 60,17.8 75,12.2 90,19.6 105,15.9 120,23.3 135,17.8 150,25.2 165,21.5 180,19.6 195,19.6"/>
+          <circle cx="195" cy="19.6" r="2.6" fill="var(--warn)"/>
+        </svg>
+        <div class="note">Two mason gangs unreleased from Tower C. Balancer flagged this on day 6.</div>
+      </div>
+
+      <div class="tile">
+        <div class="lab">Material wastage</div>
+        <div class="val">3.1<small>%</small></div>
+        <div class="sub"><span class="pill good"><span class="dot" aria-hidden="true"></span>Improving</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">was 6.4%</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Material wastage falling steadily from six point four percent to three point one percent">
+          <polyline fill="none" stroke="var(--good)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,3.7 15,5.7 30,7.8 45,9.9 60,12.6 75,16 90,17.4 105,20.1 120,21.5 135,22.9 150,24.3 165,24.9 180,25.6 195,26.3"/>
+          <circle cx="195" cy="26.3" r="2.6" fill="var(--good)"/>
+        </svg>
+        <div class="note">Gate reconciliation caught two unrecorded steel exits in month 6.</div>
+      </div>
+
+      <div class="tile">
+        <div class="lab">Safety</div>
+        <div class="val">96<small> days LTI-free</small></div>
+        <div class="sub"><span class="pill good"><span class="dot" aria-hidden="true"></span>No LTI</span>
+          <span style="font-size:12px;color:var(--ink-3);font-family:'IBM Plex Mono',monospace">7 open hazards</span></div>
+        <svg class="spark" viewBox="0 0 200 30" role="img" aria-label="Open hazards trending down from twelve to seven">
+          <polyline fill="none" stroke="var(--good)" stroke-width="2" vector-effect="non-scaling-stroke"
+            points="0,6.4 15,11.6 30,3 45,9.9 60,13.3 75,8.1 90,15 105,11.6 120,16.7 135,13.3 150,18.4 165,15 180,16.7 195,15"/>
+          <circle cx="195" cy="15" r="2.6" fill="var(--good)"/>
+        </svg>
+        <div class="note">Open hazards, monthly. Two stop-works raised, both upheld by the safety officer.</div>
+      </div>
+    </div>
+
+    <div class="charts">
+      <div class="chart">
+        <div class="ct">Progress against baseline</div>
+        <div class="cs">Cumulative percent complete. Actual is measured from the weekly drone scan, not reported.</div>
+        <svg id="scurve" viewBox="0 0 560 250" role="img"
+             aria-label="S-curve showing actual progress running about six points below the planned baseline at month 14, with the AI forecast closing to a finish roughly 26 days late.">
+          <!-- grid -->
+          <g stroke="currentColor" opacity=".16" stroke-width="1">
+            <line x1="44" y1="210" x2="544" y2="210"/><line x1="44" y1="162.5" x2="544" y2="162.5"/>
+            <line x1="44" y1="115" x2="544" y2="115"/><line x1="44" y1="67.5" x2="544" y2="67.5"/>
+            <line x1="44" y1="20" x2="544" y2="20"/>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55" text-anchor="end">
+            <text x="36" y="213">0%</text><text x="36" y="165.5">25%</text><text x="36" y="118">50%</text>
+            <text x="36" y="70.5">75%</text><text x="36" y="23">100%</text>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55" text-anchor="middle">
+            <text x="44" y="228">M0</text><text x="169" y="228">M7</text><text x="294" y="228">M14</text>
+            <text x="419" y="228">M21</text><text x="544" y="228">M28</text>
+          </g>
+          <!-- today rule -->
+          <line x1="294" y1="20" x2="294" y2="210" stroke="currentColor" stroke-width="1" stroke-dasharray="2 4" opacity=".45"/>
+          <text x="299" y="32" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">TODAY</text>
+          <!-- planned baseline -->
+          <polyline fill="none" stroke="var(--s-base)" stroke-width="2" stroke-dasharray="5 4"
+            points="44,210 79.7,204.3 115.4,192.9 151.1,175.8 186.9,154.9 222.6,132.1 258.3,109.3 294,88.4 329.7,69.4 365.4,54.2 401.1,42.8 436.9,33.3 472.6,25.7 508.3,20"/>
+          <!-- forecast -->
+          <polyline fill="none" stroke="var(--s2)" stroke-width="2" stroke-dasharray="2 3"
+            points="294,99.8 329.7,80.8 365.4,63.7 401.1,50.4 436.9,39 472.6,29.5 508.3,22.7 524.4,20"/>
+          <!-- actual -->
+          <polyline fill="none" stroke="var(--s1)" stroke-width="2.4"
+            points="44,210 79.7,206.2 115.4,196.7 151.1,181.5 186.9,162.5 222.6,141.6 258.3,120.7 294,99.8"/>
+          <circle cx="294" cy="99.8" r="3.6" fill="var(--s1)" stroke="var(--surface)" stroke-width="2"/>
+          <circle cx="294" cy="88.4" r="3" fill="var(--s-base)" stroke="var(--surface)" stroke-width="2"/>
+          <!-- gap callout -->
+          <path d="M283 88.4 H277 V99.8 H283" fill="none" stroke="currentColor" stroke-width="1" opacity=".6"/>
+          <text x="272" y="97" text-anchor="end" font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".7">6 pts behind</text>
+          <text x="540" y="186" text-anchor="end" font-family="'IBM Plex Mono',monospace" font-size="10" fill="var(--s2)">AI forecast: finish +26 d</text>
+          <!-- crosshair + hover -->
+          <line id="xh" x1="0" y1="20" x2="0" y2="210" stroke="currentColor" stroke-width="1" opacity="0"/>
+          <circle id="dp" r="3.4" fill="var(--s-base)" opacity="0"/><circle id="da" r="3.4" fill="var(--s1)" opacity="0"/>
+          <g id="hits" fill="transparent">
+            <rect class="hit" x="44"    y="20" width="18" height="190" data-x="44"    data-yp="210"   data-ya="210"   data-t="M0|Planned 0%|Actual 0%|On baseline"/>
+            <rect class="hit" x="61.8"  y="20" width="35.7" height="190" data-x="79.7"  data-yp="204.3" data-ya="206.2" data-t="M2|Planned 3%|Actual 2%|Gap −1 pt"/>
+            <rect class="hit" x="97.5"  y="20" width="35.7" height="190" data-x="115.4" data-yp="192.9" data-ya="196.7" data-t="M4|Planned 9%|Actual 7%|Gap −2 pts"/>
+            <rect class="hit" x="133.2" y="20" width="35.7" height="190" data-x="151.1" data-yp="175.8" data-ya="181.5" data-t="M6|Planned 18%|Actual 15%|Gap −3 pts"/>
+            <rect class="hit" x="169"   y="20" width="35.7" height="190" data-x="186.9" data-yp="154.9" data-ya="162.5" data-t="M8|Planned 29%|Actual 25%|Gap −4 pts"/>
+            <rect class="hit" x="204.7" y="20" width="35.7" height="190" data-x="222.6" data-yp="132.1" data-ya="141.6" data-t="M10|Planned 41%|Actual 36%|Gap −5 pts"/>
+            <rect class="hit" x="240.4" y="20" width="35.7" height="190" data-x="258.3" data-yp="109.3" data-ya="120.7" data-t="M12|Planned 53%|Actual 47%|Gap −6 pts"/>
+            <rect class="hit" x="276.1" y="20" width="35.7" height="190" data-x="294"   data-yp="88.4"  data-ya="99.8"  data-t="M14 · today|Planned 64%|Actual 58%|Gap −6 pts"/>
+            <rect class="hit" x="311.8" y="20" width="35.7" height="190" data-x="329.7" data-yp="69.4"  data-ya="80.8"  data-t="M16|Planned 74%|AI forecast 68%|Gap −6 pts"/>
+            <rect class="hit" x="347.6" y="20" width="35.7" height="190" data-x="365.4" data-yp="54.2"  data-ya="63.7"  data-t="M18|Planned 82%|AI forecast 77%|Gap −5 pts"/>
+            <rect class="hit" x="383.3" y="20" width="35.7" height="190" data-x="401.1" data-yp="42.8"  data-ya="50.4"  data-t="M20|Planned 88%|AI forecast 84%|Gap −4 pts"/>
+            <rect class="hit" x="419"   y="20" width="35.7" height="190" data-x="436.9" data-yp="33.3"  data-ya="39"    data-t="M22|Planned 93%|AI forecast 90%|Gap −3 pts"/>
+            <rect class="hit" x="454.7" y="20" width="35.7" height="190" data-x="472.6" data-yp="25.7"  data-ya="29.5"  data-t="M24|Planned 97%|AI forecast 95%|Gap −2 pts"/>
+            <rect class="hit" x="490.4" y="20" width="53.6" height="190" data-x="508.3" data-yp="20"    data-ya="22.7"  data-t="M26|Planned 100%|AI forecast 98.6%|Finish +26 d"/>
+          </g>
+        </svg>
+        <div class="ckey">
+          <i><svg viewBox="0 0 26 8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="var(--s-base)" stroke-width="2" stroke-dasharray="5 4"/></svg>Planned baseline</i>
+          <i><svg viewBox="0 0 26 8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="var(--s1)" stroke-width="2.4"/></svg>Actual (measured)</i>
+          <i><svg viewBox="0 0 26 8" aria-hidden="true"><line x1="1" y1="4" x2="25" y2="4" stroke="var(--s2)" stroke-width="2" stroke-dasharray="2 3"/></svg>AI forecast</i>
+        </div>
+        <details><summary>View as table</summary>
+          <table><thead><tr><th>Month</th><th class="mono">Planned</th><th class="mono">Actual</th><th class="mono">Forecast</th></tr></thead>
+          <tbody>
+            <tr><td>M2</td><td class="mono">3%</td><td class="mono">2%</td><td class="mono">—</td></tr>
+            <tr><td>M6</td><td class="mono">18%</td><td class="mono">15%</td><td class="mono">—</td></tr>
+            <tr><td>M10</td><td class="mono">41%</td><td class="mono">36%</td><td class="mono">—</td></tr>
+            <tr><td>M14 · today</td><td class="mono">64%</td><td class="mono">58%</td><td class="mono">58%</td></tr>
+            <tr><td>M18</td><td class="mono">82%</td><td class="mono">—</td><td class="mono">77%</td></tr>
+            <tr><td>M22</td><td class="mono">93%</td><td class="mono">—</td><td class="mono">90%</td></tr>
+            <tr><td>M26</td><td class="mono">100%</td><td class="mono">—</td><td class="mono">98.6%</td></tr>
+          </tbody></table>
+        </details>
+      </div>
+
+      <div class="chart">
+        <div class="ct">Cost variance by package</div>
+        <div class="cs">Forecast at completion against control budget, ₹ lakh. Sign carries the meaning; colour repeats it.</div>
+        <svg id="varchart" viewBox="0 0 420 310" role="img"
+             aria-label="Cost variance by package: structure over budget by 148 lakh and façade by 96 lakh, offset by site development 34 lakh and preliminaries 18 lakh under budget.">
+          <text x="260" y="22" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="9.5" fill="currentColor" opacity=".55">CONTROL BUDGET</text>
+          <line x1="260" y1="30" x2="260" y2="296" stroke="currentColor" stroke-width="1.2" opacity=".45"/>
+          <g font-size="11.5" fill="currentColor" text-anchor="end">
+            <text x="152" y="58">Structure (RCC)</text><text x="152" y="90">Façade</text>
+            <text x="152" y="122">Finishes</text><text x="152" y="154">MEP services</text>
+            <text x="152" y="186">Waterproofing</text><text x="152" y="218">Lifts</text>
+            <text x="152" y="250">Preliminaries</text><text x="152" y="282">Site development</text>
+          </g>
+          <g class="bar" >
+            <rect class="vb" x="261"   y="44"  width="99"  height="20" rx="2" fill="var(--crit)" data-t="Structure (RCC)|Budget ₹62.0 Cr|Forecast ₹63.5 Cr|+₹148 L over|Driver: 3 approved variations + steel rate"/>
+            <rect class="vb" x="261"   y="76"  width="63.9" height="20" rx="2" fill="var(--crit)" data-t="Façade|Budget ₹18.5 Cr|Forecast ₹19.5 Cr|+₹96 L over|Driver: glazing spec upgrade at Gate 5"/>
+            <rect class="vb" x="261"   y="108" width="40.9" height="20" rx="2" fill="var(--crit)" data-t="Finishes|Budget ₹41.0 Cr|Forecast ₹41.6 Cr|+₹62 L over|Driver: tile wastage above allowance"/>
+            <rect class="vb" x="261"   y="140" width="24.7" height="20" rx="2" fill="var(--crit)" data-t="MEP services|Budget ₹28.0 Cr|Forecast ₹28.4 Cr|+₹38 L over|Driver: copper index, partly hedged"/>
+            <rect class="vb" x="261"   y="172" width="13.2" height="20" rx="2" fill="var(--crit)" data-t="Waterproofing|Budget ₹4.2 Cr|Forecast ₹4.4 Cr|+₹21 L over|Driver: extra terrace treatment after NCR"/>
+            <rect class="vb" x="251.9" y="204" width="7.1"  height="20" rx="2" fill="var(--good)" data-t="Lifts|Budget ₹6.8 Cr|Forecast ₹6.7 Cr|−₹12 L under|Driver: rate contract locked in month 4"/>
+            <rect class="vb" x="247.8" y="236" width="11.2" height="20" rx="2" fill="var(--good)" data-t="Preliminaries|Budget ₹9.5 Cr|Forecast ₹9.3 Cr|−₹18 L under|Driver: DG runtime down 22% on load matching"/>
+            <rect class="vb" x="237"   y="268" width="22"   height="20" rx="2" fill="var(--good)" data-t="Site development|Budget ₹7.4 Cr|Forecast ₹7.1 Cr|−₹34 L under|Driver: cut-and-fill rebalanced from drone survey"/>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".75">
+            <text x="366" y="58">+148</text><text x="331" y="90">+96</text><text x="308" y="122">+62</text>
+            <text x="292" y="154">+38</text><text x="280" y="186">+21</text>
+          </g>
+          <g font-family="'IBM Plex Mono',monospace" font-size="10" fill="currentColor" opacity=".75" text-anchor="end">
+            <text x="245" y="218">−12</text><text x="241" y="250">−18</text><text x="230" y="282">−34</text>
+          </g>
+          <text x="260" y="308" text-anchor="middle" font-family="'IBM Plex Mono',monospace" font-size="9" fill="currentColor" opacity=".5">net +₹301 L · 3.2% over ₹208.0 Cr</text>
+        </svg>
+        <div class="ckey">
+          <i><span class="pill crit" style="border:0;background:none;padding:0"><span class="dot" aria-hidden="true"></span>+ over budget</span></i>
+          <i><span class="pill good" style="border:0;background:none;padding:0"><span class="dot" aria-hidden="true"></span>− under budget</span></i>
+        </div>
+        <details><summary>View as table</summary>
+          <table><thead><tr><th>Package</th><th class="mono">Budget</th><th class="mono">Forecast</th><th class="mono">Var (₹L)</th></tr></thead>
+          <tbody>
+            <tr><td>Structure (RCC)</td><td class="mono">62.0 Cr</td><td class="mono">63.5 Cr</td><td class="mono">+148</td></tr>
+            <tr><td>Façade</td><td class="mono">18.5 Cr</td><td class="mono">19.5 Cr</td><td class="mono">+96</td></tr>
+            <tr><td>Finishes</td><td class="mono">41.0 Cr</td><td class="mono">41.6 Cr</td><td class="mono">+62</td></tr>
+            <tr><td>MEP services</td><td class="mono">28.0 Cr</td><td class="mono">28.4 Cr</td><td class="mono">+38</td></tr>
+            <tr><td>Waterproofing</td><td class="mono">4.2 Cr</td><td class="mono">4.4 Cr</td><td class="mono">+21</td></tr>
+            <tr><td>Lifts</td><td class="mono">6.8 Cr</td><td class="mono">6.7 Cr</td><td class="mono">−12</td></tr>
+            <tr><td>Preliminaries</td><td class="mono">9.5 Cr</td><td class="mono">9.3 Cr</td><td class="mono">−18</td></tr>
+            <tr><td>Site development</td><td class="mono">7.4 Cr</td><td class="mono">7.1 Cr</td><td class="mono">−34</td></tr>
+          </tbody></table>
+        </details>
+      </div>
+    </div>
+
+    <div class="stream">
+      <div class="stream-hd">Event stream · today · every row links to the frame or record that produced it</div>
+      <div class="alert c"><div class="ts">09:12</div><div class="sev"></div>
+        <div class="msg"><b>Cover blocks missing in 3 bays — column C-14, 7th floor</b>
+          <span>Defect Vision Agent · floor camera 4, frame 09:11:48 · confidence 0.91</span></div>
+        <div class="act">POUR BLOCKED<br>QC engineer · SLA 2 h</div></div>
+      <div class="alert c"><div class="ts">08:31</div><div class="sev"></div>
+        <div class="msg"><b>Worker at 11th floor edge without harness</b>
+          <span>Safety Vision Agent · camera 6 · stop-work recommended, evidence attached</span></div>
+        <div class="act">AWAITING HUMAN<br>Safety officer · SLA 5 min</div></div>
+      <div class="alert w"><div class="ts">08:47</div><div class="sev"></div>
+        <div class="msg"><b>Steel lead time now 34 days — clears need-by by 2 days only</b>
+          <span>Lead-time Agent · supplier confirmation + Material Price Forecaster: buy window closes in 9 days</span></div>
+        <div class="act">RECOMMENDATION<br>Purchase committee</div></div>
+      <div class="alert w"><div class="ts">07:02</div><div class="sev"></div>
+        <div class="msg"><b>Façade package forecast +₹96 L, driven by 3 approved variations</b>
+          <span>Budget Control Agent · crossed the 3% package threshold at 06:58</span></div>
+        <div class="act">ESCALATED<br>CFO · 2 options attached</div></div>
+      <div class="alert g"><div class="ts">07:55</div><div class="sev"></div>
+        <div class="msg"><b>7th floor slab measured 100% — RA bill line and portal updated</b>
+          <span>Progress Vision Agent · drone scan vs BIM · variance to claim 0.4%</span></div>
+        <div class="act">AUTO-EXECUTED L3<br>PM may reverse for 24 h</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- ══════════ 07 GATES ══════════ -->
+<section class="sheet" id="gates">
+  <div class="shead"><span class="scode">SH-07</span><h2>Where a human must sign</h2></div>
+  <p class="sdek">The eleven gates are the specification of the system, not an afterthought bolted on for
+  comfort. Each one exists because the failure it prevents is either irreversible, contractual or legally
+  personal to the signatory. Everything <em>between</em> gates is fair game for automation.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th class="mono">Gate</th><th>Decision</th><th>Who signs</th><th>What the AI hands them</th><th>If nobody decides</th></tr></thead>
+      <tbody>
+        <tr><td class="mono">G1 · S-01</td><td><b>Title opinion &amp; parcel shortlist</b></td><td>Legal counsel + acquisition committee</td><td>Chain-of-title timeline, flagged gaps, comparable price band, walk-away number</td><td>Parcel stays in pipeline; no offer issues</td></tr>
+        <tr><td class="mono">G2 · S-02</td><td><b>Go / no-go on capital</b></td><td>Investment committee</td><td>Pareto set of massing options, P10/P50/P90 IRR, downside runway month</td><td>Hard stop. Nothing proceeds</td></tr>
+        <tr><td class="mono">G3 · S-03</td><td><b>GFC drawing release</b></td><td>Principal architect + structural engineer</td><td>Clash-free federated model, compliance sheet, open VE items</td><td>Drawing cannot reach site; look-ahead blocks the activity</td></tr>
+        <tr><td class="mono">G4 · S-04</td><td><b>Statutory submission</b></td><td>Liaison head + legal</td><td>Assembled pack, completeness check against the authority's own checklist</td><td>File is not submitted. No exception</td></tr>
+        <tr><td class="mono">G5 · S-05</td><td><b>Control budget &amp; variations &gt; ₹5 L</b></td><td>Head of QS + CFO</td><td>P50/P80 estimate, cause-tagged variation, forecast-at-completion impact</td><td>Variation is not executed; work stops at that item</td></tr>
+        <tr><td class="mono">G6 · S-06</td><td><b>Vendor award</b></td><td>Purchase committee</td><td>Normalised comparison, vendor reliability score, walk-away price</td><td>No PO issues. Lead-time agent starts warning</td></tr>
+        <tr><td class="mono">G7 · S-07</td><td><b>Baseline or recovery plan change</b></td><td>Project manager</td><td>Slip driver named, two recovery options with cost and day impact</td><td>Look-ahead keeps publishing; baseline stays as-is and the gap widens visibly</td></tr>
+        <tr><td class="mono">G8 · S-08</td><td><b>Stop work</b></td><td>Safety officer</td><td>Hazard detection with the frame, the rule breached, the exposed crew count</td><td>Escalates every 5 minutes up the ladder until acknowledged</td></tr>
+        <tr><td class="mono">G9 · S-09</td><td><b>Acknowledge or dismiss high-severity event</b></td><td>Site in-charge</td><td>Typed event, evidence, deduplication against open items</td><td>Escalates to project head at SLA breach; auto-dismissal never happens</td></tr>
+        <tr><td class="mono">G10 · S-10</td><td><b>Price move or discount beyond band</b></td><td>Sales head</td><td>Absorption vs plan, floor price, revenue impact of the move</td><td>List price holds. No discount is ever auto-granted</td></tr>
+        <tr><td class="mono">G11 · S-11</td><td><b>Possession</b></td><td>Site head + the customer</td><td>Scan-generated snag list, closure evidence, complete home file</td><td>Flat is not handed over. Buyer's own list always overrides the scan</td></tr>
+      </tbody>
+    </table>
+  </div>
+  <p class="fnote">A twelfth, softer gate sits in maintenance: the facility manager approves work orders above
+  threshold and the society committee approves capital expenditure. Routine preventive orders below threshold
+  issue on their own, which is the point of predictive maintenance.</p>
+</section>
+
+<!-- ══════════ 08 AUTONOMY ══════════ -->
+<section class="sheet" id="autonomy">
+  <div class="shead"><span class="scode">SH-08</span><h2>How much the system is allowed to do</h2></div>
+  <p class="sdek">Every agent carries an autonomy level. The level is a property of the <em>action</em>, not of
+  how good the model is — a highly accurate model still may not sign a cheque. Raise a level only after the
+  agent has a measured track record at the level below.</p>
+
+  <div class="ladder">
+    <div class="rung"><div class="lv">L0</div>
+      <div class="wh"><b>Observe</b><p>Collects and displays. Makes no claim about what should happen.</p></div>
+      <div class="ex">gate RFID counts<br>meter readings<br>document register</div></div>
+    <div class="rung"><div class="lv">L1</div>
+      <div class="wh"><b>Advise</b><p>Surfaces a finding or a ranking. A human does all the work of acting on it.</p></div>
+      <div class="ex">vendor reliability score<br>land parcel shortlist<br>VE alternates</div></div>
+    <div class="rung hi"><div class="lv">L2</div>
+      <div class="wh"><b>Auto-draft</b><p>Produces the finished artefact — the application pack, the comparative statement, the demand letter — and a human reviews and signs it. This is where most of this system lives.</p></div>
+      <div class="ex">approval submission packs<br>BOQ and rate analysis<br>RFQs and comparisons<br>feasibility models<br>demand letters</div></div>
+    <div class="rung"><div class="lv">L3</div>
+      <div class="wh"><b>Auto-execute with veto</b><p>Acts immediately, notifies the owner, and stays reversible for a stated window. Used where the cost of waiting exceeds the cost of being wrong.</p></div>
+      <div class="ex">block a dependent activity<br>publish the 3-week look-ahead<br>update % complete<br>assign a snag with SLA<br>raise a preventive work order</div></div>
+    <div class="rung"><div class="lv">L4</div>
+      <div class="wh"><b>Fully automatic</b><p>No human in the path, because there is no judgement in the path.</p></div>
+      <div class="ex">ingestion and normalisation<br>alert routing<br>report generation<br>portal status polling</div></div>
+  </div>
+
+  <div class="grid">
+    <div class="card"><h3>The capped-at-L2 rule</h3>
+      <p>Any action that spends money, signs or files a document, stops work, changes a contract price or makes
+      a commitment to a customer is capped at L2 permanently. No accuracy score unlocks it. This is what makes
+      the system safe to deploy quickly everywhere else.</p></div>
+    <div class="card"><h3>Earning a level</h3>
+      <p>An agent moves from L1 to L2 after 90 days where its drafts were accepted with minor edits 85%+ of the
+      time. L2 to L3 requires a measured false-positive rate below the agreed threshold and a working reversal
+      path that someone has actually tested.</p></div>
+    <div class="card"><h3>Falling back</h3>
+      <p>Levels drop automatically. Three overturned L3 actions in a rolling month, or a confidence
+      distribution that shifts beyond its band, demotes the agent to L2 until it is re-reviewed. Silent drift
+      is the failure mode that kills trust.</p></div>
+  </div>
+</section>
+
+<!-- ══════════ 09 DATA SPINE ══════════ -->
+<section class="sheet" id="spine-data">
+  <div class="shead"><span class="scode">SH-09</span><h2>What it plugs into</h2></div>
+  <p class="sdek">Nothing here replaces the systems a developer already runs. The command center reads from
+  them, writes back to them, and keeps the identity of every element consistent across all of them. If a
+  vendor proposes ripping out the ERP, that is a different project and a worse one.</p>
+
+  <div class="tw">
+    <table>
+      <thead><tr><th>System</th><th>Typical stack</th><th class="mono">Reads</th><th class="mono">Writes</th><th>Why it matters</th></tr></thead>
+      <tbody>
+        <tr><td><b>ERP / accounting</b></td><td>SAP, Farvision, Tally, Highrise</td><td class="mono">✓</td><td class="mono">✓</td><td>Committed vs incurred cost, GRNs, running bills, escrow movement</td></tr>
+        <tr><td><b>BIM / design</b></td><td>Revit, Navisworks, IFC exchange</td><td class="mono">✓</td><td class="mono">—</td><td>Source of quantities, clashes, compliance checks and the element ID everything else hangs off</td></tr>
+        <tr><td><b>Scheduling</b></td><td>Primavera P6, MS Project</td><td class="mono">✓</td><td class="mono">✓</td><td>Baseline in, measured progress and recalculated critical path out</td></tr>
+        <tr><td><b>CRM</b></td><td>Salesforce, Zoho, Sell.Do, LeadRat</td><td class="mono">✓</td><td class="mono">✓</td><td>Lead scoring, routing, booking and collection status</td></tr>
+        <tr><td><b>Document management</b></td><td>SharePoint, Procore, ACC</td><td class="mono">✓</td><td class="mono">✓</td><td>Drawing revisions, approvals correspondence, the audit trail</td></tr>
+        <tr><td><b>Video (VMS)</b></td><td>Hikvision, Milestone, RTSP feeds</td><td class="mono">✓</td><td class="mono">—</td><td>Frames for vision agents; only detections leave the site, never raw video</td></tr>
+        <tr><td><b>Drone / reality capture</b></td><td>DJI + photogrammetry, 360° cameras</td><td class="mono">✓</td><td class="mono">—</td><td>Weekly point cloud that turns progress from an opinion into a measurement</td></tr>
+        <tr><td><b>IoT gateway</b></td><td>Batching plant, maturity probes, meters, RFID</td><td class="mono">✓</td><td class="mono">—</td><td>Concrete quality, plant utilisation, attendance, energy and water</td></tr>
+        <tr><td><b>Authority portals</b></td><td>ULB, RERA, fire, SEIAA, AAI</td><td class="mono">✓</td><td class="mono">—</td><td>Submission status, queries, sanction dates for the approvals critical path</td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div class="grid">
+    <div class="card"><span class="num">THE ONE HARD REQUIREMENT</span><h3>A single element identity</h3>
+      <p>Column C-14 on the 7th floor must be the same object in the model, the BOQ line, the pour record, the
+      cube test, the camera detection, the snag list and the maintenance ticket. Every capability on this page
+      collapses into disconnected demos without it, and no amount of model quality substitutes for it.</p></div>
+    <div class="card"><span class="num">WRITE DISCIPLINE</span><h3>Every write is attributable</h3>
+      <p>When the system updates a percentage, a bill line or a schedule date, the record carries which agent
+      wrote it, from which evidence, under which autonomy level, and who could reverse it. This is what makes
+      the output usable in a contractual dispute rather than a liability in one.</p></div>
+    <div class="card"><span class="num">FALLBACK</span><h3>Degrade, never stop</h3>
+      <p>Site loses network, a portal changes its HTML, a camera goes down. Each integration declares its
+      staleness tolerance; past it, the dashboard shows the field as stale rather than showing an old number
+      as if it were current. A confidently wrong dashboard is worse than a blank one.</p></div>
+  </div>
+</section>
+
+<!-- ══════════ 10 ROLLOUT ══════════ -->
+<section class="sheet" id="rollout">
+  <div class="shead"><span class="scode">SH-10</span><h2>How to actually get there</h2></div>
+  <p class="sdek">Building all twelve stages at once is how these programmes die. Sequence by where the money
+  and the evidence are: sense first, because it is the cheapest way to prove the system tells the truth;
+  automate the front office last, because it is the least forgiving of a wrong answer.</p>
+
+  <div class="ladder">
+    <div class="phase"><div class="p-l"><div class="pn">Phase 0</div><div class="pt">Months 1–3</div></div>
+      <div class="p-r"><b>The data spine</b>
+        <p>One element identity, one event bus, connectors to ERP, BIM, P6 and CRM. Nothing user-facing ships.
+        This phase is unglamorous, unavoidable, and the single best predictor of whether the rest works.</p></div></div>
+    <div class="phase"><div class="p-l"><div class="pn">Phase 1</div><div class="pt">Months 3–7</div></div>
+      <div class="p-r"><b>Sense the site — S-07, S-08, S-09</b>
+        <p>Cameras, one drone cadence, gate RFID, the safety and progress agents, and the command screen. Run
+        it alongside the existing weekly report for two months and let the two disagree in public. Credibility
+        is earned here or not at all.</p></div></div>
+    <div class="phase"><div class="p-l"><div class="pn">Phase 2</div><div class="pt">Months 6–11</div></div>
+      <div class="p-r"><b>Control the money — S-05, S-06</b>
+        <p>Model-driven take-off, rate analysis, live forecast at completion, vendor scoring and normalised
+        comparisons. This is where the programme pays for itself, and it only works because Phase 1 made the
+        progress numbers trustworthy.</p></div></div>
+    <div class="phase"><div class="p-l"><div class="pn">Phase 3</div><div class="pt">Months 10–16</div></div>
+      <div class="p-r"><b>Front of house — S-10, S-11</b>
+        <p>Lead scoring, the conversational agent, the customer progress portal fed by verified progress, snag
+        scanning and the digital home file. The portal is only safe to launch once the progress number behind
+        it is the measured one.</p></div></div>
+    <div class="phase"><div class="p-l"><div class="pn">Phase 4</div><div class="pt">Months 14–24</div></div>
+      <div class="p-r"><b>Close the loop — S-01 to S-04, S-12</b>
+        <p>Land scouting, title reading, feasibility, approvals tracking and predictive maintenance. By now the
+        system has enough completed history to make its own predictions calibrated instead of theoretical, and
+        maintenance failures start feeding back into design.</p></div></div>
+  </div>
+</section>
+
+<!-- ══════════ 11 RISKS ══════════ -->
+<section class="sheet" id="risks">
+  <div class="shead"><span class="scode">SH-11</span><h2>Where this breaks</h2></div>
+  <p class="sdek">Every honest system document has this section. These are the failure modes that have killed
+  comparable programmes, and the design choice on this page that is meant to survive each one.</p>
+
+  <div class="grid">
+    <div class="card"><h3>Alert fatigue</h3>
+      <p>A vision model firing two hundred times a day gets muted in a fortnight. <b>Mitigation:</b> severity
+      tiers, deduplication against open events, an owner and SLA on every alert, and a threshold that tightens
+      automatically as dismissal rate rises.</p></div>
+    <div class="card"><h3>Garbage BOQ coding</h3>
+      <p>If the model is not coded to the schedule of rates, take-off produces confident nonsense.
+      <b>Mitigation:</b> a modelling standard enforced at consultant appointment, and a reconciliation report
+      that refuses to publish quantities below a coverage threshold.</p></div>
+    <div class="card"><h3>Vendors gaming the score</h3>
+      <p>Any published score gets optimised for. <b>Mitigation:</b> weight outcome data the vendor cannot
+      author — measured delivery dates, rejection rates at the gate, safety incidents — over anything
+      self-reported.</p></div>
+    <div class="card"><h3>Legal exposure on documents</h3>
+      <p>An AI-assembled submission that is wrong is still the developer's submission. <b>Mitigation:</b> the
+      hard rule at G4 — nothing is filed unsigned — plus a completeness check that reports what it could
+      <em>not</em> verify, not just what it could.</p></div>
+    <div class="card"><h3>Worker resistance and privacy</h3>
+      <p>Cameras aimed at people generate resentment and legal risk. <b>Mitigation:</b> a published monitoring
+      policy, gang-level rather than individual productivity, face identification restricted to the gate, a
+      stated retention clock, and the labour contractor consulted before installation.</p></div>
+    <div class="card"><h3>Model drift after handover</h3>
+      <p>A defect model trained on Tower A degrades on a different façade system. <b>Mitigation:</b> confidence
+      monitoring per project, automatic demotion of autonomy level on drift, and the label store from SH-05
+      feeding a scheduled retrain.</p></div>
+    <div class="card"><h3>The dashboard nobody opens</h3>
+      <p>The most common ending. <b>Mitigation:</b> push the three things that need a decision to the phone of
+      the person who has to decide, and judge the system on gate response times rather than on dashboard
+      logins.</p></div>
+    <div class="card"><h3>Over-trusting a single number</h3>
+      <p>"The AI says 58%" becomes a payment trigger and then a dispute. <b>Mitigation:</b> every measurement
+      carries a confidence band and its source frame, and a human measurement check stays in the loop for
+      anything that releases money.</p></div>
+  </div>
+</section>
+
+</main>
+
+<footer>
+  <div class="tape"></div>
+  <div class="sheet" style="padding-top:32px">
+    <div class="fgrid">
+      <div><b>Document</b>AI Construction Operating System</div>
+      <div><b>Revision</b>1.0 · for implementation</div>
+      <div><b>Sheets</b>SH-01 to SH-11</div>
+      <div><b>Issued</b>2026-08-29</div>
+      <div><b>Next review</b>End of Phase 0</div>
+    </div>
+    <p class="fnote">Figures throughout — cost, schedule, wastage, attendance and package variances — are
+    illustrative values for a reference project of two towers and 248 units, used to show what the screens
+    read like in operation. They are not benchmarks. Replace them with your own baselines before this document
+    is used to set a target. Statutory references are written for Indian practice (ULB plan sanction, fire
+    NOC, AAI height clearance, SEIAA environment clearance, RERA and BU/occupancy) and should be re-checked
+    against the authorities with jurisdiction over the specific site.</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var tip = document.getElementById('tip');
+  function show(e, html){
+    tip.innerHTML = html;
+    tip.style.opacity = '1';
+    var pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+    var x = e.clientX + pad, y = e.clientY + pad;
+    if (x + w > window.innerWidth - 8) x = e.clientX - w - pad;
+    if (y + h > window.innerHeight - 8) y = e.clientY - h - pad;
+    tip.style.left = x + 'px'; tip.style.top = y + 'px';
+  }
+  function hide(){ tip.style.opacity = '0'; }
+
+  function fmt(d){
+    var p = d.split('|');
+    return '<b>' + p[0] + '</b><br>' + p.slice(1).join('<br>');
+  }
+
+  /* S-curve: crosshair + tooltip */
+  var xh = document.getElementById('xh'),
+      dp = document.getElementById('dp'),
+      da = document.getElementById('da');
+  document.querySelectorAll('#hits .hit').forEach(function(r){
+    function on(e){
+      var x = r.getAttribute('data-x');
+      xh.setAttribute('x1', x); xh.setAttribute('x2', x); xh.setAttribute('opacity', '.45');
+      dp.setAttribute('cx', x); dp.setAttribute('cy', r.getAttribute('data-yp')); dp.setAttribute('opacity', '1');
+      da.setAttribute('cx', x); da.setAttribute('cy', r.getAttribute('data-ya')); da.setAttribute('opacity', '1');
+      show(e, fmt(r.getAttribute('data-t')));
+    }
+    r.addEventListener('mouseenter', on);
+    r.addEventListener('mousemove', on);
+    r.addEventListener('mouseleave', function(){
+      xh.setAttribute('opacity','0'); dp.setAttribute('opacity','0'); da.setAttribute('opacity','0'); hide();
+    });
+  });
+
+  /* variance bars */
+  document.querySelectorAll('.vb').forEach(function(b){
+    b.style.cursor = 'crosshair';
+    b.addEventListener('mouseenter', function(e){ b.setAttribute('opacity','.78'); show(e, fmt(b.getAttribute('data-t'))); });
+    b.addEventListener('mousemove', function(e){ show(e, fmt(b.getAttribute('data-t'))); });
+    b.addEventListener('mouseleave', function(){ b.removeAttribute('opacity'); hide(); });
+  });
+
+  window.addEventListener('scroll', hide, {passive:true});
+})();
+</script>
