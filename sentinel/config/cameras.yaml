@@ -1,0 +1,94 @@
+# ─────────────────────────────────────────────────────────────────────────
+# REAL CAMERA CONFIGURATION
+#
+# This is the ONLY file you edit to connect Sentinel to live cameras.
+# No source changes. No rebuild. Restart the ingestion service and the
+# cameras below are pulled alongside (or instead of) the demo estate.
+#
+#   1. Set INGEST_MODE=live   in .env   (or `hybrid` to keep the demo too)
+#   2. Add your cameras below
+#   3. docker compose restart ingestion
+#
+# CREDENTIALS
+# Never write a password into stream_url in production -- the loader
+# refuses to start if you do. Instead give each camera a credential_ref
+# and put the value in the environment:
+#
+#     credential_ref: env:SENTINEL_CAM_AHM014
+#     # then in .env:  SENTINEL_CAM_AHM014=viewer:the-real-password
+#
+# Supported refs:  env:VAR   file:/run/secrets/name   vault://path/name
+# ─────────────────────────────────────────────────────────────────────────
+
+defaults:
+  protocol: RTSP
+  role: SURVEILLANCE
+  fov_deg: 90
+  range_m: 60
+  width: 1280
+  height: 720
+  fps: 12
+  department: GP_AHM
+  enabled: true
+
+cameras: []
+
+# ── Examples. Uncomment and edit. ───────────────────────────────────────
+#
+# - camera_id: AHM-SAT-101                 # your own stable identifier
+#   name: Jodhpur Cross Roads - NE approach
+#   latitude: 23.02705
+#   longitude: 72.51192
+#   heading_deg: 47                        # WHICH WAY IT LOOKS. Capture this
+#   fov_deg: 82                            # during survey -- without it the
+#   range_m: 65                            # map has no field of view and the
+#   protocol: RTSP                         # cross-camera gate is much weaker.
+#   stream_url: rtsp://10.42.7.14:554/Streaming/Channels/101
+#   substream_url: rtsp://10.42.7.14:554/Streaming/Channels/102
+#   credential_ref: env:SENTINEL_CAM_AHM101
+#   anpr_capable: false
+#   zone: Satellite
+#   tags: [junction, arterial]
+#
+# ── Analog camera on a legacy DVR channel ──
+# - camera_id: AMC-DVR3-CH07
+#   name: Zone-3 Yard Gate
+#   latitude: 23.0410
+#   longitude: 72.5610
+#   heading_deg: 190
+#   protocol: DVR
+#   substream_url: rtsp://10.42.9.3:554/cam/realmonitor?channel=7&subtype=1
+#   credential_ref: env:SENTINEL_CAM_AMCDVR3
+#   width: 704
+#   height: 576
+#   fps: 12
+#   anpr_capable: false                    # CVBS cannot resolve a plate
+#   department: AMC
+#
+# ── Dedicated ANPR lane (narrow FOV, main stream, IR) ──
+# - camera_id: GSRTC-ANPR-02
+#   name: Geeta Mandir bus stand - exit ramp
+#   latitude: 23.0132
+#   longitude: 72.5905
+#   heading_deg: 275
+#   fov_deg: 28                            # narrow: that is what makes a
+#   range_m: 40                            # plate big enough to read
+#   protocol: RTSP
+#   stream_url: rtsp://10.42.11.8:554/Streaming/Channels/101
+#   credential_ref: env:SENTINEL_CAM_GSRTC02
+#   width: 1920
+#   height: 1080
+#   anpr_capable: true
+#   role: ANPR
+#   department: GSRTC
+#
+# ── Municipal HLS feed ──
+# - camera_id: AMC-HLS-11
+#   name: Kankaria Lakefront
+#   latitude: 23.0045
+#   longitude: 72.6013
+#   protocol: HLS
+#   stream_url: https://stream.amc.gov.in/live/kankaria/index.m3u8
+#   width: 854
+#   height: 480
+#   department: AMC

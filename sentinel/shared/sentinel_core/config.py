@@ -86,15 +86,16 @@ class Settings(BaseSettings):
     ai_batch_size: int = 8
     detector_model: str = "yolov8n"
     detector_conf: float = 0.35
-    reid_dim: int = 256
+    reid_dim: int = 512
     anpr_min_plate_px: int = 90
     anpr_min_blur_var: float = 100.0
 
     # ── Ingestion ────────────────────────────────────────────────────
     ingest_mode: Literal["demo", "live", "hybrid"] = "demo"
     demo_camera_count: int = 50
-    demo_vehicle_count: int = 120
-    demo_tick_hz: float = 2.0
+    demo_vehicle_count: int = 1800
+    demo_tick_hz: float = 6.0
+    demo_speed_multiplier: float = 3.0
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
     camera_config_path: str = "config/cameras.yaml"
     stream_probe_timeout_s: int = 12
