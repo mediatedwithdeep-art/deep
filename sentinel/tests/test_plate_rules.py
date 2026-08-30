@@ -4,8 +4,8 @@ Run: python3 -m pytest sentinel/services/cv/test_plate_rules.py -q
      (or plain `python3 test_plate_rules.py` — it self-runs without pytest)
 """
 import sys, os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import plate_rules as pr
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared"))
+from sentinel_core import plate_rules as pr
 
 
 def test_normalize():

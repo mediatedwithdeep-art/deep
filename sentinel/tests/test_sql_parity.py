@@ -10,11 +10,11 @@ Run: python3 sentinel/services/cv/test_sql_parity.py
 """
 import os, re, sys
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import plate_rules as pr
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared"))
+from sentinel_core import plate_rules as pr
 
 SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "..", "db", "migrations", "002_gating.sql")
+                        "..", "database", "migrations", "0003_spatial_functions.sql")
 
 
 def _sql() -> str:

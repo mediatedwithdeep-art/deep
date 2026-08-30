@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinel-core"
+version = "1.0.0"
+description = "Shared domain logic for the Sentinel VMS: plate rules, cross-camera fusion, message bus, config, logging."
+requires-python = ">=3.11"
+dependencies = [
+  "pydantic>=2.6",
+  "pydantic-settings>=2.2",
+]
+
+[project.optional-dependencies]
+redis = ["redis>=5.0"]
+kafka = ["aiokafka>=0.10"]
+
+[tool.setuptools.packages.find]
+include = ["sentinel_core*"]

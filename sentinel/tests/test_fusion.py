@@ -5,8 +5,8 @@ Run: python3 sentinel/services/matcher/test_fusion.py
 import sys, os
 from datetime import datetime, timedelta, timezone
 
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import fusion as F
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "shared"))
+from sentinel_core import fusion as F
 
 T0 = datetime(2026, 9, 7, 10, 0, 0, tzinfo=timezone.utc)
 

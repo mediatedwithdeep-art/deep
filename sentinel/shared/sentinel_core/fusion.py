@@ -27,14 +27,11 @@ Pure Python + numpy/scipy; no GPU. The DB provides the gate (see
 from __future__ import annotations
 
 import math
-import sys
-import os
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta
 from typing import Sequence
 
-sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "cv"))
-import plate_rules  # noqa: E402
+from . import plate_rules
 
 try:
     import numpy as np
