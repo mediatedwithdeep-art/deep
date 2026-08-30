@@ -1,0 +1,6 @@
+__pycache__/
+*.py[cod]
+.env
+sentinel/.env
+sentinel/data/
+node_modules/

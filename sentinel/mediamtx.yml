@@ -1,0 +1,57 @@
+# MediaMTX — the view path. Sub-second WebRTC to the operator wall.
+#
+# Two settings below carry most of the latency win:
+#   rtspTransport: tcp   — reliable over GSWAN; UDP loss looks like corruption
+#   runOnDemand          — pull a camera only while someone is watching it
+
+logLevel: info
+readTimeout: 10s
+writeTimeout: 10s
+writeQueueSize: 512
+
+# WebRTC (WHEP) — this is what the browser connects to.
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+# Add your TURN server here for operators behind restrictive NAT. On a
+# closed police WAN you usually do not need one; on public internet you do.
+webrtcICEServers2: []
+
+# LL-HLS fallback for poor networks. ~2-4s versus WebRTC's 200-500ms.
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+hlsPartDuration: 200ms
+hlsSegmentDuration: 1s
+hlsAlwaysRemux: no
+
+rtsp: yes
+rtspAddress: :8554
+rtspTransports: [tcp]
+
+api: yes
+apiAddress: :9997          # the API service drives path config through this
+
+metrics: yes
+metricsAddress: :9998
+
+pathDefaults:
+  # Cameras are added dynamically by the API via the MediaMTX API.
+  # `sourceOnDemand` means no RTSP session is opened until a viewer asks,
+  # which is what keeps 80,000 registered cameras from costing anything
+  # when nobody is looking at them.
+  sourceOnDemand: yes
+  sourceOnDemandStartTimeout: 10s
+  sourceOnDemandCloseAfter: 20s
+  rtspTransport: tcp
+
+paths:
+  # Static demo path. The 50-camera prototype registers real cameras through
+  # the API; this one exists so `docker compose up` has something to show.
+  demo-loop:
+    runOnDemand: >
+      ffmpeg -re -stream_loop -1 -i /samples/traffic.mp4
+      -c:v libx264 -preset ultrafast -tune zerolatency
+      -g 25 -x264-params keyint=25:min-keyint=25:scenecut=0
+      -f rtsp rtsp://localhost:8554/demo-loop
+    runOnDemandRestart: yes
