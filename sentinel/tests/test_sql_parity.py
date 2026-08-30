@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."
 from sentinel_core import plate_rules as pr
 
 SQL_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),
-                        "..", "database", "migrations", "0003_spatial_functions.sql")
+                        "..", "database", "migrations", "0005_partitions_and_functions.sql")
 
 
 def _sql() -> str:
