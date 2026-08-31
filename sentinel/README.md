@@ -1,104 +1,233 @@
-# Sentinel — Unified VMS & AI Analytics Ecosystem
+# Sentinel — Unified VMS & AI Analytics
 
-Technical blueprint and working scaffold for the **Gujarat Police Sentinel Innovation Challenge 2026**.
+**Gujarat Police Sentinel Innovation Challenge 2026**
 
-**MVP target (7 Sep 2026):** 50 heterogeneous live camera feeds, AI vehicle tracking across them, real-time alerts, GIS movement history.
-**Design target:** 80,000+ cameras, 26 departments, state-wide.
+One pane of glass over a heterogeneous camera estate: ingest disparate
+feeds, detect and track vehicles, read plates, follow one vehicle across
+cameras, alert in real time, and show its movement on a map.
+
+```bash
+git clone <this repo> && cd sentinel
+make demo
+```
+
+That is the whole setup. It builds, starts PostgreSQL/PostGIS/pgvector,
+Redis, the API, the AI pipeline, the event processor and the command centre,
+applies migrations, seeds a 50-camera Ahmedabad estate, and prints your
+login. **No GPU, no model weights, no cameras required.**
+
+- Command centre → `http://localhost:3000`
+- API docs → `http://localhost:8000/docs`
+
+Presenting it? → **[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md)**
+Connecting real cameras? → **[docs/REAL_CAMERAS.md](docs/REAL_CAMERAS.md)**
 
 ---
 
-## The three claims this design rests on
+## The three claims this is built on
 
-**1. Video never centralises. Metadata does.**
-80,000 cameras at 4 Mbps is 320 Gbps and 104 PB per month. That is not a budget problem, it is a physics problem. Sentinel leaves video at the edge, ships ~5 kbps of metadata per camera to the core, and pulls full-resolution clips only on demand. Every other decision follows from this. → [docs/01](docs/01-architecture.md)
+**1 · Video never centralises. Metadata does.**
+80,000 cameras at 4 Mbps is **320 Gbps and 104 PB/month**. That is not a
+budget problem, it is physics, and no centralised design survives it. Video
+stays at the edge; ~5 kbps per camera of metadata reaches the core; clips are
+pulled on demand. Every other decision follows.
 
-**2. The spatio-temporal gate matters more than the model.**
-Given a sighting at camera A, only cameras reachable by road in a plausible travel window are candidates — typically 2–5 out of 50. That gate removes 95–98% of comparisons, and it is what makes an 85%-mAP ReID model *operationally trustworthy* rather than a false-positive generator. It is a PostGIS query plus a cached OSRM matrix. → [docs/03 §4.3](docs/03-cv-pipeline.md)
+**2 · The spatio-temporal gate matters more than the model.**
+Given a sighting, only cameras reachable by road in a plausible travel window
+are candidates. Measured on the demo estate: **3.3 candidates out of 49**
+within a 3-minute window — a 93% reduction. Appearance matching at 0.9% false
+positives is unusable against 49 cameras and trustworthy against 3. It is a
+PostGIS query plus a cached routing matrix. No GPU.
 
-**3. ANPR alone cannot track a vehicle across a real estate.**
-Only 10–15% of general surveillance cameras can resolve a plate. Requiring a plate read at every hop yields a dotted line. Sentinel fuses plate (precision) with ReID and attributes (recall) under the gate. → [docs/03 §0](docs/03-cv-pipeline.md)
+**3 · ANPR alone cannot track a vehicle across a real estate.**
+Only 26% of the demo estate can physically resolve a plate; the rest are
+wide-angle. Requiring a plate read at every hop yields a dotted line. Sentinel
+fuses plate (precision) with appearance and attributes (recall), under the gate.
 
 ---
 
-## Documents
+## What is actually built
 
 | | |
 |---|---|
-| [01 — System Architecture](docs/01-architecture.md) | Federation, ingest, decode-once fan-out, latency budgets, storage tiers, camera health |
-| [02 — Tech Stack](docs/02-tech-stack.md) | Component choices with rationale, **licence warnings**, hardware sizing |
-| [03 — CV Pipeline](docs/03-cv-pipeline.md) | Detection, tracking, Indian ANPR, ReID, fusion scoring, compute budget, honest limitations |
-| [04 — Legacy Integration](docs/04-legacy-integration.md) | Analog DVR bridging, outbound-only edge gateway, DPDP/BSA §63 compliance |
-| [05 — Phase 1 Roadmap](docs/05-phase1-roadmap.md) | Day-by-day to 7 Sep, plus the concrete first-feed ingest sequence |
-| [API contract](docs/api/openapi.yaml) | OpenAPI 3.1 — camera onboarding, targets, tracks, alerts, evidence |
-| [Event contracts](docs/events/) | Kafka topic layout and JSON Schemas |
+| **Tests** | **186 passing** — unit + integration against a live PostgreSQL |
+| Database | 6 migrations, PostGIS + pgvector, native range partitioning |
+| API | 38 endpoints, JWT + RBAC, WebSocket, audit log, Prometheus |
+| AI pipeline | detect → track → quality gate → ANPR + ReID → sighting |
+| Ingestion | RTSP / ONVIF / HLS / DVR adapters + a 1,800-vehicle traffic world |
+| Event processor | cross-camera identity, 8 configurable alert rules |
+| Frontend | 8 pages, React + MapLibre, verified in a real browser |
+| Deployment | one-command Compose; Kubernetes manifests for scale-out |
+
+Measured, not asserted — `make benchmark`:
+
+| | |
+|---|---|
+| Whole 50-camera estate | 14.2 ms/tick, **9% of one core** |
+| ANPR, dedicated lane, day | **92.5%** end-to-end |
+| ANPR, wide-angle, night | **37.9%** — published because it is true |
+| Gate reduction (3-min window) | **93.3%** fewer comparisons |
+| ReID same-ID vs different-ID | 0.721 ± 0.112 vs 0.361 ± 0.078 |
+
+Full results and method: **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**
 
 ---
 
-## What is implemented here
+## How it fits together
 
-This is a scaffold with the hard parts written and tested, not a finished product. What exists:
+```
+ CAMERAS                    EDGE                          CORE
+ ───────                    ────                          ────
+ IP / RTSP  ─┐
+ ONVIF      ─┤   ┌────────────────────────┐      ┌──────────────────────┐
+ Analog/DVR ─┼──▶│ decode (ffmpeg/NVDEC)  │      │  Event processor     │
+ HLS        ─┤   │ detect  → YOLOX        │      │  ├ cross-camera match│
+ Vendor VMS ─┘   │ track   → ByteTrack    │      │  ├ alert rules       │
+                 │ QUALITY GATE ~80% out  │      │  └ persist + publish │
+                 │ ANPR + ReID + colour   │      └──────────┬───────────┘
+                 └───────────┬────────────┘                 │
+                             │ Sightings (~5 kbps/camera)   │
+                             ▼                              ▼
+                     ┌───────────────┐          ┌───────────────────────┐
+                     │ Redis Streams │─────────▶│ PostgreSQL + PostGIS  │
+                     │ (→ Kafka)     │          │ + pgvector, partitioned│
+                     └───────┬───────┘          └───────────┬───────────┘
+                             │                              │
+                             ▼                              ▼
+                     ┌───────────────────────────────────────────┐
+                     │  API (FastAPI)  ── WebSocket ──▶ Command  │
+                     │  38 endpoints, RBAC, audit       Centre   │
+                     └───────────────────────────────────────────┘
 
-| Path | What it is | Tested |
-|---|---|---|
-| `db/migrations/001_init.sql` | Full schema: PostGIS registry, Timescale sighting hypertable, pgvector embeddings, tracks, alerts, audit, evidence chain | — |
-| `db/migrations/002_gating.sql` | `candidate_cameras()` spatio-temporal gate, `st_feasibility()`, plate canonicalisation, FOV polygon derivation | — |
-| `services/cv/plate_rules.py` | Indian plate grammar, lexicon-constrained OCR correction, confusion-weighted fuzzy matching | ✅ 11 tests |
-| `services/matcher/fusion.py` | Gating, score fusion, ReID calibration, Hungarian assignment | ✅ 14 tests |
-| `services/ingest/adapters.py` | Vendor RTSP URL templates, credential-safe URL building, ffprobe capability probe, vendor autodetect | ✅ |
-| `services/ingest/onvif_discovery.py` | WS-Discovery + GetProfiles/GetStreamUri, dependency-free | ✅ |
-| `scripts/build_adjacency.py` | OSRM travel-time graph builder — populates the gate | ✅ |
-| `scripts/simulate_feeds.sh` | N looped RTSP feeds for reproducible 50-camera testing | ✅ |
-| `docker-compose.yml`, `mediamtx.yml` | Single-host stack | ✅ |
+  Video NEVER crosses the edge/core boundary except as an on-demand clip.
+  Browsers fetch video directly from the media server over WebRTC.
+```
 
-Not yet written: the FastAPI service bodies, the CV inference workers, and the React dashboard. Those are Days 1–4 work in [docs/05](docs/05-phase1-roadmap.md) and the contracts they must satisfy are already fixed in `docs/api/openapi.yaml`.
+Detail: **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)**
 
-Run the tests:
+---
 
-```bash
-python3 services/cv/test_plate_rules.py     # 11 passing
-python3 services/matcher/test_fusion.py     # 14 passing (scipy optional)
+## Repository layout
+
+```
+sentinel/
+├── shared/sentinel_core/   domain models, config, logging, message bus,
+│                           plate rules, cross-camera fusion scoring
+├── ai/sentinel_ai/         detector, tracker, quality gate, ANPR, ReID
+│                           backends: simulation (no GPU) | onnx (real)
+├── video-ingestion/        camera adapters, ffmpeg reader, worker
+│                           supervisor, and the demo traffic world
+├── event-processor/        cross-camera matcher, alert engine, persistence
+├── backend/                FastAPI: auth, cameras, search, tracking,
+│                           alerts, analytics, WebSocket
+├── frontend/               React + TypeScript + MapLibre command centre
+├── database/               migrations, migration runner, Ahmedabad seed
+├── config/cameras.yaml     ← THE file you edit for real cameras
+├── infrastructure/         nginx, Prometheus, Grafana, Kubernetes
+├── scripts/benchmark.py    every number in the docs comes from here
+├── tests/                  186 tests
+└── docs/
 ```
 
 ---
 
-## Quick start
+## Running it
 
 ```bash
-cp .env.example .env && $EDITOR .env        # set PG_PASSWORD, MINIO_PASSWORD
-
-docker compose up -d postgres redpanda redis minio mediamtx
-docker compose exec -T postgres psql -U sentinel -d sentinel < db/migrations/001_init.sql
-docker compose exec -T postgres psql -U sentinel -d sentinel < db/migrations/002_gating.sql
-
-./scripts/prepare_osrm.sh                   # ~25 min, start it early
-docker compose up -d osrm
-
-./scripts/simulate_feeds.sh 35 ./data/samples    # simulated cameras
-# ...onboard real cameras via POST /api/v1/cameras
-
-python3 scripts/build_adjacency.py --max-dist 5000
+make demo            # everything, one command
+make logs            # follow the pipeline
+make down            # stop (keeps data)
+make clean           # stop and delete data
+make test            # 186 tests
+make benchmark       # measure it yourself
+make observability   # + Prometheus and Grafana
+make help            # all targets
 ```
 
-Read the last line of `build_adjacency.py`'s output. Gate selectivity is the number that predicts your cross-camera precision.
+Host-native development, without Docker:
+
+```bash
+make dev-db          # just PostgreSQL + Redis
+make migrate seed
+make dev-api         # in one terminal
+make dev-ingestion   # in another
+make dev-processor   # in another
+make dev-web         # in another
+```
 
 ---
 
-## Two things worth knowing before you build
+## Connecting real Sentinel Gujarat cameras
 
-**Ultralytics YOLO is AGPL-3.0.** For a state-government deployment that is normally a procurement blocker. Prototype with it if it is fastest, ship YOLOX or RT-DETRv2 (both Apache-2.0), keep the detector behind an interface, and say so in the submission. See the licence table in [docs/02](docs/02-tech-stack.md).
+Edit **`config/cameras.yaml`**, then `make hybrid`. No source changes, no
+rebuild. Credentials are referenced by name and resolved from the
+environment or a secret store — inline passwords are refused outright when
+`ENVIRONMENT=production`.
 
-**Do not bet the demo on 50 live cameras.** Run ~35 as looped republishes and 10–15 genuinely live. Venue networks fail. This is standard practice for testing this class of system, it is reproducible, and stating it openly reads as competence.
+```yaml
+- camera_id: AHM-SAT-101
+  name: Jodhpur Cross Roads - NE approach
+  latitude: 23.02705
+  longitude: 72.51192
+  heading_deg: 47          # capture this during survey; see below
+  protocol: RTSP
+  substream_url: rtsp://10.42.7.14:554/Streaming/Channels/102
+  credential_ref: env:SENTINEL_CAM_AHM101
+```
+
+`heading_deg` is not optional in practice: without it a camera is a dot with
+no field of view, and because the adjacency graph is directional the
+cross-camera gate is materially weaker. One compass reading per camera during
+survey; very expensive to retrofit across thousands of sites.
+
+Full guide, including analog DVRs and the security model:
+**[docs/REAL_CAMERAS.md](docs/REAL_CAMERAS.md)**
 
 ---
 
-## Expected accuracy — plan for these, not for 99%
+## Things worth knowing before you judge it
 
-| Condition | ANPR exact-match | With lexicon + fuzzy |
-|---|---|---|
-| Dedicated ANPR lane, day | 92–97% | 96–99% |
-| Dedicated ANPR lane, night + IR | 85–93% | 92–96% |
-| General surveillance cam, day | 55–70% | 70–82% |
-| General surveillance cam, night | 20–40% | 35–55% |
-| Wide-angle junction (plate < 60 px) | < 10% | < 15% |
+**It tells the truth about uncertainty.** Every cross-camera hop is labelled
+*confirmed* (plate-verified) or *probable* (appearance), with the full score
+breakdown one click away. Plate search is fuzzy by design and says so. The
+false-positive rate is displayed, not hidden. Camera Health reports how much
+of the estate physically cannot read a plate.
 
-The full limitations list is [docs/03 §6](docs/03-cv-pipeline.md). Present it. A team that knows its own error envelope is far more credible than one claiming numbers an evaluator can disprove with a single question.
+**Privacy is in the schema, not the roadmap.** Viewing a vehicle's movement
+history requires a stated purpose, which is written to a 7-year audit log
+(DPDP Act 2023 purpose limitation). Reading the audit log is itself audited.
+No table can hold a camera password.
+
+**It runs air-gapped.** No font CDN, no map token, no external model service.
+When the tile server is unreachable the overlays still render — that is the
+correct degraded behaviour for a control room, and it is tested.
+
+**Known limits are documented, not buried:**
+**[docs/LIMITATIONS.md](docs/LIMITATIONS.md)**
+
+---
+
+## Documentation
+
+| | |
+|---|---|
+| [ARCHITECTURE.md](docs/ARCHITECTURE.md) | Federation, ingest, decode-once fan-out, latency budgets |
+| [CV_PIPELINE.md](docs/CV_PIPELINE.md) | Models, Indian ANPR, ReID, fusion scoring, compute budget |
+| [TECH_STACK.md](docs/TECH_STACK.md) | Component choices with rationale and **licence analysis** |
+| [LEGACY_INTEGRATION.md](docs/LEGACY_INTEGRATION.md) | Analog DVRs, edge gateways, DPDP / BSA §63 |
+| [SCALING.md](docs/SCALING.md) | The path from 50 to 80,000 cameras |
+| [BENCHMARKS.md](docs/BENCHMARKS.md) | Measured performance and method |
+| [LIMITATIONS.md](docs/LIMITATIONS.md) | What this does not do |
+| [REAL_CAMERAS.md](docs/REAL_CAMERAS.md) | Connecting live feeds |
+| [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Click-by-click presentation runbook |
+| [ROADMAP.md](docs/ROADMAP.md) | Day-by-day build plan |
+| [api/openapi.yaml](docs/api/openapi.yaml) | API contract |
+
+---
+
+## Licence note
+
+The ONNX backend deliberately avoids the Ultralytics package (**AGPL-3.0**),
+which is normally a procurement blocker for a state-government deployment. It
+loads a plain ONNX graph, so YOLOX, RT-DETRv2 and D-FINE (all Apache-2.0)
+drop straight in. Full table in [TECH_STACK.md](docs/TECH_STACK.md).
