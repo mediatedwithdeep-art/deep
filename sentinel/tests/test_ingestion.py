@@ -7,6 +7,9 @@ from __future__ import annotations
 import asyncio
 import os
 import pathlib
+import re
+import shutil
+import subprocess
 import tempfile
 
 import pytest
@@ -17,7 +20,9 @@ from sentinel_core.geo import haversine_m
 from ingestion.camera_config import (
     CameraSpec, load_from_yaml, resolve_credentials,
 )
-from ingestion.stream_reader import FrameReader, redact
+from ingestion.stream_reader import (
+    FrameReader, redact, rtsp_socket_timeout_option,
+)
 from ingestion.world import TrafficWorld
 from ingestion.supervisor import IngestionSupervisor
 
@@ -128,6 +133,54 @@ def test_ffmpeg_input_flags_are_protocol_specific(url, expected, forbidden):
     opts = FrameReader(url)._input_options()
     assert expected in opts
     assert forbidden not in opts
+
+
+@pytest.mark.parametrize("url", [
+    "rtsp://127.0.0.1:9/stream/cam-1",
+    "https://127.0.0.1:9/live/stream/cam-1/index.m3u8",
+    "/nonexistent/clip.mp4",
+])
+def test_generated_ffmpeg_argv_is_accepted_by_the_installed_binary(url):
+    """The argument list we build must actually parse on THIS ffmpeg.
+
+    Regression test for a real outage: `-stimeout` was removed from the
+    RTSP demuxer after ffmpeg 4.x, and ffmpeg does not warn -- it aborts
+    with "Error splitting the argument list" before opening the input, so
+    every RTSP camera failed instantly. The previous test only asserted
+    that flags were present in a list, which is why it could not catch
+    this. This one asks ffmpeg.
+
+    A connection failure is a pass: it proves argv parsed and ffmpeg got
+    as far as the network. Only an argument-parsing error is a failure.
+    """
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg not installed")
+
+    cmd = FrameReader(url, width=64, height=48, fps=1)._command()
+    r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
+    err = (r.stderr or "") + (r.stdout or "")
+
+    for fatal in ("Unrecognized option",
+                  "Error splitting the argument list",
+                  "Option not found",
+                  "Unknown option"):
+        assert fatal not in err, (
+            f"ffmpeg rejected our own argument list for {url}:\n"
+            f"  {fatal!r} in stderr\n  argv: {' '.join(cmd)}\n{err[:400]}")
+
+
+def test_rtsp_socket_timeout_flag_exists_in_this_ffmpeg():
+    """Whichever spelling we chose, this ffmpeg must document it."""
+    if not shutil.which("ffmpeg"):
+        pytest.skip("ffmpeg not installed")
+    flag = rtsp_socket_timeout_option()
+    assert flag in ("-timeout", "-stimeout")
+    help_text = subprocess.run(
+        ["ffmpeg", "-hide_banner", "-h", "demuxer=rtsp"],
+        capture_output=True, text=True, timeout=10)
+    combined = (help_text.stdout or "") + (help_text.stderr or "")
+    assert re.search(rf"^\s*{re.escape(flag)}\s", combined, re.MULTILINE), (
+        f"chose {flag} but this ffmpeg does not list it")
 
 
 def test_unreachable_stream_fails_without_raising():

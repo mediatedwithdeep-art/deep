@@ -20,6 +20,8 @@ watchdog and the worker restarts the process rather than waiting.
 
 from __future__ import annotations
 
+import functools
+import re
 import shutil
 import subprocess
 import threading
@@ -38,6 +40,40 @@ class StreamInfo:
     fps: float
     codec: str
     has_video: bool = True
+
+
+@functools.lru_cache(maxsize=1)
+def rtsp_socket_timeout_option() -> str:
+    """Return the RTSP socket-timeout flag this ffmpeg actually accepts.
+
+    This is not pedantry. ``-stimeout`` was removed from the RTSP demuxer
+    after ffmpeg 4.x, and ffmpeg does not warn and continue -- it refuses
+    to parse the argument list at all:
+
+        Unrecognized option 'stimeout'.
+        Error splitting the argument list: Option not found
+
+    The process exits before it ever opens the input, so every RTSP camera
+    fails instantly and the error looks like a configuration fault rather
+    than a version mismatch. Government estates run whatever ffmpeg their
+    distribution shipped, which spans both spellings, so the flag is
+    probed once against the installed binary rather than assumed.
+    """
+    fallback = "-timeout"
+    if not shutil.which("ffmpeg"):
+        return fallback
+    try:
+        r = subprocess.run(["ffmpeg", "-hide_banner", "-h", "demuxer=rtsp"],
+                           capture_output=True, text=True, timeout=10)
+    except (subprocess.TimeoutExpired, OSError):
+        return fallback
+    help_text = (r.stdout or "") + (r.stderr or "")
+    # Match the option column so a mention inside prose cannot fool us.
+    if re.search(r"^\s*-stimeout\s", help_text, re.MULTILINE):
+        return "-stimeout"
+    if re.search(r"^\s*-timeout\s", help_text, re.MULTILINE):
+        return "-timeout"
+    return fallback
 
 
 def redact(url: str) -> str:
@@ -121,7 +157,8 @@ class FrameReader:
         opts = ["-fflags", "nobuffer", "-flags", "low_delay"]
         if url.startswith("rtsp://"):
             opts += ["-rtsp_transport", self.transport,
-                     "-stimeout", "5000000"]          # 5 s socket timeout, microseconds
+                     # Spelling differs across ffmpeg majors; probe it.
+                     rtsp_socket_timeout_option(), "5000000"]   # 5 s, microseconds
         elif url.startswith(("http://", "https://")):
             # HLS: follow the live edge rather than starting from the top of
             # the playlist, which would otherwise replay minutes of history.
