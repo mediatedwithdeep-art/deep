@@ -36,10 +36,10 @@ from __future__ import annotations
 import logging
 import os
 import re
-import selectors
 import shutil
 import socket
 import subprocess
+import tempfile
 import threading
 import time
 import uuid
@@ -312,7 +312,12 @@ class RtspServer:
         """
         if src._sdp:
             return self._sdp_for_tcp(src._sdp)
-        sdp_path = f"/tmp/sentinel-sandbox-{src.camera_id}.sdp"
+        # A unique path per call: two clients describing the same camera at
+        # once would otherwise race on one file, and one of them would read
+        # it after the other had unlinked it.
+        sdp_path = os.path.join(
+            tempfile.gettempdir(),
+            f"sentinel-sandbox-{src.camera_id}-{uuid.uuid4().hex[:8]}.sdp")
         cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error", "-y",
                "-i", src.path, "-c", "copy", "-f", "rtp",
                "-sdp_file", sdp_path, "-t", "0.1",

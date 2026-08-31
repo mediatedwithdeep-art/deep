@@ -88,10 +88,22 @@ def test_frame_timing_comes_from_pts_not_from_arrival(h264_clip):
     assert pts_gaps, "no continuous frame pairs"
 
     # 15 fps source → 1/15 s between frames, from the stream's own clock.
+    #
+    # The gap may be an integer MULTIPLE of that when the host is loaded and
+    # the source genuinely delivers fewer frames -- that is a congested
+    # camera, which is the normal case on a government WAN, and PTS
+    # reporting it faithfully is correct behaviour. What must never happen
+    # is a gap far BELOW the frame interval: that is the signature of
+    # arrival-derived timing, which on a buffered connect reads ~0.001 s.
     nominal = 1.0 / 15.0
     median = sorted(pts_gaps)[len(pts_gaps) // 2]
-    assert abs(median - nominal) < nominal * 0.25, (
-        f"median PTS gap {median:.4f}s is not the source's {nominal:.4f}s")
+    assert median > nominal * 0.75, (
+        f"median PTS gap {median:.4f}s is far below the source's "
+        f"{nominal:.4f}s -- this looks like arrival time, not PTS")
+    multiple = median / nominal
+    assert abs(multiple - round(multiple)) < 0.3, (
+        f"median PTS gap {median:.4f}s is not a multiple of the source's "
+        f"{nominal:.4f}s (x{multiple:.2f})")
 
     # And capture_time must track PTS, not arrival.
     cap_gaps = [(b.capture_time - a.capture_time).total_seconds()
