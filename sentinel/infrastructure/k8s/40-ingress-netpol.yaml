@@ -1,0 +1,57 @@
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: sentinel
+  namespace: sentinel
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "86400"   # control-room sockets stay open all shift
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "86400"
+    nginx.ingress.kubernetes.io/proxy-body-size: "32m"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [sentinel.gujarat.gov.in]
+      secretName: sentinel-tls
+  rules:
+    - host: sentinel.gujarat.gov.in
+      http:
+        paths:
+          - { path: /api, pathType: Prefix, backend: { service: { name: sentinel-api, port: { number: 8000 } } } }
+          - { path: /,    pathType: Prefix, backend: { service: { name: sentinel-web, port: { number: 80 } } } }
+---
+# Default-deny, then allow only what is needed. The ingestion pods reach
+# camera networks; nothing else should, and a compromised web pod must not
+# be able to scan a DVR VLAN.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny, namespace: sentinel }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-internal, namespace: sentinel }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress, Egress]
+  ingress:
+    - from: [{ podSelector: {} }, { namespaceSelector: { matchLabels: { name: ingress-nginx } } }]
+  egress:
+    - to: [{ podSelector: {} }]
+    - ports: [{ port: 53, protocol: UDP }, { port: 53, protocol: TCP }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: ingestion-to-cameras, namespace: sentinel }
+spec:
+  podSelector: { matchLabels: { app: sentinel-ingestion } }
+  policyTypes: [Egress]
+  egress:
+    - to:
+        - ipBlock:
+            cidr: 10.42.0.0/16          # camera VLANs — narrow this per site
+      ports:
+        - { port: 554, protocol: TCP }  # RTSP
+        - { port: 80,  protocol: TCP }  # ONVIF
+        - { port: 443, protocol: TCP }  # HLS

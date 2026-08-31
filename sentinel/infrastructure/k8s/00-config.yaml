@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sentinel-config
+  namespace: sentinel
+data:
+  ENVIRONMENT: "production"
+  POSTGRES_HOST: "sentinel-postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "sentinel"
+  POSTGRES_USER: "sentinel"
+  REDIS_HOST: "sentinel-redis"
+  REDIS_PORT: "6379"
+  BUS_BACKEND: "redis"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  INGEST_MODE: "live"
+  AI_BACKEND: "onnx"
+  AI_TARGET_FPS: "6"
+---
+# Placeholder only. Create the real one with `kubectl create secret` and
+# never commit it. ENVIRONMENT=production refuses to start on a weak value,
+# so a forgotten placeholder fails loudly at rollout instead of silently
+# shipping a known key.
+apiVersion: v1
+kind: Secret
+metadata:
+  name: sentinel-secrets
+  namespace: sentinel
+type: Opaque
+stringData:
+  SECRET_KEY: "REPLACE-ME"
+  POSTGRES_PASSWORD: "REPLACE-ME"

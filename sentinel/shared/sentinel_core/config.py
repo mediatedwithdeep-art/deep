@@ -12,8 +12,10 @@ import secrets
 from functools import lru_cache
 from typing import Literal
 
+from typing import Annotated
+
 from pydantic import Field, field_validator, model_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 
 class Settings(BaseSettings):
@@ -72,7 +74,12 @@ class Settings(BaseSettings):
     # both hostname forms. Browsers treat localhost and 127.0.0.1 as
     # different origins, so listing only one produces a CORS failure that
     # looks like a broken API rather than a config gap.
-    cors_origins: list[str] = [
+    # NoDecode is load-bearing. Without it pydantic-settings tries to
+    # json.loads() the environment value BEFORE any validator runs, so a
+    # perfectly ordinary CORS_ORIGINS=http://a,http://b crashes the process
+    # at startup with a JSONDecodeError that names neither the variable nor
+    # the cause. The validator below accepts the comma-separated form.
+    cors_origins: Annotated[list[str], NoDecode] = [
         "http://localhost:5173", "http://127.0.0.1:5173",
         "http://localhost:4173", "http://127.0.0.1:4173",
         "http://localhost:3000", "http://127.0.0.1:3000",
