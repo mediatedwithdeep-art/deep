@@ -288,15 +288,27 @@ def test_a_loop_point_is_reported_as_a_scene_discontinuity(tmp_path):
         srv.add(MediaSource("cam-loop", clip, "h264", loop=True))
         reader = LiveStreamReader(srv.rtsp_url("cam-loop"), camera_id="loop")
         reader.start()
-        seen, deadline = [], time.time() + 40
+        # Generous, because the whole suite runs several RTSP servers at
+        # once on a 4-vCPU host and a starved decoder can take far longer
+        # than the 1.5 s of wall time the clip represents.
+        seen, deadline = [], time.time() + 120
         while time.time() < deadline and reader.health.discontinuities == 0:
             f = reader.read()
             if f is not None:
                 seen.append(f)
             time.sleep(0.004)
         discontinuities = reader.health.discontinuities
+        frames, pts_span = reader.health.frames, reader.health.pts_span_s
         reader.stop()
 
+    # Separate "did not reach the loop point" from "reached it and missed
+    # it". Only the second is this code's fault, and reporting the first as
+    # the second sends the next reader hunting a bug that is not there.
+    assert frames > 0, "no frames decoded at all -- the stream never opened"
+    assert pts_span >= 1.4, (
+        f"only {pts_span:.2f}s of a 1.5s clip was decoded in 120s "
+        f"({frames} frames) -- the host is too loaded for this test to "
+        f"conclude anything about discontinuity detection")
     assert discontinuities >= 1, "looped past the end without noticing"
 
 

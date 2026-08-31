@@ -168,6 +168,27 @@ class LiveStreamReader:
 
     # ── options ───────────────────────────────────────────────────────
 
+    #: Schemes that can carry a genuinely live stream. Anything else -- a
+    #: bare path, file://, a downloaded clip -- is recorded media.
+    LIVE_SCHEMES = ("rtsp://", "rtsps://", "http://", "https://",
+                    "rtmp://", "srt://", "udp://", "rtp://")
+
+    @property
+    def is_live_url(self) -> bool:
+        """Whether this URL can be a live camera at all.
+
+        PART 11 requires live-only evaluation, and the way that requirement
+        fails in practice is not deliberate cheating: it is a catalogue
+        entry with a stale local path, or a developer pointing a reader at
+        a sample clip to reproduce something and leaving it. Either
+        produces a stream that decodes perfectly, reports healthy, and
+        measures recorded video -- with no symptom anywhere.
+
+        A path is not merely discouraged here, it is refused by `start()`,
+        because a warning in a log is not a control.
+        """
+        return self.url.lower().startswith(self.LIVE_SCHEMES)
+
     def _open_options(self) -> dict[str, str]:
         """Transport options. RTSP is pinned to TCP, always.
 
@@ -188,6 +209,16 @@ class LiveStreamReader:
 
     def start(self) -> None:
         if self._running:
+            return
+        if not self.is_live_url:
+            # Refused, not warned. A reader pointed at a file decodes
+            # perfectly and reports healthy while measuring recorded video,
+            # so there is no symptom for a warning to be noticed by.
+            self.health.status = CameraStatus.DISABLED
+            self.health.last_error = (
+                f"refusing a non-live source for camera {self.camera_id}: "
+                f"{redact(self.url)} is not one of {', '.join(self.LIVE_SCHEMES)}")
+            log.error("%s", self.health.last_error)
             return
         self._running = True
         self.health.status = CameraStatus.PROBING
