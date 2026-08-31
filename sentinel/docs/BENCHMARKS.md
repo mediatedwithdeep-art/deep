@@ -165,15 +165,29 @@ cameras to watch *next*, so the map highlights ahead of the vehicle.
 
 | | |
 |---|---|
-| Per tick, whole estate | **17.1 ms** |
-| Tick budget used at 6 Hz | **10%** |
+| Per tick, whole estate | **14.2 – 22.0 ms** (three hosts) |
+| Tick budget used at 6 Hz | **9 – 13%** |
 | Sightings produced | 10 / s |
 | Plate reads | 13.6% of sightings |
 | Cameras producing sightings | 26 / 50 in a 30 s window |
-| **Implied capacity, single core** | **~488 cameras** |
+| **Implied capacity, single core** | **~380 – 585 cameras** |
 
-Treat ~488 as an upper bound for the *simulation* path. With real decode and
-inference the binding constraint is NVDEC and GPU, not this loop:
+
+**This figure is host-dependent and has been measured three times on three
+different containers: 14.2, 17.1 and 22.0 ms/tick, implying ~585, ~488 and
+~379 cameras per core.** The same code, the same seed, the same estate —
+the variation is shared-CPU contention, not a change in the system. It is
+quoted as a range rather than corrected to the latest value, because
+correcting it each time produced three confident numbers that were each
+wrong within a month.
+
+Use the **ratio** (≈10–13% of one core for 50 cameras) rather than the
+absolute figure, and treat ~380 as the conservative end of the capacity
+implication.
+
+Treat the top of that range as an upper bound for the *simulation* path.
+With real decode and inference the binding constraint is NVDEC and GPU,
+not this loop:
 roughly **30–45 sub-streams per T4-class GPU** (see [ARCHITECTURE.md](ARCHITECTURE.md#15-latency-budget)).
 
 ### End-to-end pipeline, measured against PostgreSQL

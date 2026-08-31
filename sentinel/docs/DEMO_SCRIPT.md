@@ -1,6 +1,6 @@
 # Demo Script
 
-**Total time: 8 minutes.** Rehearse it three times on the actual machine.
+**Total time: 9 minutes.** Rehearse it three times on the actual machine.
 
 This is what to click and what to say. The reasoning behind each claim is in
 [ARCHITECTURE.md](ARCHITECTURE.md) and [BENCHMARKS.md](BENCHMARKS.md); this
@@ -37,194 +37,238 @@ a network failure degrades the demo rather than ending it.
 
 ---
 
-## The run
+## The run — 16 steps, 9 minutes
 
-### 1 · Open on the problem, not the product (30 s)
-
-> "Gujarat has cameras in 26 departments that cannot see each other. A
-> vehicle crossing the city today is tracked by a person phoning another
-> person. Sentinel is one pane of glass over all of it."
-
-Point at the Command Centre.
-
-> "Fifty cameras, four protocols, nine vendors. Modern IP cameras, analog
-> cameras on 2011 DVRs, and municipal HLS feeds — all normalised into one
-> view. Nothing downstream knows the difference."
-
-**Say the number:** cameras online / total, top-left.
+Timings are the target. If you are running long, **cut steps 11 and 14**;
+never cut 8 or 13.
 
 ---
 
-### 2 · Show the estate honestly (45 s)
+### 1 · Login, and what a login means here (25 s)
 
-Click **Camera Health**.
+Sign in as **`controller`** — an OPERATOR in Ahmedabad City Police.
 
-> "Here is the part most systems hide. Of fifty cameras, only thirteen can
-> physically resolve a number plate — the rest are wide-angle. Fourteen run
-> firmware that is end-of-life or has a known CVE."
+> "Twenty-six departments own cameras in Gujarat and they cannot see each
+> other's. That is the problem. So the first thing this system does is
+> decide what this officer is allowed to see."
 
-> "That is not a defect in our system. It is what a real government estate
-> looks like, and a VMS that reports one blended accuracy figure across
-> those two classes is telling its operators something untrue."
+Say the number: **26 departments seeded.**
 
-Scroll to a camera with a low trust score.
+### 2 · Command Centre (30 s)
 
-> "Trust score decays fast on failure and recovers slowly, so a camera that
-> flaps is never treated as reliable in between."
+> "One screen. Live estate, live detections, live alerts."
 
-*This is the single most credible thing you will say. Do not skip it.*
+Point at the **LIVE** badge. Point at the department name beside the
+username.
 
----
+**The moment worth having:** open a second browser as **`traffic`**
+(Ahmedabad *Traffic* Police, a different department). The camera list is
+different. Same system, same database, different estate.
 
-### 3 · Live detection (45 s)
+> "That is not a UI filter. It is enforced in every query — 25 tests hold
+> it, including that a department admin cannot switch off a neighbour's
+> camera during an incident."
 
-Click **Live Cameras**.
+### 3 · The estate, honestly (40 s)
 
-> "Every tile is a real pipeline: decode, detect, track, then ANPR and
-> re-identification only on the crops that pass a quality gate. The gate
-> refuses roughly 80% of candidate crops, which is what makes fifty cameras
-> fit on one GPU instead of four."
+Map view. Field-of-view wedges, not dots.
 
-Point at a tile's detection count ticking up.
+> "Fifty cameras, four protocols, nine vendors. Eighteen percent are analog
+> on legacy DVRs. Ten percent are municipal HLS feeds with 10-second
+> latency. This is what a real government estate looks like, and a system
+> that only works on clean modern IP cameras has not solved the problem."
 
-> "The number is live detections in the last minute. Video is negotiated
-> browser-to-media-server over WebRTC — it never passes through the API, so
-> one slow viewer cannot affect anyone else."
+Point at a red camera. **Do not hide it.**
 
-Filter to **ANPR-capable only**.
+> "Roughly a fifth of a real estate is dead, frozen or misaimed at any
+> moment. We show that on the front page."
 
-> "Thirteen cameras. That constraint drives the whole design."
+### 4 · Select the target vehicle (25 s)
 
----
+Vehicle Search → plate **`GJ01AB1234`** → open it.
 
-### 4 · The alert fires (60 s)
+> "An officer has a plate. Everything from here is: where has this vehicle
+> been, and can I trust the answer."
 
-Click **Alerts**.
+### 5 · ANPR, with its limits stated (40 s)
 
-> "A watchlist entry for FIR 0142/2026, plate GJ01AB1234."
+Show the plate read and its confidence.
 
-Click a **WATCHLIST HIT** alert to open the detail panel.
+> "Dedicated ANPR lane in daylight: **92.5%** end to end. Wide-angle camera
+> at night: **37.9%**."
 
-> "The alert carries its evidence: the characters actually read, the OCR
-> confidence, whether the lexicon corrected it, and the case reference. An
-> operator who cannot interrogate an alert learns to mute it."
+Say the second number deliberately.
 
-If the alert says **Probable**, read the caveat aloud:
+> "We publish our worst number because an officer needs to know when not to
+> trust it. And a read below 0.72 confidence never reaches a government
+> record system at all — we do not query a citizen's registration on the
+> strength of a misread character."
 
-> "This one is a probable match — the plate was read as one string and
-> matched to the target after allowing for OCR confusion. The system says
-> so, and says to verify. It does not present a guess as a fact."
+### 6 · Vehicle detection and the live path (35 s)
 
-Point at the **false-positive rate** tile.
+Open a camera tile.
 
-> "We show that on purpose. It is the number that decides whether operators
-> keep trusting the system."
+> "Detection runs on the sub-stream at 6 fps, not the main stream at 25.
+> That is a 10× bandwidth saving and it costs nothing, because a plate needs
+> pixels on the plate, not pixels in the frame."
 
----
+The one live-path claim worth making:
 
-### 5 · Cross-camera tracking — the centrepiece (2 min)
+> "Timing comes from the stream's own presentation timestamps, not from
+> when bytes arrive. On connect, a decoder hands you 0.8 seconds of video in
+> 11 milliseconds — arrival-based timing is 70× wrong, and every speed and
+> every travel-time check is computed from it."
 
-From the alert, click **Track this vehicle**.
+### 7 · Tracking within a camera (30 s)
 
-The Vehicle Tracking page loads. **Type a purpose** into the box:
+Show the track and its trail.
 
-> `FIR 0142/2026 vehicle movement enquiry`
+> "ByteTrack, with the low-confidence second pass — that is what holds a
+> track through a vehicle passing behind a bus. Track age is in seconds
+> from PTS, not frames, so a 6 fps camera and a 25 fps camera agree about
+> how long a vehicle has been missing."
 
-> "It will not show me movement history without a stated purpose, and that
-> purpose is written to the audit log against my account. The DPDP Act 2023
-> requires purpose limitation for personal data, and video of identifiable
-> people is personal data."
+### 8 · Cross-camera match — the centrepiece (90 s)
 
-Click **Show history**. Point at the timeline:
+**Do not rush this.** Open the vehicle's cross-camera view.
 
-> "Camera A, then B, then C, with timestamps. Each hop is labelled
-> **confirmed** or **probable**. Confirmed means a plate read tied it.
-> Probable means appearance matched it, and appearance cannot distinguish
-> two similar vehicles with certainty."
+Walk one hop out loud:
 
-Click **Why this match?** on a probable hop.
+> "Camera 14 to camera 22. Plate matched with one character corrected by
+> the plate grammar. Appearance similarity 0.83. Travel time 47 seconds
+> against a road distance of 610 metres — that is 47 km/h, which is
+> possible. **CONFIRMED.**"
 
-> "Plate, appearance, colour, type, and road-network reachability, each
-> scored separately. It travelled in 218 seconds; the road network expects
-> about 240. That last one is the important one."
+Then the one that was rejected:
 
-Point at the map.
+> "This one was rejected. Same plate read, but the travel time implies
+> 180 km/h on an urban road. Physically impossible, so it is not a match —
+> whatever the appearance score said."
 
-> "The blue line is the observed path. Every segment joins two real
-> sightings — we never draw an inferred segment as if it were observed."
+> "And appearance alone can never confirm. Ceiling of 0.79 without a plate.
+> That is a safety property, not a tuning choice: a system that identifies
+> a car by colour and shape will eventually identify the wrong car, and an
+> officer will act on it."
 
-Scroll to **Where to look next**.
+### 9 · GIS route (45 s)
 
-> "Given the last sighting, these are the cameras the vehicle can physically
-> reach, with arrival windows from the road graph. The map is showing you
-> where to look *ahead* of the vehicle."
+Show the route drawn on the map.
 
----
+> "This is the road route, not straight lines between cameras. The
+> adjacency graph carries road distance and travel time between every pair
+> of cameras within 15 minutes — 994 edges for 50 cameras, about 20
+> reachable neighbours each."
 
-### 6 · The claim that makes it scale (60 s)
+### 10 · Movement timeline (35 s)
 
-Stay on that table.
+Show the timeline.
 
-> "That reachability calculation is not a nicety, it is the thing that makes
-> cross-camera tracking work at all."
+> "Every hop, every confidence, every reason. An officer can see why the
+> system believes this journey happened, and disagree with any hop."
 
-> "Appearance matching against all fifty cameras produces false positives at
-> a rate that destroys operator trust in about ten minutes. We measured the
-> gate: within a three-minute arrival window it leaves **1.2 candidate
-> cameras out of 49** — a 97.6% reduction, and 3.3 within five minutes. The same model that is unusable
-> against fifty is trustworthy against three."
+**Purpose is required to open this.** Point at the reason prompt.
 
-> "And it is a PostGIS query plus a cached routing matrix. No GPU."
+> "Movement history needs a stated purpose before it opens. DPDP Act 2023
+> makes purpose limitation an obligation, not a preference."
 
----
+### 11 · Search (35 s)
 
-### 7 · Search (45 s)
+Search by attributes rather than plate: white car, Satellite zone, last hour.
 
-Click **Vehicle Search**. Type a plate with a deliberate error, e.g.
-`GJO1AB1Z34` (letter O for zero, Z for two).
+> "Most investigations do not start with a plate. They start with 'white
+> hatchback, near this junction, around this time'."
 
-> "I typed it wrong on purpose — O for zero, Z for two. Those are the
-> confusions OCR makes systematically. Exact matching would find nothing."
+### 12 · Alert (40 s)
 
-Press Search. The vehicle appears.
+Open the alert list.
 
-> "Fuzzy by design, and the interface says so and says to verify. An officer
-> who thinks they have an exact read may go to the wrong vehicle."
+> "Alerts are deduplicated and severity-ranked. A watchlist hit on a
+> stolen vehicle is CRITICAL; a camera going offline is not."
 
----
+Open the audit trail.
 
-### 8 · Scale, in one breath (45 s)
+> "Every access is audited — including refusals. An attempt to reach
+> another department's camera is recorded with who tried, because a refusal
+> that leaves no record is one an attacker can retry all year."
 
-Click **System Analytics**.
+### 13 · Intelligence lookup — real vs mock (60 s)
 
-> "80,000 cameras at 4 Mbps is 320 gigabits per second and 104 petabytes a
-> month. That is not a budget problem, it is a physics problem, and no
-> centralised design survives it."
+**The most important honesty moment in the demo.** Do not skip it.
 
-> "So video never centralises. It stays at the edge; about 5 kilobits per
-> camera of metadata comes to the core; full-resolution clips are pulled
-> only on demand. The MVP is not a small version of the state system — it is
-> one district-scale cell of it, and the seam between edge and core is
-> already in the code."
+Open the intelligence panel on the target vehicle.
 
-Point at the throughput tiles.
+> "This is a VAHAN lookup. The vehicle comes back REPORTED STOLEN — and
+> look at the banner: **DEMO DATA, not a real record.**"
 
-> "Measured: the whole fifty-camera estate costs 14 milliseconds per tick,
-> about 9% of one core."
+Point at it.
 
----
+> "We have no VAHAN credentials. Nobody gave us access, and we did not go
+> looking for a way around that. So every one of the five adapters — VAHAN,
+> SARTHI, eGujCop, AFIS, NAFIS — runs against a mock backend, and every
+> record it returns is stamped, all the way to this screen."
 
-### 9 · Close on the limits (30 s)
+Then the part that shows it is real engineering:
 
-> "Three things this does not do. Night ANPR on a wide-angle camera is
-> around 38% and we publish that. Two white hatchbacks at 720p can be
-> confused, which is why appearance matches surface for confirmation instead
-> of auto-confirming. And a fake plate defeats ANPR entirely — only
-> appearance helps there."
+> "Screening a plate releases a status flag and nothing else. Not the
+> owner's name, not their address. So a false-positive alert cannot expose
+> a citizen who was never relevant. Owner details need a registered
+> investigation with a case reference, because the audit log has to be able
+> to answer 'under which case was this address retrieved' in five years."
 
-> "Everything I have shown runs from one command on a laptop, with no GPU
-> and no model weights, and the same code path takes real weights and real
-> cameras by changing configuration."
+> "And the fingerprint systems never return an identification. Only a
+> candidate list and REFER TO EXAMINER. A match is an examiner's
+> determination — a VMS printing a name from a score is manufacturing
+> evidence."
+
+### 14 · Camera health (30 s)
+
+Switch to the Camera Health tab.
+
+> "Estate health is a first-class view, not a diagnostic. Trust score per
+> camera, firmware risk, frozen-picture detection — a live socket
+> delivering an unchanging image is the most common silent failure in the
+> field, and every other health signal looks perfect while it happens."
+
+**If you have 30 seconds spare:** `docker compose stop ingestion`, watch it
+go red, restart it. Recovering visibly from a real failure persuades more
+than a demo where nothing goes wrong.
+
+### 15 · Edge → regional → central (45 s)
+
+One diagram, three numbers.
+
+> "Eighty thousand cameras. Centralise the main streams and you need
+> **320 gigabits per second** of state backbone. Centralise the metadata
+> instead and you need **96 megabits**. That is a factor of 3,300, and it
+> is the entire argument for processing at the edge."
+
+> "Edge decodes and detects. Regional aggregates and does cross-camera
+> matching, because vehicles do not teleport between districts. Central
+> holds the registry, the map and the search."
+
+> "Video does not move. Twenty-four petabytes of hot video at seven days'
+> retention is a data-centre programme, not a storage line."
+
+### 16 · Scale, and what we did not measure (50 s)
+
+> "We measured the event path at 50, 250, 500 and 1,000 cameras. The first
+> curve looked bad — cost per camera growing 3.8×. So we ran two controls."
+
+> "Hold traffic constant and scale cameras: 10× the cameras costs 3.1× the
+> time, and per-camera cost *falls*. Hold cameras constant and scale
+> traffic: linear. The superlinearity was our own traffic simulator, which
+> production does not have."
+
+> "Above 1,000 cameras, everything is arithmetic over stated assumptions,
+> and every cell in the capacity table says which it is — measured,
+> calculated, estimated or projected."
+
+Close on the limits:
+
+> "Nothing here has run against the real Sentinel gateway. No government
+> record system is connected. The accuracy figures are the simulator's.
+> All three are in the traceability matrix, and we would rather you heard
+> them from us."
 
 ---
 
@@ -255,10 +299,12 @@ where nothing goes wrong.
 | Gate reduction (5-min window) | 3.3 candidates of 49 — **93.3%** |
 | ANPR, dedicated lane, day | **92.5%** end-to-end |
 | ANPR, wide-angle, night | **37.9%** — say this one |
-| Estate cost | 17 ms/tick, **10%** of one core |
-| Implied capacity | ~488 cameras per core |
-| State-scale arithmetic | 320 Gbps, 104 PB/month |
-| Tests | 230 passing |
+| Estate cost | 14-22 ms/tick, **9-13%** of one core |
+| Implied capacity | ~380-585 cameras per core (host-dependent) |
+| Centralised vs metadata, 80k cameras | **320 Gbps vs 96 Mbps** |
+| Departments / roles | 26 / 6 |
+| Government systems connected | **0 of 5** — all mock, all stamped |
+| Tests | 327 collected |
 
 Every one of these comes from `make benchmark`. If a judge asks, run it.
 

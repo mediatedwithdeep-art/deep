@@ -50,7 +50,7 @@ fuses plate (precision) with appearance and attributes (recall), under the gate.
 
 | | |
 |---|---|
-| **Tests** | **230 passing** — unit, integration against a live PostgreSQL, and live-feed tests against a real RTSP server |
+| **Tests** | **327 collected** — unit, integration against a live PostgreSQL, live-feed tests against a real RTSP server, plus dedicated Sentinel-contract and security-regression suites |
 | Database | 6 migrations, PostGIS + pgvector, native range partitioning |
 | API | 39 endpoints, JWT + RBAC, WebSocket, audit log, Prometheus |
 | AI pipeline | detect → track → quality gate → ANPR + ReID → sighting |
@@ -63,7 +63,7 @@ Measured, not asserted — `make benchmark`:
 
 | | |
 |---|---|
-| Whole 50-camera estate | 17.1 ms/tick, **10% of one core** |
+| Whole 50-camera estate | 14.2–22.0 ms/tick, **9–13% of one core** (three hosts; see [BENCHMARKS.md](docs/BENCHMARKS.md)) |
 | ANPR, dedicated lane, day | **92.5%** end-to-end |
 | ANPR, wide-angle, night | **37.9%** — published because it is true |
 | Gate reduction (3-min window) | **97.6%** fewer comparisons |
@@ -96,7 +96,7 @@ Full results and method: **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**
                              ▼                              ▼
                      ┌───────────────────────────────────────────┐
                      │  API (FastAPI)  ── WebSocket ──▶ Command  │
-                     │  38 endpoints, RBAC, audit       Centre   │
+                     │  45 operations, RBAC, audit      Centre   │
                      └───────────────────────────────────────────┘
 
   Video NEVER crosses the edge/core boundary except as an on-demand clip.
@@ -219,6 +219,11 @@ correct degraded behaviour for a control room, and it is tested.
 | [BENCHMARKS.md](docs/BENCHMARKS.md) | Measured performance and method |
 | [SENTINEL_LIVE_TEST_REPORT.md](docs/SENTINEL_LIVE_TEST_REPORT.md) | 50 cameras over live RTSP: PTS, codecs, reconnection |
 | [PHASE2_AUDIT.md](docs/PHASE2_AUDIT.md) | What was executed, and what is still pending |
+| [REQUIREMENT_TRACEABILITY_MATRIX.md](docs/REQUIREMENT_TRACEABILITY_MATRIX.md) | **Every requirement → implementation → test → status.** Start here to check a claim |
+| [GOVERNMENT_INTEGRATION.md](docs/GOVERNMENT_INTEGRATION.md) | VAHAN / SARTHI / eGujCop / AFIS / NAFIS adapters, and why none is connected |
+| [SCALE_BENCHMARK.md](docs/SCALE_BENCHMARK.md) | 50 → 1,000 cameras measured; capacity to 80,000 with per-cell provenance |
+| [NETWORK_BANDWIDTH_PLAN.md](docs/NETWORK_BANDWIDTH_PLAN.md) | Centralised vs federated vs hybrid, with the arithmetic |
+| [DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md) | Nine failure domains, RPO/RTO, behaviour at 1 min / 10 min / 1 h |
 | [LIMITATIONS.md](docs/LIMITATIONS.md) | What this does not do |
 | [REAL_CAMERAS.md](docs/REAL_CAMERAS.md) | Connecting live feeds |
 | [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Click-by-click presentation runbook |
