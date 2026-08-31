@@ -323,3 +323,48 @@ are true at the same time and all three belong in the submission:
 Items 2 and 3 are the real work of Phase 2, and neither is discoverable by
 reading the code — only by running it against something that behaves like a
 real camera. Building that something is therefore the first task.
+
+---
+
+## 9 · Resolution record — what this audit found, and where it stands
+
+**Added 2026-08-31, after Phase 2B.** Everything above is left exactly as
+it was written at commit `d0d0b97`: it is the baseline, and editing a
+baseline to make it agree with later work destroys the only thing it was
+for. This section records what has since happened to each P0 finding, with
+the test that holds it.
+
+| # | Finding (§5) | Status now | Held by |
+|---|---|---|---|
+| 1 | `GET /api/ingest` catalogue absent | **CLOSED** | `test_sentinel_catalogue.py` — discovery, reconciliation, no hard-coded identifier |
+| 2 | `-stimeout` aborts every RTSP camera | **CLOSED** | Flag probed against the installed binary; `test_generated_ffmpeg_argv_is_accepted_by_the_installed_binary` runs ffmpeg and asserts it parses. This ffmpeg wants `-timeout` |
+| 3 | Nothing derives from PTS | **CLOSED** | `LiveStreamReader` via PyAV; `test_frame_timing_comes_from_pts_not_from_arrival` — PTS 0.8 s against arrival 11 ms on connect |
+| 4 | `-vf fps=` forces CFR inside ffmpeg | **CLOSED** | Removed from the live path, and `FrameReader` **deleted** rather than deprecated. `test_no_forced_constant_frame_rate_survives_anywhere_in_ingestion` scans every module's string literals; `test_the_removed_cfr_reader_has_not_come_back` |
+| 5 | Tracker ages in frames | **CLOSED** | `max_age_s`, per-interval velocity, `predict(dt)`; a 200 px/s vehicle through 40/80/45 ms gaps tracks at 198 px/s |
+| 6 | Fixed `time.sleep(3.0)` retry, no RECONNECTING | **CLOSED** | `backoff_delay` 2→4→8→16→30 s jittered; migration 0007; `test_a_dropped_stream_reconnects_and_reports_reconnecting` |
+| 7 | Nothing resets tracker/ReID at a scene cut | **CLOSED** | `reset_for_discontinuity`; `test_a_discontinuity_does_not_swallow_the_next_vehicle` |
+| 8 | Codecs and resolutions untested | **CLOSED** | 43 × H.264 + 7 × H.265 concurrently over RTSP; aspect ratio preserved |
+| 9 | TCP not asserted anywhere | **CLOSED** | Pinned with no config path to UDP, in both the reader and `probe()`; the sandbox refuses UDP with 461 |
+| 10 | Live-only not provable | **CLOSED** | Non-live schemes refused by `start()`; AST scans for seeks and file opens |
+| 11 | No connection pacing | **CLOSED** | Stagger plus concurrency cap; 50 opens over 16.9 s |
+| — | Playback URLs built by string surgery | **CLOSED** | Migration 0009; served verbatim from the catalogue |
+| — | Department scoping absent as a control | **CLOSED** | `dept_filter` on every query; 26 security-regression tests over a two-department estate |
+| — | Government adapters absent | **CLOSED** as mocks | Five adapters, every record stamped `MOCK`, `RealBackend` raises and names what is missing |
+| — | Gate reported candidates, not pairs or ms | **CLOSED** | `MatcherStats.scored_pairs` vs `ungated_pairs`, gate and scorer timed separately |
+| — | Retention was one cliff, hard-coded | **CLOSED** | Migration 0010: HOT/WARM/COLD ordered by CHECK, configurable per table, COLD detaches rather than drops |
+
+**Still open, and not closed by any amount of further work here:**
+
+| Finding | Why it stays open |
+|---|---|
+| **Real Sentinel gateway** | Host, credentials and API documentation were never available. Every live-feed result is against `tools/sentinel_sandbox` — a real RTSP 1.0 server with real RTP and real PTS, but ours. **REAL SENTINEL VALIDATION — PENDING EXTERNAL ACCESS** |
+| **Real government records** | Five separate institutional authorisations |
+| **AI accuracy on real imagery** | 92.5% day / 37.9% night are the simulation backend's, and are labelled that way everywhere |
+| **Anything above 1,000 cameras** | Arithmetic over stated assumptions, never executed |
+| **Database replication / PITR** | Not built. The single largest unmitigated risk in the system |
+| **`make demo`** | Compose validates; the Docker blob CDN returns 403 by network policy. The host-native path has been run end to end |
+
+**Baseline against today:** 186 tests at audit → **346**. Migrations 6 → 10.
+The two findings §8 called "the real work of Phase 2" — the live-feed path
+and PTS timing — are both closed, and both are held by tests that run
+against a real RTSP server rather than a simulated one.

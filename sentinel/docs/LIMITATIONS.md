@@ -118,6 +118,7 @@ These are genuinely not built, and would be needed before production:
 | **Rate limiting is in-process** | N API replicas allow N× the configured limit. Must move to Redis before scaling out. Called out in code and in the K8s README. |
 | **No WS-Security on ONVIF** | Cameras requiring WS-UsernameToken digest need `onvif-zeep`. HTTP Digest works for most. |
 | **No video recording tier** | Evidence export is designed and schema'd; the edge ring buffer that feeds it is not implemented. |
+| **Metadata tiering exists; the archive job does not** | HOT/WARM/COLD boundaries are enforced in the schema and `detach_cold_partitions()` takes a partition off the query path for archival. Nothing then exports it to an object store — that job is not written, so a detached partition simply sits on local disk until `drop_old_partitions()` reaches it. |
 | **No BSA §63 certificate generation** | Schema and hash chain exist; the certificate renderer does not. |
 | **Single PostgreSQL** | No replication or PITR. This database holds evidence — use a managed PostGIS with point-in-time recovery. |
 | **No Keycloak / SSO** | Auth is self-contained JWT. Department-level federation needs an OIDC provider. |

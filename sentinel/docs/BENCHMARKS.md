@@ -151,6 +151,29 @@ Cameras reachable by road from a given camera, averaged over all 50.
 | 900 s | 19.9 | 59.4% |
 | *no gate* | *49* | *0%* |
 
+### The same reduction, priced in pairs and milliseconds
+
+Candidate cameras are a property of the road graph. What the running system
+costs is comparisons and time, which is what PART 17 asks for. The per-pair
+cost is **measured** against the real scorer; the pair counts follow from
+the 180 s reachability above, over one batch of 50 sightings against 400
+live vehicles.
+
+| | Without the gate | With the gate |
+|---|---:|---:|
+| Pairs scored | 20,000 | **473** |
+| Scoring time | 2,240 ms | **53 ms** |
+
+Measured cost per scored pair: **112 µs** (`fusion.score_pair`, 4,000
+repetitions). The pair counts are exact; the milliseconds are that measured
+cost multiplied by them, and are labelled as such in the benchmark output.
+
+The matcher carries the same instrumentation in production —
+`MatcherStats.scored_pairs` against `ungated_pairs`, with the gate and the
+scorer timed separately, because a slow gate is a database problem and a
+slow scorer is an embedding problem, and one combined number optimises the
+wrong one.
+
 This is the highest-leverage component in the system and it involves no
 model at all — a PostGIS query against a cached routing matrix.
 

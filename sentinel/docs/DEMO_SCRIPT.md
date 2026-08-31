@@ -159,6 +159,13 @@ Show the route drawn on the map.
 > of cameras within 15 minutes — 994 edges for 50 cameras, about 20
 > reachable neighbours each."
 
+**If a judge asks what the gate is worth in compute**, not just in
+candidates: one batch of 50 sightings against 400 live vehicles is 20,000
+comparisons without the gate and **473** with it — 2,240 ms against 53 ms,
+at a measured 112 µs per scored pair. The matcher counts both in
+production, so the claim is checkable on a running system rather than only
+in a benchmark.
+
 ### 10 · Movement timeline (35 s)
 
 Show the timeline.
@@ -304,7 +311,9 @@ where nothing goes wrong.
 | Centralised vs metadata, 80k cameras | **320 Gbps vs 96 Mbps** |
 | Departments / roles | 26 / 6 |
 | Government systems connected | **0 of 5** — all mock, all stamped |
-| Tests | 327 collected |
+| Tests | **346 collected** |
+| Gate, in comparisons | 20,000 pairs → **473**; 2,240 ms → **53 ms** |
+| Migrations / API operations | 10 / 45 across 41 paths |
 
 Every one of these comes from `make benchmark`. If a judge asks, run it.
 

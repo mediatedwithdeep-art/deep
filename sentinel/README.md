@@ -50,9 +50,9 @@ fuses plate (precision) with appearance and attributes (recall), under the gate.
 
 | | |
 |---|---|
-| **Tests** | **327 collected** — unit, integration against a live PostgreSQL, live-feed tests against a real RTSP server, plus dedicated Sentinel-contract and security-regression suites |
-| Database | 6 migrations, PostGIS + pgvector, native range partitioning |
-| API | 39 endpoints, JWT + RBAC, WebSocket, audit log, Prometheus |
+| **Tests** | **346 collected** — unit, integration against a live PostgreSQL, live-feed tests against a real RTSP server, plus dedicated Sentinel-contract and security-regression suites |
+| Database | 10 migrations, PostGIS + pgvector, range partitioning, HOT/WARM/COLD tiering |
+| API | 45 operations across 41 paths, JWT + RBAC, WebSocket, audit log, Prometheus |
 | AI pipeline | detect → track → quality gate → ANPR + ReID → sighting |
 | Ingestion | RTSP / ONVIF / HLS / DVR adapters + a 1,800-vehicle traffic world |
 | Event processor | cross-camera identity, 8 configurable alert rules |
@@ -66,7 +66,7 @@ Measured, not asserted — `make benchmark`:
 | Whole 50-camera estate | 14.2–22.0 ms/tick, **9–13% of one core** (three hosts; see [BENCHMARKS.md](docs/BENCHMARKS.md)) |
 | ANPR, dedicated lane, day | **92.5%** end-to-end |
 | ANPR, wide-angle, night | **37.9%** — published because it is true |
-| Gate reduction (3-min window) | **97.6%** fewer comparisons |
+| Gate reduction (3-min window) | **97.6%** fewer comparisons — 20,000 pairs → 473, **2,240 ms → 53 ms** |
 | ReID same-ID vs different-ID | 0.721 ± 0.112 vs 0.361 ± 0.078 |
 
 Full results and method: **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**
@@ -125,7 +125,7 @@ sentinel/
 ├── config/cameras.yaml     ← THE file you edit for real cameras
 ├── infrastructure/         nginx, Prometheus, Grafana, Kubernetes
 ├── scripts/benchmark.py    every number in the docs comes from here
-├── tests/                  230 tests
+├── tests/                  346 tests
 └── docs/
 ```
 
@@ -138,7 +138,7 @@ make demo            # everything, one command
 make logs            # follow the pipeline
 make down            # stop (keeps data)
 make clean           # stop and delete data
-make test            # 230 tests
+make test            # 346 tests
 make benchmark       # measure it yourself
 make observability   # + Prometheus and Grafana
 make help            # all targets
@@ -224,6 +224,9 @@ correct degraded behaviour for a control room, and it is tested.
 | [SCALE_BENCHMARK.md](docs/SCALE_BENCHMARK.md) | 50 → 1,000 cameras measured; capacity to 80,000 with per-cell provenance |
 | [NETWORK_BANDWIDTH_PLAN.md](docs/NETWORK_BANDWIDTH_PLAN.md) | Centralised vs federated vs hybrid, with the arithmetic |
 | [DISASTER_RECOVERY.md](docs/DISASTER_RECOVERY.md) | Nine failure domains, RPO/RTO, behaviour at 1 min / 10 min / 1 h |
+| [INFRASTRUCTURE_SIZING.md](docs/INFRASTRUCTURE_SIZING.md) | Node archetypes, build-out to 80,000, storage tiers and retention |
+| [COST_BENEFIT.md](docs/COST_BENEFIT.md) | Federated vs centralised, with every unit cost labelled an estimate |
+| [STATEWIDE_ROLLOUT.md](docs/STATEWIDE_ROLLOUT.md) | Five phases, per-district sequence, and what must be true before Phase 1 |
 | [LIMITATIONS.md](docs/LIMITATIONS.md) | What this does not do |
 | [REAL_CAMERAS.md](docs/REAL_CAMERAS.md) | Connecting live feeds |
 | [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Click-by-click presentation runbook |

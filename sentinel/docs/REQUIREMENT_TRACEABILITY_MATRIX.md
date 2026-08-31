@@ -1,6 +1,6 @@
 # Requirement Traceability Matrix
 
-**327 tests collected** · **45 API operations** · **9 migrations** · Phase 2B, 2026-08-31
+**346 tests collected** · **45 API operations across 41 paths** · **10 migrations** · Phase 2B, 2026-08-31
 
 Status vocabulary — used strictly, with no fourth option smuggled in:
 
@@ -36,7 +36,7 @@ Status vocabulary — used strictly, with no fourth option smuggled in:
 |---|---|---|---|---|---|---|
 | All timing derived from PTS | `Frame.pts_time`, `capture_time` anchored once | PTS 0.8 s vs arrival 11 ms on connect | `test_frame_timing_comes_from_pts_not_from_arrival` | 6 | **TESTED** | Without RTCP NTP the anchor carries a constant one-way delay; intervals are unaffected |
 | Never use arrival time | Removed; worker passes `frame.capture_time` | Worker builds `LiveStreamReader`, not `FrameReader` | `test_capture_time_is_monotonic_and_spans_real_video_time` | 6 | **TESTED** | — |
-| Never use `CAP_PROP_FPS` / forced CFR | `-vf fps=` removed from the live path | FPS from PTS reproduced 15.00/12.00/4.00 exactly | Live report §4 | 6 | **TESTED** | — |
+| Never use `CAP_PROP_FPS` / forced CFR | `-vf fps=` removed; `FrameReader` **deleted**, not deprecated | FPS from PTS reproduced 15.00/12.00/4.00 exactly; AST scan of every ingestion module | `test_no_forced_constant_frame_rate_survives_anywhere_in_ingestion`, `test_the_removed_cfr_reader_has_not_come_back` | 6 | **TESTED** | — |
 | PTS carried to tracker | `age_s`, `velocity` px/s, `predict(dt)` | 200 px/s source read as 12.7 px/s before the fix | `test_irregular_frame_intervals_are_preserved_end_to_end` | — | **TESTED** | — |
 | Tracker retires by elapsed time, not frames | `max_age_s` | 6 fps and 25 fps cameras retire together | `test_track_age_is_seconds_so_slow_and_fast_cameras_agree` | — | **TESTED** | — |
 | Irregular intervals preserved (0/40/120/165 ms) | Per-interval velocity and prediction | Brief's own example | `test_irregular_frame_intervals_are_preserved_end_to_end`, `test_prediction_scales_with_the_real_gap` | — | **TESTED** | — |
@@ -72,7 +72,7 @@ Status vocabulary — used strictly, with no fourth option smuggled in:
 | Camera capability metadata | `anpr_capable` per camera | Drives gate and role | `test_capability_metadata_survives_discovery` | 3 | **TESTED** | Set by hand; not derived from catalogue optics |
 | Cross-camera ReID with confidence | Fusion score, CONFIRMED vs PROBABLE | `NO_PLATE_CEILING = 0.79` | `test_fusion.py` (14 tests) | 8 | **TESTED** | Appearance can never auto-confirm — a safety property, not a tuning choice |
 | Gate reduction measured | Suite 7 | 1.2 of 49 at 180 s; 3.3 at 300 s | `test_event_processor.py` | 9 | **TESTED** | — |
-| Gate reports pairs and ms | Candidates only | — | — | — | **PENDING** | Suite 7 reports candidate counts, not pairs-scored or milliseconds |
+| Gate reports pairs and ms | `MatcherStats` counts scored pairs and the ungated counterfactual; gate and scorer timed separately | 112 µs/pair measured; 20,000 pairs ungated vs 473 gated; 2,240 ms vs 53 ms | `test_the_gate_is_measured_in_pairs_scored_not_only_in_candidates`, `test_the_gate_reports_milliseconds_not_only_counts` | 9 | **TESTED** | Per-pair cost is the simulation backend's scorer; the pair counts are exact |
 
 ## PART 18–22 · Integration, departments, federation
 
@@ -102,7 +102,10 @@ Status vocabulary — used strictly, with no fourth option smuggled in:
 | Capacity at 50/1k/3k/10k/50k/80k | Table with per-cell provenance | 10 stated assumptions | — | 16 | **PROJECTED** above 1,000 | Nothing above 1,000 cameras was run |
 | Bandwidth: centralised vs federated vs hybrid | `NETWORK_BANDWIDTH_PLAN.md` | 320 Gbps vs 96 Mbps | — | 15 | **DESIGNED** | No WAN measured |
 | `DISASTER_RECOVERY.md` | Nine domains, RPO/RTO, 1 min / 10 min / 1 h | — | — | — | **DESIGNED** | Only the camera and edge rows are tested; no failover has been executed |
-| Tiered HOT/WARM/COLD storage | Retention days per partitioned table | `0005_partitions_and_functions.sql` | `test_database.py` | — | **PARTIAL** | Retention exists; no tier concept, and 7/15-day configurability is not exposed |
+| `INFRASTRUCTURE_SIZING.md` | Node archetypes and build-out, 50 → 80,000 | GPU-bound at 40 cameras/GPU; 500 edge nodes at 80,000 | — | 16 | **DESIGNED** | No edge appliance exists; GPU rows inherit assumption A7 |
+| `COST_BENEFIT.md` | Federated vs centralised, year 1 | ₹82.7 cr vs ₹138.7 cr; storage + backbone are ₹57.6 cr of the ₹56 cr gap | — | 15 | **DESIGNED** | No procurement quote was obtained; unit costs are estimates against list prices |
+| `STATEWIDE_ROLLOUT.md` | Five phases, per-district sequence, entry criteria | Phase 1 entry criteria listed, all currently unmet | — | — | **DESIGNED** | Commits to no dates; depends on external authorisations |
+| Tiered HOT/WARM/COLD storage | `hot_days`/`warm_days`/`cold_days` per table, ordered by CHECK; `partition_tier()`, `storage_tier_report()`, `detach_cold_partitions()` | `vehicle_sighting` at 7/15/30; tiers resolve HOT→WARM→COLD→EXPIRED at 1/10/20/99 days | `test_a_partition_moves_through_the_tiers_as_it_ages`, `test_cold_detach_removes_a_partition_from_the_query_path_without_dropping_it` (8 tests) | — | **TESTED** | COLD detaches for archival; only `drop_old_partitions()` deletes. No object-store export job exists yet |
 | District sharding | Adjacency graph is local by construction | `SCALING.md` | — | — | **DESIGNED** | Never exercised across two districts |
 
 ## Cross-cutting · Security
@@ -135,6 +138,9 @@ Collected here so no reader has to assemble them from the table.
 4. **Nothing above 1,000 cameras was executed.** Everything from 3,000
    upward is arithmetic over stated assumptions.
 5. **`make demo` has never been run end to end.** The Compose file
-   validates; the image layers are unreachable from this network
-   (policy 403 on the Docker blob CDN). Every component has been run
-   individually, host-native.
+   validates (`docker compose config -q` passes) but the image layers are
+   unreachable from this network — the Docker blob CDN returns 403 by
+   policy, re-confirmed this session. What *has* been run end to end is the
+   host-native path: all 10 migrations onto a virgin database, the 26-department
+   seed, the API serving that estate over HTTP with a real JWT login, and
+   45 operations across 41 paths in the generated OpenAPI document.
