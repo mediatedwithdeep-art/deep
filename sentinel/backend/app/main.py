@@ -27,7 +27,7 @@ from sentinel_core.log import configure_logging, get_logger, set_trace_id
 
 from . import db, metrics, ws
 from .deps import rate_limit
-from .routers import alerts, auth, cameras, system, vehicles
+from .routers import alerts, auth, cameras, intelligence, system, vehicles
 from .security import Role, decode_token
 
 log = get_logger("sentinel.api")
@@ -128,7 +128,7 @@ async def observability(request: Request, call_next):
 
 
 API = "/api/v1"
-for router in (auth.router, cameras.router, vehicles.router,
+for router in (auth.router, cameras.router, vehicles.router, intelligence.router,
                alerts.router, system.router):
     app.include_router(router, prefix=API, dependencies=[Depends(rate_limit)])
 

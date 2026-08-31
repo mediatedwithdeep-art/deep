@@ -97,3 +97,52 @@ async def api(db, pg_dsn):
             yield client
     await appdb.close_pool()
     get_settings.cache_clear()
+
+
+# ── one user per role, and the login helpers ─────────────────────────
+# Shared for the same reason as `api` above: the API suite and the
+# government-integration suite both need an authenticated caller, and a
+# duplicated copy of this would drift.
+@pytest.fixture
+def users(db):
+    """One user per role, sharing a known password."""
+    import pathlib
+    import sys
+    sys.path.insert(0, str(pathlib.Path(__file__).resolve().parents[1] / "backend"))
+    from app.security import hash_password
+
+    db.execute("INSERT INTO department (code,name) VALUES ('API','API Test') "
+               "ON CONFLICT (code) DO NOTHING")
+    pw = "ApiTestPassword2026!"
+    created = {}
+    for role in ("VIEWER", "OPERATOR", "INVESTIGATOR", "ADMIN"):
+        username = f"api_{role.lower()}"
+        # Upsert rather than delete-and-recreate: an earlier test may have
+        # left a watchlist entry referencing this user, and deleting the row
+        # would trip the foreign key. Resetting the password in place also
+        # undoes any password change a previous test made.
+        db.execute("""INSERT INTO app_user (username, full_name, password_hash,
+                          role, department_id)
+                      SELECT %s,%s,%s,%s::user_role,d.id FROM department d
+                      WHERE d.code='API'
+                      ON CONFLICT (username) DO UPDATE
+                        SET password_hash = EXCLUDED.password_hash,
+                            role          = EXCLUDED.role,
+                            is_active     = TRUE,
+                            failed_logins = 0,
+                            locked_until  = NULL""",
+                   (username, f"{role} User", hash_password(pw), role))
+        created[role] = username
+    return {"password": pw, **created}
+
+
+async def _token(api, username: str, password: str) -> str:
+    r = await api.post("/api/v1/auth/login",
+                       json={"username": username, "password": password})
+    assert r.status_code == 200, r.text
+    return r.json()["access_token"]
+
+
+async def _auth(api, users, role="ADMIN") -> dict:
+    token = await _token(api, users[role], users["password"])
+    return {"Authorization": f"Bearer {token}"}
