@@ -186,6 +186,40 @@ def main() -> int:
         reader.stop()
 
         # ── 7 · does scene discontinuity reset state? ────────────────
+        #
+        # Driven directly rather than by looping media, and deliberately so.
+        # The sandbox loops with ffmpeg's `-stream_loop -1`, which may splice
+        # the loop with CONTINUOUS PTS -- in which case there is no
+        # discontinuity to detect and the observation says nothing either
+        # way. Waiting for one makes this check a coin toss on ffmpeg's
+        # splicing behaviour rather than a test of our own.
+        #
+        # What the requirement actually asks is that a hard PTS break is
+        # detected and resets state. That is driven here against the real
+        # production path.
+        class _FakeFrame:
+            width, height = 64, 48
+            def to_ndarray(self, format=None, width=None, height=None):
+                import numpy as np
+                return np.zeros((height or self.height,
+                                 width or self.width, 3), dtype="uint8")
+
+        r3 = LiveStreamReader("rtsp://127.0.0.1:9/synthetic", camera_id="CUT")
+        ff = _FakeFrame()
+        for pts in (0.0, 0.0667, 0.1333):          # a normal run of frames
+            r3._emit(ff, pts)
+        before = r3.health.discontinuities
+        anchor_before = r3._anchor_pts
+        r3._emit(ff, 0.2000)                        # an ordinary gap
+        ordinary = r3.read().is_discontinuity
+        r3._emit(ff, 0.0)                           # PTS goes BACKWARDS
+        backwards = r3.read()
+        r3._emit(ff, 0.0667)
+        r3._emit(ff, 99.0)                          # and a large forward jump
+        jumped = r3.read()
+        cuts = r3.health.discontinuities - before
+
+        # Supporting live observation, reported but not asserted.
         short = make_clip(str(tmp / "short.mp4"), "h264", seconds=1.0, fps=15.0)
         s2 = RtspServer(port=0)
         s2.add(MediaSource(camera_id="LOOP", path=short, codec="h264", loop=True))
@@ -193,29 +227,27 @@ def main() -> int:
         try:
             r2 = LiveStreamReader(s2.rtsp_url("LOOP"), camera_id="LOOP")
             r2.start()
-            # Read the COUNTER, not the frame. The reader's buffer is one
-            # slot that overwrites, so the frame carrying the flag can be
-            # replaced before a poller sees it -- correct for live video,
-            # and a trap for anything trying to observe a single frame.
-            deadline = time.time() + 120
+            deadline = time.time() + 45
             while time.time() < deadline and r2.health.discontinuities == 0:
                 r2.read()
                 time.sleep(0.004)
-            cuts = r2.health.discontinuities
-            frames_seen, span = r2.health.frames, r2.health.pts_span_s
+            live_cuts, live_frames = r2.health.discontinuities, r2.health.frames
             r2.stop()
-            # Separate "never reached the loop point" from "reached it and
-            # missed it". Only the second is the system's fault.
-            reached = span >= 0.9
-            record("7. Does scene discontinuity reset state?",
-                   cuts >= 1 if reached else None,
-                   f"looping a 1.0s clip: {cuts} discontinuity/ies over "
-                   f"{frames_seen} frames, {span:.2f}s of PTS decoded"
-                   + ("" if reached else
-                      " -- host too loaded to reach the loop point, "
-                      "inconclusive rather than failed"))
         finally:
             s2.stop()
+
+        record("7. Does scene discontinuity reset state?",
+               (not ordinary) and backwards.is_discontinuity
+               and jumped.is_discontinuity and cuts == 2
+               and r3._anchor_pts != anchor_before,
+               f"an ordinary 67 ms gap flagged={ordinary} (must be False); "
+               f"PTS going backwards flagged={backwards.is_discontinuity}; "
+               f"a {99.0 - 0.0667:.0f}s forward jump flagged="
+               f"{jumped.is_discontinuity}; {cuts} cut(s) counted and the "
+               f"capture-time anchor moved. Live loop, reported not asserted: "
+               f"{live_cuts} cut(s) over {live_frames} frames -- "
+               f"`-stream_loop` may splice with continuous PTS, so this "
+               f"observation is not evidence either way")
 
         # ── 8 · does /api/ingest populate cameras dynamically? ────────
         from ingestion.sentinel_catalogue import load_from_sentinel, reconcile
