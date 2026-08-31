@@ -79,6 +79,13 @@ CAMERA_PROFILES = [
 ]
 
 
+#: Departments that actually own cameras in the Ahmedabad demo estate, and
+#: their share of it. The full 26 are seeded above; these are the ones a
+#: 50-camera demo of one city can honestly populate.
+_CAMERA_DEPTS = ["GP_AHM", "GP_TRAF", "AMC", "GSRTC", "AUDA", "GAD"]
+_CAMERA_DEPT_WEIGHTS = [45, 20, 15, 8, 7, 5]
+
+
 def weighted_profiles(n: int) -> list[tuple]:
     out: list[tuple] = []
     for p in CAMERA_PROFILES:
@@ -144,11 +151,17 @@ def seed(dsn: str, camera_count: int = 50, demo_password: str | None = None) -> 
             ON CONFLICT (code) DO NOTHING""")
 
         # ── users ────────────────────────────────────────────────────
+        # One account per role named in PART 20, plus a second department's
+        # operator so the department-isolation control is demonstrable from
+        # the UI rather than only from the test suite: log in as `traffic`
+        # and the Ahmedabad City Police cameras are not there.
         users = [
-            ("admin",     "System Administrator", "ADMIN",        "GP_AHM",  "ADM-0001"),
+            ("stateadmin","State Administrator",  "SYSTEM",       "HOME",    "ADM-0001"),
+            ("admin",     "Department Admin",     "ADMIN",        "GP_AHM",  "ADM-1001"),
             ("controller","Control Room Officer", "OPERATOR",     "GP_AHM",  "OPR-1042"),
             ("inspector", "Crime Branch Inspector","INVESTIGATOR","GP_AHM",  "INV-2210"),
             ("traffic",   "Traffic Control Desk", "OPERATOR",     "GP_TRAF", "OPR-3301"),
+            ("auditor",   "Compliance Auditor",   "AUDITOR",      "HOME",    "AUD-0001"),
             ("viewer",    "Read Only Account",    "VIEWER",       "AMC",     None),
         ]
         for username, full_name, role, dept, badge in users:
@@ -178,11 +191,12 @@ def seed(dsn: str, camera_count: int = 50, demo_password: str | None = None) -> 
             fov = 32.0 if anpr else RNG.choice([70.0, 82.0, 90.0, 100.0])
             rng_m = 45.0 if anpr else RNG.choice([50.0, 60.0, 75.0])
 
-            # Distribute cameras across police departments, with a few in municipal
-            police_depts = [d[0] for d in DEPARTMENTS if d[2] == "POLICE"]
-            weights = [45 if d == "GP_AHM" else 15 if d.startswith("GP_") else 5
-                      for d in police_depts]
-            dept_code = RNG.choices(police_depts, weights=weights)[0]
+            # The demo estate is Ahmedabad, so it is weighted heavily to the
+            # Ahmedabad forces. The other 20-odd departments exist in the
+            # registry with no cameras rather than being given invented ones:
+            # a fabricated camera at a fabricated junction in Junagadh would
+            # be operational data nobody can check.
+            dept_code = RNG.choices(_CAMERA_DEPTS, weights=_CAMERA_DEPT_WEIGHTS)[0]
             if junction.zone == "Hansol":
                 dept_code = "GAD"
 
@@ -254,7 +268,7 @@ def seed(dsn: str, camera_count: int = 50, demo_password: str | None = None) -> 
             "SELECT round(avg(c),1) FROM (SELECT count(*) c FROM camera_adjacency "
             "GROUP BY from_camera) t").fetchone()[0]
 
-    print(f"  departments      {len(DEPARTMENTS)}")
+    print(f"  departments      {len(DEPARTMENTS)} ({len(_CAMERA_DEPTS)} own cameras in this demo estate)")
     print(f"  zones            {len(zones)} (+1 restricted geofence)")
     print(f"  users            {len(users)}")
     print(f"  cameras          {n_cam}")

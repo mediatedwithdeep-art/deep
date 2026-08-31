@@ -3,14 +3,23 @@
 from __future__ import annotations
 
 from typing import Annotated, Literal
+from urllib.parse import urlsplit
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..deps import CurrentUserDep, dept_filter, require, write_audit
+from ..deps import (
+    CurrentUserDep, dept_filter, require, require_department,
+    sees_all_departments, write_audit,
+)
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
+
+# The Sentinel contract's published ports. Used ONLY to derive a URL the
+# catalogue did not supply -- never to rewrite one it did.
+WHEP_PORT = 8889
+HLS_PORT = 8888
 
 
 class Location(BaseModel):
@@ -96,21 +105,20 @@ async def list_cameras(
     limit: int = Query(500, ge=1, le=5000),
     offset: int = Query(0, ge=0),
 ):
-    where: list[str] = ["c.status <> 'DISABLED'"]
-    params: list = []
-
-    # Enforce department scoping: non-SYSTEM users see only their own dept
-    dept_clause, dept_param = dept_filter(user)
-    if dept_clause:
-        where.append(dept_clause)
-        if dept_param:
-            params.append(dept_param)
+    # Department scope first, so every later clause narrows an already
+    # authorised set rather than widening an unauthorised one.
+    scope_sql, scope_params = dept_filter(user)
+    where: list[str] = ["c.status <> 'DISABLED'", scope_sql]
+    params: list = list(scope_params)
 
     if status_filter:
         where.append("c.status = %s::camera_status")
         params.append(status_filter)
-    # Only SYSTEM admins can query other departments; others are limited to their own
-    if department and (user.role.name == "SYSTEM" or not dept_clause):
+    if department:
+        # `?department=` narrows within the caller's scope; it cannot escape
+        # it, because scope_sql is already ANDed in above. A department
+        # admin asking for someone else's department gets an empty list,
+        # which is the truthful answer to "show me what I may see there".
         where.append("d.code = %s")
         params.append(department)
     if zone:
@@ -156,14 +164,10 @@ async def cameras_geojson(user: Annotated[object, Depends(require("camera:read")
     Returns points and field-of-view polygons in one payload so the map
     makes a single request instead of one per camera.
     """
-    dept_clause, dept_param = dept_filter(user)
-    where_clause = "c.status <> 'DISABLED'"
-    params = []
-    if dept_clause:
-        where_clause += f" AND {dept_clause}"
-        if dept_param:
-            params.append(dept_param)
-    rows = await db.fetch_all(f"{_SELECT} WHERE {where_clause} ORDER BY c.camera_id", params)
+    scope_sql, scope_params = dept_filter(user)
+    rows = await db.fetch_all(
+        f"{_SELECT} WHERE c.status <> 'DISABLED' AND {scope_sql} "
+        f"ORDER BY c.camera_id", scope_params)
     features = []
     for r in rows:
         props = {k: v for k, v in r.items() if k != "fov_geojson"}
@@ -189,34 +193,42 @@ async def camera_health(user: Annotated[object, Depends(require("camera:read"))]
     misaimed at any moment. A VMS that does not surface that is lying to
     its operators, so this is a first-class view rather than a diagnostic.
     """
-    summary = await db.fetch_one("""
+    scope_sql, scope_params = dept_filter(user)
+    summary = await db.fetch_one(f"""
         SELECT count(*) AS total,
-               count(*) FILTER (WHERE status='ONLINE')   AS online,
-               count(*) FILTER (WHERE status='OFFLINE')  AS offline,
-               count(*) FILTER (WHERE status='DEGRADED') AS degraded,
-               count(*) FILTER (WHERE last_seen IS NULL OR
-                                last_seen < now() - INTERVAL '90 seconds') AS stale,
-               count(*) FILTER (WHERE anpr_capable)      AS anpr_capable,
-               count(*) FILTER (WHERE firmware_risk IN ('EOL','KNOWN_CVE')) AS firmware_at_risk,
-               round(avg(trust_score)::numeric, 3)       AS mean_trust
-        FROM camera WHERE status <> 'DISABLED'""")
-    detail = await db.fetch_all("""
+               count(*) FILTER (WHERE c.status='ONLINE')   AS online,
+               count(*) FILTER (WHERE c.status='OFFLINE')  AS offline,
+               count(*) FILTER (WHERE c.status='DEGRADED') AS degraded,
+               count(*) FILTER (WHERE c.last_seen IS NULL OR
+                                c.last_seen < now() - INTERVAL '90 seconds') AS stale,
+               count(*) FILTER (WHERE c.anpr_capable)      AS anpr_capable,
+               count(*) FILTER (WHERE c.firmware_risk IN ('EOL','KNOWN_CVE')) AS firmware_at_risk,
+               round(avg(c.trust_score)::numeric, 3)       AS mean_trust
+        FROM camera c JOIN department d ON d.id = c.department_id
+        WHERE c.status <> 'DISABLED' AND {scope_sql}""", scope_params)
+    detail = await db.fetch_all(f"""
         SELECT c.camera_id, c.name, c.status::text AS status, c.zone,
                c.latitude, c.longitude, c.trust_score, c.last_seen,
                c.consecutive_failures, c.firmware_risk, c.anpr_capable,
                h.fps_actual, h.scene_change, h.decode_errors, h.inference_ms, h.message
         FROM camera c
+        JOIN department d ON d.id = c.department_id
         LEFT JOIN v_camera_health_latest h ON h.camera_ref = c.camera_id
-        WHERE c.status <> 'DISABLED'
+        WHERE c.status <> 'DISABLED' AND {scope_sql}
         ORDER BY c.trust_score ASC, c.camera_id
-        LIMIT 500""")
+        LIMIT 500""", scope_params)
     return {"summary": summary, "cameras": detail}
 
 
 @router.get("/{camera_id}")
 async def get_camera(camera_id: str,
                      user: Annotated[object, Depends(require("camera:read"))]):
-    row = await db.fetch_one(f"{_SELECT} WHERE c.camera_id = %s", (camera_id,))
+    scope_sql, scope_params = dept_filter(user)
+    row = await db.fetch_one(
+        f"{_SELECT} WHERE c.camera_id = %s AND {scope_sql}",
+        [camera_id, *scope_params])
+    # 404 rather than 403 for a camera in another department: 403 would
+    # confirm the id exists, which is itself harvestable by enumeration.
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "camera not found")
     return row
@@ -226,26 +238,53 @@ async def get_camera(camera_id: str,
 async def camera_stream(camera_id: str,
                         user: Annotated[object, Depends(require("camera:read"))],
                         quality: Literal["sub", "main"] = "sub"):
-    """Playback URLs.
+    """Playback URLs, as published by the camera's source catalogue.
 
     The API never proxies video. It returns a WHEP endpoint that the
     browser negotiates directly with the media server, so video bytes never
     traverse the API and one slow client cannot affect anyone else.
+
+    It also never returns an RTSP URL. A browser cannot play RTSP, so
+    handing one to the frontend can only produce a dead player or an
+    operator pasting a credential-bearing URL into VLC. RTSP is the AI
+    pipeline's transport and stays server-side; see `stream_url` on the
+    camera row, which this endpoint deliberately does not expose.
     """
     row = await db.fetch_one(
-        "SELECT camera_id, name, status::text AS status, protocol::text AS protocol "
-        "FROM camera WHERE camera_id=%s", (camera_id,))
+        "SELECT c.camera_id, c.name, c.status::text AS status, "
+        "       c.protocol::text AS protocol, c.whep_url, c.hls_url, d.code AS department "
+        "FROM camera c JOIN department d ON d.id = c.department_id "
+        "WHERE c.camera_id=%s", (camera_id,))
     if row is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "camera not found")
-    import os
-    base = os.environ.get("MEDIA_BASE_URL", "http://localhost:8889")
-    path = f"cam-{camera_id.lower()}" + ("-sub" if quality == "sub" else "")
+    require_department(user, row["department"])
+
+    whep, hls = row["whep_url"], row["hls_url"]
+    # Derive only what the catalogue did not supply, and say which happened.
+    # A derived URL is a guess at another system's routing; labelling it
+    # means an operator debugging a black player knows whether to look at
+    # our configuration or at theirs.
+    derived: list[str] = []
+    if not whep or not hls:
+        import os
+        base = os.environ.get("MEDIA_BASE_URL", "http://localhost:8889").rstrip("/")
+        host = urlsplit(base).hostname or "localhost"
+        scheme = urlsplit(base).scheme or "http"
+        if not whep:
+            whep = f"{scheme}://{host}:{WHEP_PORT}/stream/{camera_id}/whep"
+            derived.append("whep_url")
+        if not hls:
+            hls = f"{scheme}://{host}:{HLS_PORT}/live/stream/{camera_id}/index.m3u8"
+            derived.append("hls_url")
+
     return {
         "camera_id": camera_id,
         "status": row["status"],
-        "whep_url": f"{base}/{path}/whep",
-        "llhls_url": f"{base.replace('8889', '8888')}/{path}/index.m3u8",
+        "whep_url": whep,
+        "llhls_url": hls,
         "quality": quality,
+        "url_source": "catalogue" if not derived else "derived",
+        "derived_fields": derived,
         # Sub-second WebRTC keeps the alert and the picture aligned. With
         # HLS the alert would beat the video by ten seconds and operators
         # would stop trusting both.
@@ -258,6 +297,15 @@ async def camera_sightings(camera_id: str,
                            user: Annotated[object, Depends(require("sighting:read"))],
                            hours: int = Query(1, ge=1, le=168),
                            limit: int = Query(200, ge=1, le=2000)):
+    # Authorise the CAMERA before returning anything observed through it.
+    # Sightings inherit their camera's department: a plate read is as
+    # sensitive as the lens that read it.
+    scope_sql, scope_params = dept_filter(user)
+    owner = await db.fetch_one(
+        f"SELECT 1 AS ok FROM camera c JOIN department d ON d.id = c.department_id "
+        f"WHERE c.camera_id = %s AND {scope_sql}", [camera_id, *scope_params])
+    if owner is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "camera not found")
     rows = await db.fetch_all("""
         SELECT sighting_id, timestamp, vehicle_track_id, vehicle_type::text AS vehicle_type,
                vehicle_color, plate_normalized, plate_confidence, speed_kmph,
@@ -275,6 +323,22 @@ async def create_camera(body: CameraCreate, request: Request,
                               (body.department_code,))
     if dept is None:
         raise HTTPException(422, f"unknown department '{body.department_code}'")
+    # A department admin onboards into their OWN department. Without this a
+    # scoped admin could plant a camera in another department's estate and
+    # then read everything it sees -- privilege escalation by INSERT.
+    if not sees_all_departments(user) and body.department_code != user.department:
+        # Audited before it is refused. An attempt to plant a camera in
+        # another department's estate is precisely the event an audit trail
+        # exists to capture, and a refusal that leaves no record is one an
+        # attacker can retry indefinitely without ever appearing in a review.
+        await write_audit(
+            request, user=user, action="DENIED:camera:create:cross-department",
+            resource="/cameras", resource_id=body.camera_id, result="DENIED",
+            detail={"requested_department": body.department_code,
+                    "caller_department": user.department})
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            f"cannot create a camera in department '{body.department_code}'")
     exists = await db.fetch_one("SELECT 1 FROM camera WHERE camera_id=%s",
                                 (body.camera_id,))
     if exists:
@@ -334,8 +398,15 @@ async def update_camera(camera_id: str, body: CameraUpdate, request: Request,
     if not sets:
         raise HTTPException(422, "no fields to update")
 
+    # Scope the UPDATE itself rather than checking first and writing after:
+    # a check-then-write leaves a window in which the camera moves
+    # department between the two statements.
+    scope_sql, scope_params = dept_filter(user, "d.code")
     params.append(camera_id)
-    n = await db.execute(f"UPDATE camera SET {', '.join(sets)} WHERE camera_id=%s", params)
+    params += scope_params
+    n = await db.execute(
+        f"UPDATE camera c SET {', '.join(sets)} FROM department d "
+        f"WHERE d.id = c.department_id AND c.camera_id=%s AND {scope_sql}", params)
     if n == 0:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "camera not found")
     await write_audit(request, user=user, action="CAMERA_UPDATE",
@@ -349,8 +420,11 @@ async def disable_camera(camera_id: str, request: Request,
                          user: Annotated[object, Depends(require("camera:write"))]):
     """Soft-disable. Registry rows are never hard-deleted, because the
     sightings and evidence that reference them must remain resolvable."""
-    n = await db.execute("UPDATE camera SET status='DISABLED' WHERE camera_id=%s",
-                         (camera_id,))
+    scope_sql, scope_params = dept_filter(user, "d.code")
+    n = await db.execute(
+        f"UPDATE camera c SET status='DISABLED' FROM department d "
+        f"WHERE d.id = c.department_id AND c.camera_id=%s AND {scope_sql}",
+        [camera_id, *scope_params])
     if n == 0:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "camera not found")
     await write_audit(request, user=user, action="CAMERA_DISABLE",

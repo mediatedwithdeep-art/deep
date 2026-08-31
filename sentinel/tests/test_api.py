@@ -9,42 +9,8 @@ import os
 import uuid
 
 import pytest
-import pytest_asyncio
 
 pytestmark = [pytest.mark.integration, pytest.mark.asyncio]
-
-
-@pytest_asyncio.fixture
-async def api(db, pg_dsn):
-    """The real app, wired to the test database."""
-    import urllib.parse as up
-    from sentinel_core.config import get_settings
-
-    parsed = up.urlparse(pg_dsn)
-    os.environ.update({
-        "POSTGRES_HOST": parsed.hostname or "127.0.0.1",
-        "POSTGRES_PORT": str(parsed.port or 5432),
-        "POSTGRES_USER": parsed.username or "postgres",
-        "POSTGRES_PASSWORD": parsed.password or "",
-        "POSTGRES_DB": (parsed.path or "/sentinel_test").lstrip("/"),
-        "SECRET_KEY": "test-secret-key-long-enough-for-hs256-signing-abcdef",
-        "BUS_BACKEND": "memory",
-        "LOG_LEVEL": "ERROR",
-        "ENVIRONMENT": "development",
-    })
-    get_settings.cache_clear()
-
-    import httpx
-    from app.main import app
-    from app import db as appdb
-
-    transport = httpx.ASGITransport(app=app)
-    async with app.router.lifespan_context(app):
-        async with httpx.AsyncClient(transport=transport,
-                                     base_url="http://test") as client:
-            yield client
-    await appdb.close_pool()
-    get_settings.cache_clear()
 
 
 @pytest.fixture

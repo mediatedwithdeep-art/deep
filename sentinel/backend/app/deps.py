@@ -76,18 +76,49 @@ def require(permission: str) -> Callable:
     return _check
 
 
-def dept_filter(user: CurrentUser) -> tuple[str, str | None]:
-    """Department scope filter for queries.
+def sees_all_departments(user: CurrentUser) -> bool:
+    """Whether this caller's authority spans the whole state.
 
-    SYSTEM admins see all departments. All others see only their own.
-    Returns (WHERE clause fragment, parameter value or None).
+    Only the State Admin. A Department Admin has full control *within* one
+    department, which is a different thing and is deliberately not enough:
+    26 departments sharing an estate is the problem this system exists to
+    solve, and an admin of one of them is not entitled to the other 25.
     """
-    if user.role.name == "SYSTEM":
-        return ("", None)  # no filter
+    return user.role is Role.SYSTEM
+
+
+def dept_filter(user: CurrentUser, column: str = "d.code") -> tuple[str, list]:
+    """SQL fragment restricting a query to what this caller may see.
+
+    Returns (clause, params). The clause is never empty for a scoped user,
+    so a caller that forgets to apply it produces a visibly unfiltered query
+    in review rather than a silently over-broad one at runtime.
+
+    A user with no department is denied everything rather than granted
+    everything. That asymmetry is the entire point: the failure mode of
+    "unassigned means unrestricted" is a full estate breach, and the
+    failure mode of this is a support ticket.
+    """
+    if sees_all_departments(user):
+        return ("TRUE", [])
     if user.department:
-        return ("d.code = %s", user.department)
-    # No department assignment; shouldn't happen but safe to null-filter
-    return ("FALSE", None)
+        return (f"{column} = %s", [user.department])
+    return ("FALSE", [])
+
+
+def require_department(user: CurrentUser, department: str | None) -> None:
+    """Authorise access to one resource owned by `department`.
+
+    Raises 404, not 403, when the caller is outside it. 403 would confirm
+    that a camera with this id exists in another department, which is
+    itself information an operator of one department should not be able to
+    harvest by enumeration.
+    """
+    if sees_all_departments(user):
+        return
+    if department is not None and user.department == department:
+        return
+    raise HTTPException(status.HTTP_404_NOT_FOUND, "not found")
 
 
 async def write_audit(request: Request, *, user: CurrentUser | None,

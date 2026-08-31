@@ -28,8 +28,21 @@ ALGORITHM = "HS256"
 
 
 class Role(IntEnum):
-    """Ordered by authority. Comparisons are meaningful: OPERATOR >= VIEWER."""
+    """The five roles PART 20 names, plus VIEWER.
+
+    VIEWER -> OPERATOR -> INVESTIGATOR -> ADMIN -> SYSTEM is a genuine
+    ladder: each holds a superset of the one below, and ADMIN is a
+    *Department* Admin while SYSTEM is the State Admin.
+
+    AUDITOR is deliberately OFF that ladder and its integer value implies
+    nothing. An auditor may read the audit log and nothing else -- not
+    cameras, not sightings, not alerts. Granting them VIEWER's permissions
+    "as a base" would widen the surveillance surface to satisfy a
+    compliance function, which is the opposite of what the function is for.
+    Authorise by consulting PERMISSIONS below, never by comparing roles.
+    """
     VIEWER = 10
+    AUDITOR = 15
     OPERATOR = 20
     INVESTIGATOR = 30
     ADMIN = 40
@@ -52,6 +65,12 @@ PERMISSIONS: dict[Role, set[str]] = {
     Role.VIEWER: {
         "camera:read", "sighting:read", "vehicle:read", "alert:read",
         "analytics:read",
+    },
+    # Reads the record of what everyone else did, and nothing else. No
+    # camera, no sighting, no alert: an auditor investigating misuse of the
+    # estate must not need access to the estate to do it.
+    Role.AUDITOR: {
+        "audit:read",
     },
     Role.OPERATOR: {
         "camera:read", "sighting:read", "vehicle:read", "alert:read",
