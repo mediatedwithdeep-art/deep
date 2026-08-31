@@ -105,6 +105,10 @@ dev-web:
 test:
 	$(PY) -m pytest tests/ -q
 
+## verify: answer the ten Phase 2B verification questions by running the system
+verify:
+	$(PY) scripts/verify_p0.py
+
 ## test-unit: only the tests that need no database
 test-unit:
 	$(PY) -m pytest tests/ -q -m "not integration"

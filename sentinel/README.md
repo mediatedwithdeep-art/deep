@@ -139,6 +139,7 @@ make logs            # follow the pipeline
 make down            # stop (keeps data)
 make clean           # stop and delete data
 make test            # 346 tests
+make verify          # the ten verification questions, answered by running it
 make benchmark       # measure it yourself
 make observability   # + Prometheus and Grafana
 make help            # all targets
