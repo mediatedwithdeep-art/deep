@@ -15,7 +15,7 @@ import pytest
 REPO = pathlib.Path(__file__).resolve().parents[1]
 MIGRATIONS = REPO / "database" / "migrations"
 
-for p in ("shared", "ai", "backend", "video-ingestion", "event-processor"):
+for p in ("shared", "ai", "backend", "video-ingestion", "event-processor", "tools"):
     sys.path.insert(0, str(REPO / p))
 
 

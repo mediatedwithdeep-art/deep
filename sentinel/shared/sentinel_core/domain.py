@@ -41,6 +41,11 @@ class CameraStatus(StrEnum):
     PROBING = "PROBING"
     ONLINE = "ONLINE"
     DEGRADED = "DEGRADED"
+    # Distinct from OFFLINE on purpose. A stream that ended and is being
+    # retried is not the same as a camera believed gone: showing a looping
+    # or briefly-dropped camera as OFFLINE makes the estate flap red and
+    # trains operators to ignore the colour.
+    RECONNECTING = "RECONNECTING"
     OFFLINE = "OFFLINE"
     DISABLED = "DISABLED"
 
