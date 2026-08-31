@@ -34,8 +34,8 @@ pulled on demand. Every other decision follows.
 
 **2 · The spatio-temporal gate matters more than the model.**
 Given a sighting, only cameras reachable by road in a plausible travel window
-are candidates. Measured on the demo estate: **3.3 candidates out of 49**
-within a 3-minute window — a 93% reduction. Appearance matching at 0.9% false
+are candidates. Measured on the demo estate: **1.2 candidates out of 49**
+within a 3-minute window (**3.3** within 5 minutes) — a 97.6% reduction. Appearance matching at 0.9% false
 positives is unusable against 49 cameras and trustworthy against 3. It is a
 PostGIS query plus a cached routing matrix. No GPU.
 
@@ -50,9 +50,9 @@ fuses plate (precision) with appearance and attributes (recall), under the gate.
 
 | | |
 |---|---|
-| **Tests** | **186 passing** — unit + integration against a live PostgreSQL |
+| **Tests** | **230 passing** — unit, integration against a live PostgreSQL, and live-feed tests against a real RTSP server |
 | Database | 6 migrations, PostGIS + pgvector, native range partitioning |
-| API | 38 endpoints, JWT + RBAC, WebSocket, audit log, Prometheus |
+| API | 39 endpoints, JWT + RBAC, WebSocket, audit log, Prometheus |
 | AI pipeline | detect → track → quality gate → ANPR + ReID → sighting |
 | Ingestion | RTSP / ONVIF / HLS / DVR adapters + a 1,800-vehicle traffic world |
 | Event processor | cross-camera identity, 8 configurable alert rules |
@@ -63,10 +63,10 @@ Measured, not asserted — `make benchmark`:
 
 | | |
 |---|---|
-| Whole 50-camera estate | 14.2 ms/tick, **9% of one core** |
+| Whole 50-camera estate | 17.1 ms/tick, **10% of one core** |
 | ANPR, dedicated lane, day | **92.5%** end-to-end |
 | ANPR, wide-angle, night | **37.9%** — published because it is true |
-| Gate reduction (3-min window) | **93.3%** fewer comparisons |
+| Gate reduction (3-min window) | **97.6%** fewer comparisons |
 | ReID same-ID vs different-ID | 0.721 ± 0.112 vs 0.361 ± 0.078 |
 
 Full results and method: **[docs/BENCHMARKS.md](docs/BENCHMARKS.md)**
@@ -125,7 +125,7 @@ sentinel/
 ├── config/cameras.yaml     ← THE file you edit for real cameras
 ├── infrastructure/         nginx, Prometheus, Grafana, Kubernetes
 ├── scripts/benchmark.py    every number in the docs comes from here
-├── tests/                  186 tests
+├── tests/                  230 tests
 └── docs/
 ```
 
@@ -138,7 +138,7 @@ make demo            # everything, one command
 make logs            # follow the pipeline
 make down            # stop (keeps data)
 make clean           # stop and delete data
-make test            # 186 tests
+make test            # 230 tests
 make benchmark       # measure it yourself
 make observability   # + Prometheus and Grafana
 make help            # all targets
@@ -217,6 +217,8 @@ correct degraded behaviour for a control room, and it is tested.
 | [LEGACY_INTEGRATION.md](docs/LEGACY_INTEGRATION.md) | Analog DVRs, edge gateways, DPDP / BSA §63 |
 | [SCALING.md](docs/SCALING.md) | The path from 50 to 80,000 cameras |
 | [BENCHMARKS.md](docs/BENCHMARKS.md) | Measured performance and method |
+| [SENTINEL_LIVE_TEST_REPORT.md](docs/SENTINEL_LIVE_TEST_REPORT.md) | 50 cameras over live RTSP: PTS, codecs, reconnection |
+| [PHASE2_AUDIT.md](docs/PHASE2_AUDIT.md) | What was executed, and what is still pending |
 | [LIMITATIONS.md](docs/LIMITATIONS.md) | What this does not do |
 | [REAL_CAMERAS.md](docs/REAL_CAMERAS.md) | Connecting live feeds |
 | [DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) | Click-by-click presentation runbook |

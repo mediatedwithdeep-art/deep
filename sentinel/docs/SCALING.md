@@ -79,7 +79,7 @@ scale that is unbounded.
 
 The spatio-temporal gate bounds it: only cameras reachable by road within a
 plausible travel window are candidates. Measured on the demo estate,
-**3.3 candidates out of 49** in a 3-minute window.
+**1.2 candidates out of 49** in a 3-minute window, 3.3 in a 5-minute one.
 
 Critically, the candidate count does **not** grow with estate size. Adding
 Surat's cameras does not add candidates for a vehicle in Ahmedabad, because

@@ -170,8 +170,8 @@ Stay on that table.
 
 > "Appearance matching against all fifty cameras produces false positives at
 > a rate that destroys operator trust in about ten minutes. We measured the
-> gate: within a three-minute arrival window it leaves **3.3 candidate
-> cameras out of 49** — a 93% reduction. The same model that is unusable
+> gate: within a three-minute arrival window it leaves **1.2 candidate
+> cameras out of 49** — a 97.6% reduction, and 3.3 within five minutes. The same model that is unusable
 > against fifty is trustworthy against three."
 
 > "And it is a PostGIS query plus a cached routing matrix. No GPU."
@@ -251,13 +251,14 @@ where nothing goes wrong.
 |---|---|
 | Cameras / protocols / vendors | 50 / 4 / 9 |
 | ANPR-capable | 13 of 50 (26%) |
-| Gate reduction (3-min window) | 3.3 candidates of 49 — **93%** |
+| Gate reduction (3-min window) | 1.2 candidates of 49 — **97.6%** |
+| Gate reduction (5-min window) | 3.3 candidates of 49 — **93.3%** |
 | ANPR, dedicated lane, day | **92.5%** end-to-end |
 | ANPR, wide-angle, night | **37.9%** — say this one |
-| Estate cost | 14 ms/tick, **9%** of one core |
-| Implied capacity | ~585 cameras per core |
+| Estate cost | 17 ms/tick, **10%** of one core |
+| Implied capacity | ~488 cameras per core |
 | State-scale arithmetic | 320 Gbps, 104 PB/month |
-| Tests | 186 passing |
+| Tests | 230 passing |
 
 Every one of these comes from `make benchmark`. If a judge asks, run it.
 

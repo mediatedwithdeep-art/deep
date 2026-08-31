@@ -165,14 +165,14 @@ cameras to watch *next*, so the map highlights ahead of the vehicle.
 
 | | |
 |---|---|
-| Per tick, whole estate | **14.2 ms** |
-| Tick budget used at 6 Hz | **9%** |
+| Per tick, whole estate | **17.1 ms** |
+| Tick budget used at 6 Hz | **10%** |
 | Sightings produced | 10 / s |
 | Plate reads | 13.6% of sightings |
 | Cameras producing sightings | 26 / 50 in a 30 s window |
-| **Implied capacity, single core** | **~585 cameras** |
+| **Implied capacity, single core** | **~488 cameras** |
 
-Treat ~585 as an upper bound for the *simulation* path. With real decode and
+Treat ~488 as an upper bound for the *simulation* path. With real decode and
 inference the binding constraint is NVDEC and GPU, not this loop:
 roughly **30–45 sub-streams per T4-class GPU** (see [ARCHITECTURE.md](ARCHITECTURE.md#15-latency-budget)).
 
@@ -204,7 +204,7 @@ post-hoc filter.
 | Partitions created ahead | 33 across 7 partitioned tables |
 | Retention by `DROP PARTITION` | instant, no bloat |
 | FOV polygon accuracy | within 5% of π·r²·(fov/360) |
-| Gate query | 2 candidates within a 3-minute window, of 49 |
+| Gate query | 1.2 candidates within a 3-minute window, of 49 |
 
 ---
 

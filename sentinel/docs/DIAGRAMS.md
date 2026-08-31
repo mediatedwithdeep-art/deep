@@ -89,7 +89,8 @@ flowchart LR
     style PROB fill:#33230a,stroke:#4d3611,color:#d98a1a
 ```
 
-Measured: **3.3 candidate cameras out of 49** in a 3-minute window — 93.3%
+Measured: **1.2 candidate cameras out of 49** in a 3-minute window — 97.6%
+(**3.3 of 49** in a 5-minute window — 93.3%)
 of comparisons never happen. Appearance alone can never reach CONFIRMED.
 
 ---

@@ -83,7 +83,7 @@ confidence widens the gate rather than producing a false negative.
 
 Real models need weights, a GPU, and re-measurement on your own footage. The
 binding constraint moves from this loop to **NVDEC and GPU**: roughly 30–45
-sub-streams per T4-class GPU. The ~585-cameras-per-core figure is an upper
+sub-streams per T4-class GPU. The ~488-cameras-per-core figure is an upper
 bound for the simulation path only.
 
 ### Domain shift is real
