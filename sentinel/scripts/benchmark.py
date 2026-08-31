@@ -313,7 +313,66 @@ def bench_gate() -> dict:
             f"{100*(1-mean/(n-1)):.1f}% fewer comparisons")
     row("", "", "")
     row("without the gate", f"{n-1} candidates", "every camera, every sighting")
-    return {"cameras": n, "mean_candidates": horizons}
+
+    # ── PART 17: the same reduction priced in PAIRS and MILLISECONDS ──
+    #
+    # Candidate cameras are a property of the road graph and prove nothing
+    # about cost. What a reviewer can hold us to is comparisons and time, so
+    # the per-pair cost is MEASURED here against the real scorer and then
+    # multiplied by the gated and ungated pair counts. The multiplication is
+    # arithmetic and is labelled as such; the microseconds are not.
+    from sentinel_core import fusion
+    from sentinel_ai.reid import create_extractor
+
+    ex = create_extractor("simulation")
+    now = datetime.now(timezone.utc)
+
+    def _tracklet(vid: str, cam: str):
+        return fusion.Tracklet(
+            tracklet_id=vid, camera_id=cam, ts_enter=now, ts_exit=now,
+            vclass="car", embedding=ex.extract(identity=vid, vehicle_type="car",
+                                               colour="white", view_quality=0.9),
+            embedding_model="simulation", plate_text=None,
+            colour="white", colour_conf=0.85)
+
+    gate = fusion.Gate(from_camera="A", to_camera="B",
+                       window_start=now - timedelta(seconds=60),
+                       window_end=now + timedelta(seconds=60),
+                       expected_at=now, travel_s=120.0, source="road")
+    a, b = _tracklet("V1", "A"), _tracklet("V2", "B")
+    fusion.score_pair(a, b, gate)                      # warm the path
+
+    reps = 4000
+    t0 = time.perf_counter()
+    for _ in range(reps):
+        fusion.score_pair(a, b, gate)
+    per_pair_us = 1e6 * (time.perf_counter() - t0) / reps
+
+    # One batch, at the demo estate's live-vehicle load. The gated count
+    # follows from the 180 s reachability measured above.
+    open_vehicles, batch = 400, 50
+    mean_reach = horizons[180]
+    gated_pairs = int(round(batch * open_vehicles * (mean_reach / (n - 1))))
+    ungated_pairs = batch * open_vehicles
+
+    row("", "", "")
+    row("measured cost per scored pair", f"{per_pair_us:.1f} us", "fusion.score_pair, 4,000 reps")
+    row("pairs scored WITHOUT the gate", f"{ungated_pairs:,}",
+        f"{batch} sightings x {open_vehicles} open vehicles")
+    row("pairs scored WITH the gate", f"{gated_pairs:,}",
+        f"180 s reachability, {mean_reach:.1f} of {n-1} cameras")
+    row("→ pair reduction", f"{100*(1-gated_pairs/ungated_pairs):.1f}%", "calculated")
+    row("scoring time WITHOUT the gate",
+        f"{ungated_pairs*per_pair_us/1000:.1f} ms", "measured us x calculated pairs")
+    row("scoring time WITH the gate",
+        f"{gated_pairs*per_pair_us/1000:.1f} ms", "measured us x calculated pairs")
+
+    return {"cameras": n, "mean_candidates": horizons,
+            "per_pair_us": round(per_pair_us, 2),
+            "batch_sightings": batch, "open_vehicles": open_vehicles,
+            "ungated_pairs": ungated_pairs, "gated_pairs": gated_pairs,
+            "ungated_ms": round(ungated_pairs * per_pair_us / 1000, 2),
+            "gated_ms": round(gated_pairs * per_pair_us / 1000, 2)}
 
 
 SUITES = {

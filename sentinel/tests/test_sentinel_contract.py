@@ -71,6 +71,98 @@ def test_no_ffmpeg_seek_or_speed_option_reaches_a_live_input():
         f"live input carries {forbidden & set(opts)}")
 
 
+def _string_literals(path: pathlib.Path) -> list[tuple[int, str]]:
+    """Every string constant in a module except its docstrings.
+
+    Docstrings are excluded deliberately: this file's own prose explains
+    what `-vf fps=` did and why it was removed, and a scan that cannot tell
+    an explanation from an instruction is a scan that gets deleted the
+    first time it fires on a comment.
+    """
+    tree = ast.parse(path.read_text())
+    docstrings = set()
+    for node in ast.walk(tree):
+        if isinstance(node, (ast.Module, ast.ClassDef,
+                             ast.FunctionDef, ast.AsyncFunctionDef)):
+            body = getattr(node, "body", None)
+            if body and isinstance(body[0], ast.Expr) and \
+                    isinstance(body[0].value, ast.Constant) and \
+                    isinstance(body[0].value.value, str):
+                docstrings.add(id(body[0].value))
+    return [(n.lineno, n.value) for n in ast.walk(tree)
+            if isinstance(n, ast.Constant) and isinstance(n.value, str)
+            and id(n) not in docstrings]
+
+
+def test_no_forced_constant_frame_rate_survives_anywhere_in_ingestion():
+    """PART 7 / P0 #4, enforced across the whole package rather than one file.
+
+    A forced-CFR filter resamples the stream inside ffmpeg -- duplicating
+    and dropping frames -- before Python sees a pixel, and raw video over a
+    pipe carries no timestamp channel to recover the original cadence from.
+    The damage is total and completely silent: every downstream timestamp
+    becomes a fiction, the spatio-temporal gate scores that fiction, and
+    nothing anywhere reports an error.
+
+    Scanned across every module because the way this returns is not a
+    considered decision. It is one line added by somebody smoothing out a
+    jittery preview, in whichever file they happened to be editing.
+
+    Only STRING LITERALS are inspected, because that is the only place an
+    ffmpeg argument can live. `fps=12.0` as a Python keyword argument is
+    ordinary camera metadata and must not be confused with `-vf fps=12`.
+    """
+    banned_exact = {"-vf", "-filter:v", "-vsync", "-stream_loop", "-re",
+                    "-fpsmax", "-r"}
+    offenders = []
+    for path in sorted(INGEST.glob("*.py")):
+        for lineno, text in _string_literals(path):
+            stripped = text.strip()
+            if stripped in banned_exact:
+                offenders.append(f"{path.name}:{lineno}: ffmpeg flag {stripped!r}")
+            if "fps=" in text or "readrate" in text or "vsync" in text:
+                offenders.append(f"{path.name}:{lineno}: filter string {text!r}")
+    assert not offenders, (
+        "forced constant-frame-rate conversion reappeared in the ingestion "
+        "package:\n  " + "\n  ".join(offenders))
+
+
+def test_the_removed_cfr_reader_has_not_come_back():
+    """`FrameReader` was deleted, not deprecated.
+
+    It piped raw BGR24 out of ffmpeg with `-vf fps=`, timed frames by their
+    arrival off a socket, and reconnected on a flat three-second sleep --
+    three separate P0 defects, none of which is visible from a constructor
+    that looks perfectly reasonable. Dead code with a working-looking
+    constructor is code somebody picks up, so the guard is that the class
+    cannot exist in the package at all.
+    """
+    import ingestion.stream_reader as sr
+    assert not hasattr(sr, "FrameReader"), (
+        "FrameReader is back. Live decoding belongs to LiveStreamReader, "
+        "which carries each frame's own PTS.")
+    for path in sorted(INGEST.glob("*.py")):
+        tree = ast.parse(path.read_text())
+        names = {n.name for n in ast.walk(tree) if isinstance(n, ast.ClassDef)}
+        assert "FrameReader" not in names, f"{path.name} redefines FrameReader"
+
+
+def test_the_live_reader_is_the_only_decoder_the_worker_can_reach():
+    """One decode path, so there is one place PTS can be lost.
+
+    Two readers means two timing models, and the second one is always the
+    one written in a hurry against a camera that would not cooperate.
+    """
+    import ingestion.worker as worker
+    assert hasattr(worker, "LiveStreamReader")
+    tree = ast.parse((INGEST / "worker.py").read_text())
+    imported = {a.name for n in ast.walk(tree)
+                if isinstance(n, ast.ImportFrom) for a in n.names}
+    assert "LiveStreamReader" in imported
+    assert "FrameReader" not in imported, (
+        "the worker imports a reader other than LiveStreamReader")
+
+
 # ── [ ] no file-download dependency ──────────────────────────────────
 
 def test_nothing_in_the_live_path_downloads_or_opens_a_local_file():

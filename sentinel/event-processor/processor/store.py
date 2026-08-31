@@ -210,6 +210,32 @@ class Store:
                 is_watchlisted=r["is_watchlisted"]))
         return out
 
+    def count_open_vehicles(self, ttl_seconds: int = 900,
+                            limit: int = 4000) -> int:
+        """How many vehicles are live, with NO adjacency gate applied.
+
+        This exists to make the gate's reduction claim falsifiable. The gate
+        is applied inside `open_vehicles()` as a SQL pushdown, so by the
+        time the matcher sees a candidate list the saving has already
+        happened and cannot be measured from it. PART 17 asks for the
+        before-and-after in comparisons, and the "before" is precisely this
+        number: what an ungated implementation would have had to score every
+        sighting against.
+
+        It is a bounded count over the same time window and the same LIMIT
+        the real query uses, so it prices the counterfactual honestly rather
+        than against an unbounded table scan an ungated system would not
+        have written either.
+        """
+        cutoff = datetime.now(timezone.utc) - timedelta(seconds=ttl_seconds)
+        row = self.conn.execute("""
+            SELECT count(*) AS n FROM (
+                SELECT 1 FROM vehicle v
+                WHERE v.last_seen > %s
+                ORDER BY v.last_seen DESC
+                LIMIT %s) t""", (cutoff, limit)).fetchone()
+        return int(row["n"]) if row else 0
+
     def embeddings_for(self, vehicle_track_ids: list[str]) -> dict[str, Any]:
         """Fetch embeddings for a specific set of vehicles.
 

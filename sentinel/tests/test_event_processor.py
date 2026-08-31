@@ -394,3 +394,84 @@ def test_sighting_from_an_unknown_camera_is_rejected_not_orphaned(estate):
     before = proc.stats.errors
     proc.process_sightings([_sighting("NOT-A-REAL-CAMERA", ts=NOW)])
     assert proc.stats.errors > before
+
+
+# ── the gate, priced in pairs and milliseconds (PART 17) ─────────────
+
+def test_the_gate_is_measured_in_pairs_scored_not_only_in_candidates(estate):
+    """PART 17 asks what the gate costs and what it saves, in comparisons.
+
+    Candidate *cameras* are a property of the road graph and can be
+    computed without running anything. Pairs *scored* are a property of the
+    running matcher, and they are the number that decides whether the
+    architecture survives at scale -- so the matcher counts both the pairs
+    it really scored and the pairs an ungated implementation would have had
+    to score over the same batches.
+
+    EP-CAM-Z has no adjacency to anything, so a vehicle last seen there can
+    reach no camera at all: every pair involving it is one the gate removed
+    and the counterfactual keeps.
+    """
+    proc = EventProcessor(estate, create_bus("memory"))
+    m = proc.matcher
+
+    # Seed vehicles on the unreachable camera. Nothing at A or B can ever
+    # legitimately be compared against them.
+    for i in range(6):
+        proc.process_sightings([
+            _sighting("EP-CAM-Z", ts=NOW - timedelta(seconds=90),
+                      embedding=_emb(100 + i), lat=23.4000, lon=72.9000)])
+
+    before_scored = m.stats.scored_pairs
+    before_ungated = m.stats.ungated_pairs
+
+    # A batch at A and B, which the seeded Z vehicles cannot have produced.
+    proc.process_sightings([
+        _sighting("EP-CAM-A", ts=NOW, embedding=_emb(200)),
+        _sighting("EP-CAM-B", ts=NOW, embedding=_emb(201),
+                  lat=23.0331, lon=72.5189)])
+
+    scored = m.stats.scored_pairs - before_scored
+    ungated = m.stats.ungated_pairs - before_ungated
+
+    assert ungated > 0, "the counterfactual was never recorded"
+    assert scored < ungated, (
+        f"the gate removed nothing: {scored} scored of {ungated} ungated")
+    assert 0.0 < m.stats.pair_reduction <= 1.0
+
+
+def test_the_gate_reports_milliseconds_not_only_counts(estate):
+    """A reduction claim with no time attached is unfalsifiable.
+
+    The matcher times gate lookups and pair scoring separately, because
+    they fail differently: a slow gate is a database problem, and a slow
+    scorer is an embedding problem. Both must be visible or the wrong one
+    gets optimised.
+    """
+    proc = EventProcessor(estate, create_bus("memory"))
+    m = proc.matcher
+    proc.process_sightings([
+        _sighting("EP-CAM-A", ts=NOW - timedelta(seconds=130), embedding=_emb(300))])
+    proc.process_sightings([
+        _sighting("EP-CAM-B", ts=NOW, embedding=_emb(300),
+                  lat=23.0331, lon=72.5189)])
+
+    assert m.stats.gate_lookups > 0
+    assert m.stats.gate_seconds > 0.0, "gate time was never measured"
+    assert m.stats.mean_gate_ms > 0.0
+    assert m.stats.scored_pairs > 0
+    assert m.stats.scoring_seconds > 0.0, "scoring time was never measured"
+    assert m.stats.mean_pair_us > 0.0
+    # The projection is priced at the measured per-pair cost, so it must be
+    # at least the time actually spent -- an ungated run scores a superset.
+    assert m.stats.projected_ungated_seconds >= m.stats.scoring_seconds * 0.99
+
+
+def test_pair_reduction_reads_as_no_evidence_when_nothing_was_scored():
+    """An empty run must not report a perfect score.
+
+    Dividing by a zero denominator and calling the result 100% is how a
+    metric starts flattering the system exactly when it has done no work.
+    """
+    from processor.matcher import MatcherStats
+    assert MatcherStats().pair_reduction == 0.0

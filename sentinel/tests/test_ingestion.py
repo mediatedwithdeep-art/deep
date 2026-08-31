@@ -21,7 +21,7 @@ from ingestion.camera_config import (
     CameraSpec, load_from_yaml, resolve_credentials,
 )
 from ingestion.stream_reader import (
-    FrameReader, redact, rtsp_socket_timeout_option,
+    ffmpeg_input_options, probe, redact, rtsp_socket_timeout_option,
 )
 from ingestion.world import TrafficWorld
 from ingestion.supervisor import IngestionSupervisor
@@ -122,17 +122,45 @@ def test_credentials_are_redacted_from_log_output():
 
 
 @pytest.mark.parametrize("url,expected,forbidden", [
-    ("rtsp://h/s",           "-rtsp_transport", "-stream_loop"),
+    ("rtsp://h/s",           "-rtsp_transport",   "-live_start_index"),
+    ("rtsps://h/s",          "-rtsp_transport",   "-live_start_index"),
     ("https://h/x.m3u8",     "-live_start_index", "-rtsp_transport"),
-    ("/tmp/clip.mp4",        "-stream_loop", "-rtsp_transport"),
+    ("/tmp/clip.mp4",        "-analyzeduration",  "-rtsp_transport"),
 ])
 def test_ffmpeg_input_flags_are_protocol_specific(url, expected, forbidden):
     """ffmpeg 6+ hard-fails with 'Option rtsp_transport not found' when the
     flag is passed for a non-RTSP input. That silently kills every
     file-backed and HLS camera, which is most of the demo estate."""
-    opts = FrameReader(url)._input_options()
+    opts = ffmpeg_input_options(url)
     assert expected in opts
     assert forbidden not in opts
+
+
+@pytest.mark.parametrize("url", ["rtsp://h/s", "rtsps://h/s"])
+def test_rtsp_probe_options_pin_tcp_and_carry_a_socket_timeout(url):
+    """P0 #9 and P0 #2 on the probe path.
+
+    The probe is what decides a camera is ONLINE. If it can fall back to UDP
+    the estate is surveyed over a transport the reader will never use, and
+    if it carries no socket timeout an unresponsive server reads as a slow
+    camera rather than an unreachable one.
+    """
+    opts = ffmpeg_input_options(url)
+    assert opts[opts.index("-rtsp_transport") + 1] == "tcp"
+    assert rtsp_socket_timeout_option() in opts
+    assert "udp" not in opts
+
+
+def test_no_probe_option_forces_a_constant_frame_rate():
+    """P0 #4. Forced CFR resamples inside ffmpeg, before Python sees a
+    pixel, and raw video over a pipe has no timestamp channel to recover
+    the original cadence from. No option we generate may reintroduce it."""
+    for url in ("rtsp://h/s", "https://h/x.m3u8", "/tmp/clip.mp4"):
+        opts = ffmpeg_input_options(url)
+        joined = " ".join(opts)
+        assert "fps=" not in joined, f"{url} carries a forced frame rate: {opts}"
+        for banned in ("-r", "-vsync", "-vf", "-filter:v", "-re", "-stream_loop"):
+            assert banned not in opts, f"{url} carries {banned}: {opts}"
 
 
 @pytest.mark.parametrize("url", [
@@ -156,7 +184,9 @@ def test_generated_ffmpeg_argv_is_accepted_by_the_installed_binary(url):
     if not shutil.which("ffmpeg"):
         pytest.skip("ffmpeg not installed")
 
-    cmd = FrameReader(url, width=64, height=48, fps=1)._command()
+    cmd = ["ffmpeg", "-hide_banner", "-loglevel", "error",
+           *ffmpeg_input_options(url), "-i", url, "-an",
+           "-t", "0.1", "-f", "null", "-"]
     r = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
     err = (r.stderr or "") + (r.stdout or "")
 
@@ -183,13 +213,22 @@ def test_rtsp_socket_timeout_flag_exists_in_this_ffmpeg():
         f"chose {flag} but this ffmpeg does not list it")
 
 
-def test_unreachable_stream_fails_without_raising():
-    r = FrameReader("rtsp://10.255.255.1:554/nope", width=64, height=48, fps=1)
-    r.start()
-    import time
-    time.sleep(1.5)
-    assert r.frames_read == 0
-    r.stop()
+def test_probing_an_unreachable_camera_reports_an_error_rather_than_raising():
+    """A survey of a few thousand cameras will contain wrong addresses. The
+    probe must return them as errors, one at a time, rather than raising
+    into the caller and taking the survey down with the first bad row.
+
+    This also exercises the real generated argv end to end: a connection
+    error proves ffprobe parsed our options and got as far as the network.
+    """
+    if not shutil.which("ffprobe"):
+        pytest.skip("ffprobe not installed")
+    info, err = probe("rtsp://127.0.0.1:9/nope", timeout_s=8)
+    assert info is None
+    assert err, "an unreachable camera must report why"
+    for fatal in ("Unrecognized option", "Option not found", "Unknown option",
+                  "Error splitting the argument list"):
+        assert fatal not in err, f"probe built an argv this ffmpeg rejects: {err}"
 
 
 # ── traffic world ────────────────────────────────────────────────────

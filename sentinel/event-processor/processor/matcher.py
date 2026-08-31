@@ -29,6 +29,7 @@ are surfaced for operator confirmation rather than silently accepted.
 
 from __future__ import annotations
 
+import time
 from dataclasses import dataclass, field
 from datetime import datetime, timedelta, timezone
 
@@ -57,6 +58,18 @@ class MatchOutcome:
 
 @dataclass
 class MatcherStats:
+    """Counters, and the three the gate claim is actually made of.
+
+    PART 17 asks for the gate's effect in *pairs scored* and *milliseconds*,
+    not only in candidate cameras. Candidates are a property of the road
+    graph; pairs and time are properties of the running system, and they are
+    what a reviewer can hold us to. So the matcher counts both the pairs it
+    really scored and the pairs it *would* have scored with no gate at all
+    -- the same batch, every open vehicle against every sighting, which is
+    exactly what an ungated implementation does. The counterfactual costs
+    one multiplication per batch, so it is always on rather than a flag
+    somebody has to remember to set.
+    """
     sightings: int = 0
     new_vehicles: int = 0
     matched_by_plate: int = 0
@@ -66,6 +79,11 @@ class MatcherStats:
     gate_candidates_total: int = 0
     gate_lookups: int = 0
     scored_pairs: int = 0
+    #: Pairs an ungated matcher would have scored over the same batches.
+    ungated_pairs: int = 0
+    #: Wall time inside gate lookups, and inside pair scoring.
+    gate_seconds: float = 0.0
+    scoring_seconds: float = 0.0
 
     @property
     def mean_gate_candidates(self) -> float:
@@ -73,12 +91,50 @@ class MatcherStats:
         cross-camera precision more than any model choice does."""
         return self.gate_candidates_total / max(self.gate_lookups, 1)
 
+    @property
+    def pair_reduction(self) -> float:
+        """Fraction of comparisons the gate removed, in [0, 1].
+
+        Zero when nothing was scored, which reads correctly as "no evidence"
+        rather than as a perfect score.
+        """
+        if self.ungated_pairs <= 0:
+            return 0.0
+        return 1.0 - (self.scored_pairs / self.ungated_pairs)
+
+    @property
+    def mean_gate_ms(self) -> float:
+        """Milliseconds per gate lookup."""
+        return 1000.0 * self.gate_seconds / max(self.gate_lookups, 1)
+
+    @property
+    def mean_pair_us(self) -> float:
+        """Microseconds per scored pair -- the unit cost the ungated
+        counterfactual is priced in."""
+        return 1e6 * self.scoring_seconds / max(self.scored_pairs, 1)
+
+    @property
+    def projected_ungated_seconds(self) -> float:
+        """What the same work would have cost with no gate.
+
+        Priced at the measured per-pair cost. Stated as a projection, not a
+        measurement: we did not run the ungated matcher, we counted what it
+        would have had to score and multiplied.
+        """
+        return self.ungated_pairs * (self.mean_pair_us / 1e6)
+
 
 class CrossCameraMatcher:
     def __init__(self, store: Store, *,
                  weights: fusion.Weights = fusion.DEFAULT_WEIGHTS,
                  track_ttl_seconds: int = 900,
-                 plate_lookback_seconds: int = 7200):
+                 plate_lookback_seconds: int = 7200,
+                 measure_counterfactual: bool = True):
+        #: Costs one bounded COUNT per batch, and is what makes the gate's
+        #: reduction claim checkable rather than asserted. On by default for
+        #: that reason; a deployment that wants the query back can turn it
+        #: off and lose only the metric.
+        self.measure_counterfactual = measure_counterfactual
         self.store = store
         self.weights = weights
         self.track_ttl_seconds = track_ttl_seconds
@@ -101,8 +157,10 @@ class CrossCameraMatcher:
         if key not in self._gate_cache:
             if len(self._gate_cache) > 2000:
                 self._gate_cache.clear()
+            t0 = time.perf_counter()
             self._gate_cache[key] = self.store.gate(
                 from_camera_uuid, seen_at, clock_confidence)
+            self.stats.gate_seconds += time.perf_counter() - t0
             self.stats.gate_lookups += 1
             self.stats.gate_candidates_total += len(self._gate_cache[key])
         return self._gate_cache[key]
@@ -169,6 +227,18 @@ class CrossCameraMatcher:
             (self.store.camera(s.camera_id) for s in sightings) if cam})
         open_vehicles = self.store.open_vehicles(
             self.track_ttl_seconds, reachable_from=batch_cameras)
+
+        # The ungated counterfactual for PART 17.
+        #
+        # It has to be taken HERE, not inside the appearance pass: the gate
+        # is applied as a SQL pushdown in open_vehicles(), so `open_vehicles`
+        # is already the gated set and measuring against it would report the
+        # gate saving nothing while it was in fact doing most of its work in
+        # the database. The honest denominator is every live vehicle -- what
+        # an implementation with no gate would compare each sighting against.
+        if self.measure_counterfactual:
+            self.stats.ungated_pairs += len(sightings) * \
+                self.store.count_open_vehicles(self.track_ttl_seconds)
         by_track_id = {v.vehicle_track_id: v for v in open_vehicles}
         claimed: set[str] = set()
         unresolved: list[Sighting] = []
@@ -249,6 +319,7 @@ class CrossCameraMatcher:
                 v.embedding = embeddings.get(v.vehicle_track_id)
 
         pairs: dict[tuple[int, int], tuple[fusion.ScoreBreakdown, GateWindow]] = {}
+        _score_t0 = time.perf_counter()
         for si, s in enumerate(sightings):
             cam = self.store.camera(s.camera_id)
             if cam is None:
@@ -269,9 +340,10 @@ class CrossCameraMatcher:
                     source=gw.source)
                 sb = fusion.score_pair(self._to_tracklet(v), cand_tracklet, gate,
                                        target_plate=v.best_plate, w=self.weights)
+                self.stats.scored_pairs += 1
                 if sb.decision != "REJECTED":
                     pairs[(si, vi)] = (sb, gw)
-                    self.stats.scored_pairs += 1
+        self.stats.scoring_seconds += time.perf_counter() - _score_t0
 
         assigned_s: set[int] = set()
         for si, vi in _hungarian(pairs, len(sightings), len(available)):

@@ -240,3 +240,112 @@ def test_watchlist_requires_something_to_match_on(db):
     import psycopg
     with pytest.raises(psycopg.errors.CheckViolation):
         db.execute("INSERT INTO watchlist (label, reason) VALUES ('empty','test')")
+
+
+# ── tiered storage ───────────────────────────────────────────────────
+
+def test_every_partitioned_table_has_an_ordered_tier_policy(db):
+    """HOT <= WARM <= COLD <= retention, for every table without exception.
+
+    An out-of-order policy is not a cosmetic defect: if cold_days exceeds
+    retention_days the drop runs before the archival detach, and the data is
+    destroyed before anything can export it. The database enforces the
+    ordering so no operator can configure that state by hand.
+    """
+    rows = db.execute(
+        "SELECT table_name, hot_days, warm_days, cold_days, retention_days "
+        "FROM partitioned_table_config").fetchall()
+    assert rows, "no partitioned tables are configured"
+    for name, hot, warm, cold, retention in rows:
+        assert 1 <= hot <= warm <= cold <= retention, (
+            f"{name} has an out-of-order tier policy: "
+            f"hot={hot} warm={warm} cold={cold} retention={retention}")
+
+
+def test_the_tier_policy_cannot_be_configured_out_of_order(db):
+    """The CHECK is the control. Without it the ordering above is a
+    convention that holds until the first operator edits a row."""
+    import psycopg
+    with pytest.raises(psycopg.errors.CheckViolation):
+        db.execute("UPDATE partitioned_table_config "
+                   "SET cold_days = retention_days + 1 WHERE table_name='event'")
+
+
+@pytest.mark.parametrize("age_days,expected", [
+    (1, "HOT"), (10, "WARM"), (20, "COLD"), (99, "EXPIRED")])
+def test_a_partition_moves_through_the_tiers_as_it_ages(db, age_days, expected):
+    """vehicle_sighting is configured 7 / 15 / 30, which is the 7- and
+    15-day window the brief asks to be configurable. It is a row in a
+    config table now, not a constant inside a migration."""
+    tier = db.execute(
+        "SELECT partition_tier('vehicle_sighting', (now() - make_interval(days => %s))::date)",
+        (age_days,)).fetchone()[0]
+    assert tier == expected
+
+
+def test_retention_windows_are_configurable_without_a_migration(db):
+    """The point of the config table. An estate that must keep 15 days of
+    sightings instead of 7 changes one row; nothing is rebuilt or
+    redeployed, and the change takes effect on the next tier evaluation."""
+    db.execute("UPDATE partitioned_table_config "
+               "SET hot_days = 15, warm_days = 21 WHERE table_name='vehicle_sighting'")
+    try:
+        tier = db.execute(
+            "SELECT partition_tier('vehicle_sighting', (now() - interval '10 day')::date)"
+        ).fetchone()[0]
+        assert tier == "HOT", "a widened hot window did not take effect"
+    finally:
+        db.execute("UPDATE partitioned_table_config "
+                   "SET hot_days = 7, warm_days = 15 WHERE table_name='vehicle_sighting'")
+
+
+def test_the_tier_report_accounts_for_every_live_partition(db):
+    """An operator has to be able to answer 'what is on disk, and how much
+    of it is hot' without reading pg_class by hand."""
+    db.execute("SELECT count(*) FROM ensure_partitions()")
+    rows = db.execute("SELECT table_name, partition_name, tier, bytes "
+                      "FROM storage_tier_report()").fetchall()
+    assert rows, "the report found no partitions at all"
+    assert all(tier in ("HOT", "WARM", "COLD", "EXPIRED") for _, _, tier, _ in rows)
+    assert all(nbytes >= 0 for _, _, _, nbytes in rows)
+    # Every reported partition must belong to a configured table.
+    configured = {r[0] for r in db.execute(
+        "SELECT table_name FROM partitioned_table_config").fetchall()}
+    assert {r[0] for r in rows} <= configured
+
+
+def test_cold_detach_removes_a_partition_from_the_query_path_without_dropping_it(db):
+    """DETACH, not DROP.
+
+    BSA s63 evidence and the DPDP audit trail both outlive the operational
+    window, so the archival step must leave the rows producible. A cold
+    boundary that deleted data would make retention policy quietly destroy
+    material the law requires be recoverable.
+    """
+    db.execute("""CREATE TABLE IF NOT EXISTS tier_demo (
+                      id BIGSERIAL, ts TIMESTAMPTZ NOT NULL
+                  ) PARTITION BY RANGE (ts)""")
+    db.execute("""CREATE TABLE IF NOT EXISTS tier_demo_old
+                  PARTITION OF tier_demo
+                  FOR VALUES FROM ('2020-01-01') TO ('2020-01-02')""")
+    db.execute("INSERT INTO partitioned_table_config "
+               "(table_name, interval_kind, retention_days, lookahead_units, "
+               " hot_days, warm_days, cold_days) "
+               "VALUES ('tier_demo','day',3650,1,1,2,3) "
+               "ON CONFLICT (table_name) DO NOTHING")
+    db.execute("INSERT INTO tier_demo (ts) VALUES ('2020-01-01T06:00:00Z')")
+    try:
+        assert db.execute("SELECT count(*) FROM tier_demo").fetchone()[0] == 1
+
+        detached = [r[0] for r in
+                    db.execute("SELECT detached FROM detach_cold_partitions()").fetchall()]
+        assert "tier_demo_old" in detached
+
+        # Gone from the parent's query path ...
+        assert db.execute("SELECT count(*) FROM tier_demo").fetchone()[0] == 0
+        # ... but the rows still exist and can be exported.
+        assert db.execute("SELECT count(*) FROM tier_demo_old").fetchone()[0] == 1
+    finally:
+        db.execute("DROP TABLE IF EXISTS tier_demo_old")
+        db.execute("DROP TABLE IF EXISTS tier_demo")
+        db.execute("DELETE FROM partitioned_table_config WHERE table_name='tier_demo'")
