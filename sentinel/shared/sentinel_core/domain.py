@@ -221,6 +221,12 @@ class Sighting(BaseModel):
     timestamp: datetime               # representative (midpoint)
     vehicle_type: VehicleType
     vehicle_color: str | None = None
+    # How sure the colour call is. Feeds the fusion score, where a
+    # low-confidence colour must pull toward "no information" rather than
+    # toward "different vehicle" -- sodium street lighting makes silver and
+    # white genuinely indistinguishable, and treating that disagreement as
+    # evidence loses real matches.
+    color_confidence: float | None = None
     vehicle_make_model: str | None = None
     plate: PlateRead | None = None
     embedding: list[float] | None = None

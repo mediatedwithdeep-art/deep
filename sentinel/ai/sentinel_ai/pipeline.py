@@ -276,7 +276,14 @@ class CameraPipeline:
                              key=lambda p: (p.valid_format, p.confidence))
 
         embedding = self.reid.aggregate(state.embeddings, state.embedding_weights)
-        colour = max(state.colours, key=state.colours.get) if state.colours else None
+        colour = colour_conf = None
+        if state.colours:
+            colour = max(state.colours, key=state.colours.get)
+            # Confidence is the winning colour's share of the vote weight:
+            # a track that flipped between white and silver every frame
+            # should not report the winner confidently.
+            total = sum(state.colours.values())
+            colour_conf = round(state.colours[colour] / total, 3) if total else None
 
         return Sighting(
             vehicle_track_id="",          # assigned by the cross-camera matcher
@@ -287,6 +294,7 @@ class CameraPipeline:
             timestamp=track.first_seen + (track.last_seen - track.first_seen) / 2,
             vehicle_type=track.vehicle_type,
             vehicle_color=colour,
+            color_confidence=colour_conf,
             plate=best_plate,
             embedding=embedding,
             embedding_model=self.reid.model_name if embedding else None,

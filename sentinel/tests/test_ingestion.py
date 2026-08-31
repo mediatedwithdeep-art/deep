@@ -143,7 +143,7 @@ def test_unreachable_stream_fails_without_raising():
 
 @pytest.fixture(scope="module")
 def world():
-    return TrafficWorld(vehicle_count=400, seed=7, speed_multiplier=1.0)
+    return TrafficWorld(vehicle_count=400, seed=7, time_scale=1.0)
 
 
 def test_world_spawns_the_requested_fleet(world):
@@ -154,7 +154,7 @@ def test_vehicles_follow_roads_rather_than_straight_lines(world):
     """Movement must obey the road graph. If vehicles drifted freely, the
     spatio-temporal gate would be validated against motion it will never
     see in production."""
-    w = TrafficWorld(vehicle_count=20, seed=3, speed_multiplier=1.0)
+    w = TrafficWorld(vehicle_count=20, seed=3, time_scale=1.0)
     v = next(iter(w.vehicles.values()))
     positions = []
     for _ in range(120):
@@ -170,7 +170,7 @@ def test_vehicles_follow_roads_rather_than_straight_lines(world):
 
 
 def test_vehicles_move_at_plausible_road_speeds(world):
-    w = TrafficWorld(vehicle_count=200, seed=11, speed_multiplier=1.0)
+    w = TrafficWorld(vehicle_count=200, seed=11, time_scale=1.0)
     for _ in range(60):
         w.tick(0.5)
     speeds = [v.speed_kmph for v in w.vehicles.values() if v.active and v.speed_kmph > 0]
@@ -182,7 +182,7 @@ def test_vehicles_move_at_plausible_road_speeds(world):
 def test_some_vehicles_wait_at_junctions():
     """Signals and congestion are what stretch real arrival times, and are
     why the gate's late bound is far wider than its early one."""
-    w = TrafficWorld(vehicle_count=300, seed=5, speed_multiplier=2.0)
+    w = TrafficWorld(vehicle_count=300, seed=5, time_scale=2.0)
     for _ in range(400):
         w.tick(0.5)
     assert w.stats()["stopped"] > 0
@@ -203,7 +203,7 @@ def test_apparent_size_shrinks_with_distance():
     """Boxes must obey optics. Without this the quality gate never fires and
     ANPR appears to work at any range, which is the single most misleading
     thing a surveillance demo can do."""
-    w = TrafficWorld(vehicle_count=1, seed=2, speed_multiplier=1.0)
+    w = TrafficWorld(vehicle_count=1, seed=2, time_scale=1.0)
     v = next(iter(w.vehicles.values()))
     v.lat, v.lon, v.width_m, v.height_m = 23.0, 72.5, 1.75, 1.5
     w._grid.clear()
@@ -276,7 +276,7 @@ def test_supervisor_publishes_sightings_to_the_bus():
         bus = create_bus("memory")
         await bus.connect()
         sup = IngestionSupervisor(_specs(), bus, mode="demo", tick_hz=6.0,
-                                  vehicle_count=600, speed_multiplier=3.0)
+                                  vehicle_count=600, time_scale=3.0)
         for _ in range(6 * 40):
             await sup._tick()
         return bus, sup
@@ -301,7 +301,7 @@ def test_only_anpr_capable_cameras_produce_plate_reads():
         await bus.connect()
         specs = _specs()
         sup = IngestionSupervisor(specs, bus, mode="demo", tick_hz=6.0,
-                                  vehicle_count=900, speed_multiplier=3.0)
+                                  vehicle_count=900, time_scale=3.0)
         for _ in range(6 * 60):
             await sup._tick()
         return bus, {s.camera_id for s in specs if s.anpr_capable}
@@ -335,7 +335,7 @@ def test_shutdown_flushes_vehicles_still_in_frame():
         bus = create_bus("memory")
         await bus.connect()
         sup = IngestionSupervisor(_specs(8), bus, mode="demo", tick_hz=6.0,
-                                  vehicle_count=800, speed_multiplier=3.0)
+                                  vehicle_count=800, time_scale=3.0)
         for _ in range(6 * 20):
             await sup._tick()
         before = len([m for m in bus.published if m.topic == Topics.SIGHTINGS])
@@ -357,7 +357,7 @@ def test_estate_tick_stays_within_budget():
         bus = create_bus("memory")
         await bus.connect()
         sup = IngestionSupervisor(_specs(12), bus, mode="demo", tick_hz=6.0,
-                                  vehicle_count=1800, speed_multiplier=3.0)
+                                  vehicle_count=1800, time_scale=3.0)
         for _ in range(20):
             await sup._tick()                       # warm up
         t0 = time.perf_counter()

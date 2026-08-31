@@ -89,13 +89,26 @@ class SimVehicle:
 class TrafficWorld:
     def __init__(self, vehicle_count: int = 1800, seed: int = 20260907,
                  start_time: datetime | None = None,
-                 speed_multiplier: float = 1.0):
+                 time_scale: float = 1.0):
         self.graph = RoadGraph.build()
         self.rng = random.Random(seed)
         self.now = start_time or datetime.now(timezone.utc)
-        # Compresses simulated travel so a cross-camera journey is visible
-        # inside a demo slot rather than taking twenty real minutes.
-        self.speed_multiplier = speed_multiplier
+        # Compresses the DEMO CLOCK, not vehicle speed. This distinction is
+        # load-bearing and the difference between working and broken
+        # cross-camera tracking.
+        #
+        # Scaling vehicle speed makes vehicles arrive 3x sooner than the
+        # road network says they can, so every genuine transition falls
+        # outside the early bound of the spatio-temporal gate and is
+        # rejected. Cross-camera matching then produces zero matches while
+        # every individual component tests green -- the failure looks like a
+        # broken matcher and is actually a broken world.
+        #
+        # Scaling the clock instead advances simulated time and vehicle
+        # position by the same factor, so a journey the graph says takes
+        # 120 s still takes 120 s of SIMULATED time. The gate stays exact
+        # and the demo still fits in a presentation slot.
+        self.time_scale = time_scale
         self.vehicles: dict[str, SimVehicle] = {}
         self._counter = 0
         self._plates_used: set[str] = set()
@@ -232,7 +245,13 @@ class TrafficWorld:
             v.speed_kmph = road.speed_kmph * self.rng.uniform(0.55, 1.25)
 
     def tick(self, dt_seconds: float) -> None:
-        self.now += timedelta(seconds=dt_seconds)
+        """Advance the world by `dt_seconds` of wall time.
+
+        Simulated time and vehicle movement both advance by
+        dt_seconds * time_scale, so they never disagree.
+        """
+        dt = dt_seconds * self.time_scale
+        self.now += timedelta(seconds=dt)
         for v in list(self.vehicles.values()):
             if not v.active:
                 continue
@@ -252,7 +271,7 @@ class TrafficWorld:
 
             a, b, road = self._edge(v)
             length = self.graph.edge_length_m(a, b)
-            v.progress_m += (v.speed_kmph * 1000 / 3600) * dt_seconds * self.speed_multiplier
+            v.progress_m += (v.speed_kmph * 1000 / 3600) * dt
 
             if v.progress_m >= length:
                 v.progress_m -= length
@@ -262,8 +281,10 @@ class TrafficWorld:
                 # junction. This is what stretches real arrival times, and
                 # why the gate's late bound is far wider than its early one.
                 if self.rng.random() < 0.22:
+                    # Dwell is in simulated seconds, so it scales with the
+                    # clock automatically -- no division here.
                     v.stopped_until = self.now + timedelta(
-                        seconds=self.rng.uniform(8, 55) / max(self.speed_multiplier, 1))
+                        seconds=self.rng.uniform(8, 55))
             self._place(v)
 
     # ── observation ──────────────────────────────────────────────────

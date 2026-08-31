@@ -53,7 +53,7 @@ async def main() -> int:
         tick_hz=s.demo_tick_hz,
         target_fps=s.ai_target_fps,
         vehicle_count=s.demo_vehicle_count,
-        speed_multiplier=getattr(s, "demo_speed_multiplier", 3.0))
+        time_scale=getattr(s, "demo_time_scale", 3.0))
 
     # The demo narrative needs a vehicle to follow. Seeding it here rather
     # than hoping a random one happens to cross enough cameras is what makes

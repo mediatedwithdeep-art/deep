@@ -95,7 +95,8 @@ class Settings(BaseSettings):
     demo_camera_count: int = 50
     demo_vehicle_count: int = 1800
     demo_tick_hz: float = 6.0
-    demo_speed_multiplier: float = 3.0
+    # Scales the demo CLOCK, not vehicle speed -- see world.py.
+    demo_time_scale: float = 3.0
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
     camera_config_path: str = "config/cameras.yaml"
     stream_probe_timeout_s: int = 12

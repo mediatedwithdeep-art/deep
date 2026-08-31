@@ -41,7 +41,7 @@ class IngestionSupervisor:
                  tick_hz: float = 6.0,
                  target_fps: float = 6.0,
                  vehicle_count: int = 1800,
-                 speed_multiplier: float = 3.0,
+                 time_scale: float = 3.0,
                  detector: Detector | None = None,
                  health_interval_s: float = 30.0,
                  seed: int = 20260907):
@@ -59,7 +59,7 @@ class IngestionSupervisor:
         self.world: TrafficWorld | None = None
         if mode in ("demo", "hybrid"):
             self.world = TrafficWorld(vehicle_count=vehicle_count, seed=seed,
-                                      speed_multiplier=speed_multiplier)
+                                      time_scale=time_scale)
 
         self.workers: dict[str, CameraWorker] = {}
         for spec in specs:
