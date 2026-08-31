@@ -4,3 +4,5 @@ __pycache__/
 sentinel/.env
 sentinel/data/
 node_modules/
+sentinel/frontend/node_modules/
+sentinel/frontend/dist/

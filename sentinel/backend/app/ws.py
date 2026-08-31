@@ -30,7 +30,12 @@ log = get_logger("sentinel.api.ws")
 CLIENT_QUEUE_SIZE = 10
 
 
-@dataclass
+# eq=False keeps identity-based __hash__. A plain @dataclass generates
+# __eq__, which sets __hash__ to None and makes the class unhashable -- so
+# `self.clients.add(client)` raises TypeError and every WebSocket connection
+# is closed the instant it opens. Two clients are never "equal" anyway; they
+# are distinct sockets.
+@dataclass(eq=False)
 class Client:
     websocket: WebSocket
     username: str

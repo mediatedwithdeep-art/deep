@@ -29,7 +29,9 @@ async def dashboard(user: Annotated[object, Depends(require("analytics:read"))])
         ORDER BY timestamp DESC LIMIT 12""")
     top = await db.fetch_all("""
         SELECT vehicle_track_id, best_plate, vehicle_type::text AS vehicle_type,
-               vehicle_color, camera_count, sighting_count, last_seen
+               vehicle_color, camera_count, sighting_count, last_seen,
+               round(total_distance_m::numeric) AS total_distance_m,
+               EXTRACT(EPOCH FROM (last_seen - first_seen))::int AS duration_seconds
         FROM vehicle WHERE camera_count >= 2
         ORDER BY last_seen DESC LIMIT 10""")
     return {"stats": stats, "recent_alerts": recent, "active_tracks": top}

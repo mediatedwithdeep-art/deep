@@ -68,7 +68,15 @@ class Settings(BaseSettings):
     refresh_token_ttl_days: int = 7
     password_min_length: int = 12
     rate_limit_per_minute: int = 300
-    cors_origins: list[str] = ["http://localhost:5173", "http://localhost:3000"]
+    # Both the Vite dev server (5173) and its preview server (4173), and
+    # both hostname forms. Browsers treat localhost and 127.0.0.1 as
+    # different origins, so listing only one produces a CORS failure that
+    # looks like a broken API rather than a config gap.
+    cors_origins: list[str] = [
+        "http://localhost:5173", "http://127.0.0.1:5173",
+        "http://localhost:4173", "http://127.0.0.1:4173",
+        "http://localhost:3000", "http://127.0.0.1:3000",
+    ]
 
     # ── Object storage (evidence) ────────────────────────────────────
     s3_endpoint: str = "http://localhost:9000"
