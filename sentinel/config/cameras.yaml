@@ -9,6 +9,19 @@
 #   2. Add your cameras below
 #   3. docker compose restart ingestion
 #
+# CONNECTING THE SENTINEL GATEWAY INSTEAD
+# If you have the Sentinel sandbox, you do NOT list cameras here at all.
+# Set SENTINEL_CATALOGUE_URL in .env and the estate is discovered from
+# GET <url>/api/ingest, which is the source of truth for which cameras
+# exist. This file then becomes an optional SURVEY OVERLAY: anything you
+# put below overrides the catalogue for that camera_id.
+#
+# The overlay earns its keep for `heading_deg`. A gateway rarely knows
+# which way a camera points, and without a heading a camera is a dot with
+# no field of view -- the adjacency graph is directional, so the
+# cross-camera gate gets materially weaker. One compass reading per camera
+# during survey; very expensive to retrofit across thousands of sites.
+#
 # CREDENTIALS
 # Never write a password into stream_url in production -- the loader
 # refuses to start if you do. Instead give each camera a credential_ref

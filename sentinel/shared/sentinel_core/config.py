@@ -112,9 +112,26 @@ class Settings(BaseSettings):
     demo_tick_hz: float = 6.0
     # Scales the demo CLOCK, not vehicle speed -- see world.py.
     demo_time_scale: float = 3.0
+    # UDP is offered only so a misconfiguration is explicit rather than
+    # accidental; nothing in this repository selects it. Loss over a shared
+    # government WAN arrives as corruption the detector finds vehicles in.
     rtsp_transport: Literal["tcp", "udp"] = "tcp"
     camera_config_path: str = "config/cameras.yaml"
     stream_probe_timeout_s: int = 12
+
+    # ── Sentinel gateway ─────────────────────────────────────────────
+    # Point this at the sandbox and the estate is discovered from
+    # GET <url>/api/ingest. The catalogue is the source of truth: no camera
+    # list is compiled into this application. Empty means "not configured".
+    sentinel_catalogue_url: str = ""
+    sentinel_api_token: str = ""
+    sentinel_credential_ref: str = ""
+    sentinel_poll_seconds: int = 60
+    sentinel_department: str = "GP_SENTINEL"
+    # Startup pacing. Opening fifty RTSP sessions in the same instant looks
+    # like a burst to a real gateway and gets the client throttled.
+    ingest_connect_stagger_ms: int = 200
+    ingest_max_concurrent_opens: int = 8
 
     # ── Matcher ──────────────────────────────────────────────────────
     matcher_tick_seconds: float = 1.0

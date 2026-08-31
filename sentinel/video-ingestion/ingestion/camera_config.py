@@ -211,13 +211,38 @@ def load_from_database(dsn: str) -> list[CameraSpec]:
 
 
 def load_cameras(*, dsn: str | None = None, yaml_path: str | None = None,
-                 environment: str = "demo") -> list[CameraSpec]:
-    """Merge the database registry with the YAML overlay.
+                 environment: str = "demo",
+                 catalogue_url: str | None = None,
+                 catalogue_token: str | None = None,
+                 catalogue_credential_ref: str | None = None,
+                 ) -> list[CameraSpec]:
+    """Merge the Sentinel catalogue, the database registry and the YAML overlay.
 
-    YAML wins on conflict, so an operator can correct a camera's URL or
-    aim without touching the database or restarting anything else.
+    Precedence, lowest to highest: catalogue, database, YAML.
+
+    The Sentinel catalogue is the source of truth for *which cameras exist*.
+    The layers above it exist to correct it: a survey may supply the
+    `heading_deg` the gateway does not carry, and without a heading a camera
+    is a dot with no field of view, which materially weakens the directional
+    adjacency graph the cross-camera gate depends on.
+
+    A catalogue failure is never fatal. An unreachable gateway must not take
+    an already-running estate offline -- the previously known cameras keep
+    working and the failure is logged loudly.
     """
     by_id: dict[str, CameraSpec] = {}
+    if catalogue_url:
+        try:
+            from .sentinel_catalogue import load_from_sentinel
+            specs, _ = load_from_sentinel(
+                catalogue_url, token=catalogue_token or None,
+                credential_ref=catalogue_credential_ref or None)
+            for s in specs:
+                by_id[s.camera_id] = s
+        except Exception as e:                              # noqa: BLE001
+            log.error("Sentinel catalogue load failed; continuing with the "
+                      "cameras already known",
+                      extra={"error": str(e), "url": catalogue_url})
     if dsn:
         try:
             for s in load_from_database(dsn):
