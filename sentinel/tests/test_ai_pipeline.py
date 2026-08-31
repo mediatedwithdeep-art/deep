@@ -10,7 +10,7 @@ from datetime import datetime, timedelta, timezone
 import pytest
 
 from sentinel_core.domain import BoundingBox, Detection, VehicleType
-from sentinel_ai.tracker import ByteTracker
+from sentinel_ai.tracker import ByteTracker, Track
 from sentinel_ai.quality import assess, estimate_plate_width_px
 from sentinel_ai.attributes import classify_rgb, colour_similarity
 from sentinel_ai.anpr import create_recognizer
@@ -82,7 +82,7 @@ def test_tracker_rejects_a_direction_reversing_association():
 def test_short_blips_never_become_sightings():
     """A two-frame detection is detector noise, not a vehicle. Publishing it
     would pollute the map and the cross-camera matcher."""
-    tr = ByteTracker("CAM-1", min_hits=3, max_age=2)
+    tr = ByteTracker("CAM-1", min_hits=3, max_age_s=2.0)
     tr.update([det(10, 10)], T0)
     tr.update([det(12, 10)], T0 + timedelta(seconds=0.1))
     for f in range(6):
@@ -403,3 +403,227 @@ def test_health_snapshot_reports_operational_metrics():
                 "inference_ms", "open_tracks"):
         assert key in snap
     assert snap["open_tracks"] == 0, "tracks left open after the vehicle departed"
+
+
+# ── PART 6 · PTS time model in the tracker ───────────────────────────
+#
+# The brief's own example: frames at 0, 40, 120, 165 ms. Nothing in this
+# section may depend on frame COUNT, because those four frames span three
+# different intervals.
+
+IRREGULAR_MS = [0, 40, 120, 165, 205, 330, 370, 410, 530, 570]
+
+
+def _at(ms: float) -> datetime:
+    return T0 + timedelta(milliseconds=ms)
+
+
+def test_irregular_frame_intervals_are_preserved_end_to_end():
+    """A vehicle moving at a constant real speed through irregular frame
+    intervals must come out with a constant velocity estimate.
+
+    If timing came from frame count, the 40 ms gap and the 125 ms gap would
+    be treated as equal and the speed would swing by a factor of three.
+    """
+    tr = ByteTracker("CAM-1")
+    px_per_s = 200.0
+    for ms in IRREGULAR_MS:
+        x = 50 + px_per_s * (ms / 1000.0)
+        tr.update([det(int(x), 100, ts=_at(ms))], _at(ms))
+
+    assert len(tr.tracks) == 1, "irregular intervals split the track"
+    t = tr.tracks[0]
+    vx, _ = t.velocity
+    assert vx == pytest.approx(px_per_s, rel=0.15), (
+        f"velocity {vx:.1f} px/s from a {px_per_s:.0f} px/s source -- "
+        "this is what a per-frame velocity produces on a variable-rate stream")
+
+    # And the track's own span is the real one, not a frame count.
+    assert t.duration_s == pytest.approx(0.570, abs=1e-6)
+
+
+def test_track_age_is_seconds_so_slow_and_fast_cameras_agree():
+    """The defect this replaces: `max_age` in frames meant 1.0 s on a 25 fps
+    camera and 4.2 s on a 6 fps one. Same estate, same vehicle, two
+    different retirement policies decided by frame rate."""
+    def run(fps: float) -> float:
+        tr = ByteTracker(f"CAM-{fps}", min_hits=2, max_age_s=1.0)
+        step = 1.0 / fps
+        for f in range(6):                       # establish a track
+            tr.update([det(50 + f * 10, 100, ts=_at(f * step * 1000))],
+                      _at(f * step * 1000))
+        # Now feed empty frames until it is retired, and report WHEN.
+        t_last = 5 * step
+        for f in range(1, 200):
+            now = t_last + f * step
+            tr.update([], _at(now * 1000))
+            if tr.tracks and tr.tracks[0].state == "lost":
+                return now - t_last
+        raise AssertionError(f"never retired at {fps} fps")
+
+    slow, fast = run(6.0), run(25.0)
+    # Both must retire after ~1 s of real absence, within one frame interval
+    # of the slower camera.
+    assert slow == pytest.approx(1.0, abs=1.0 / 6.0), f"6 fps retired at {slow:.2f}s"
+    assert fast == pytest.approx(1.0, abs=1.0 / 6.0), f"25 fps retired at {fast:.2f}s"
+    assert abs(slow - fast) < 1.0 / 6.0 + 1e-9, (
+        f"6 fps retired at {slow:.2f}s but 25 fps at {fast:.2f}s -- "
+        "ageing is still frame-based")
+
+
+def test_prediction_scales_with_the_real_gap():
+    """A 165 ms gap must displace the predicted box four times as far as a
+    40 ms gap. A per-frame velocity displaces it equally, which is how a
+    fast vehicle gets lost after a stutter."""
+    t = Track(track_id="T", bbox=BoundingBox(x=100, y=100, w=40, h=40),
+              vehicle_type=VehicleType.CAR, confidence=0.9,
+              first_seen=T0, last_seen=T0)
+    t.velocity = (200.0, 0.0)                     # px/s
+    near = t.predict(0.040).x - t.bbox.x
+    far = t.predict(0.165).x - t.bbox.x
+    assert near == pytest.approx(8, abs=1)
+    assert far == pytest.approx(33, abs=1)
+    assert far > near * 3.5, "prediction ignored the interval"
+
+
+def test_a_long_stall_does_not_extrapolate_the_motion_model():
+    """A stream that stalls for two minutes and resumes must not fling the
+    predicted box across the frame; the track should age out instead."""
+    tr = ByteTracker("CAM-1", max_age_s=2.5, max_gap_s=10.0)
+    for f in range(6):
+        tr.update([det(50 + f * 20, 100, ts=_at(f * 100))], _at(f * 100))
+    t = tr.tracks[0]
+    before = t.bbox.x
+    tr.update([], _at(120_000))                   # two-minute stall
+    assert t.age_s == pytest.approx(119.5, abs=0.1), "gap was not aged in real time"
+    assert t.state == "lost", "a two-minute absence did not retire the track"
+    assert t.bbox.x == before, "the box moved on a frame with no detection"
+
+
+# ── PART 10 · scene discontinuity resets tracker state ───────────────
+
+def test_a_discontinuity_ends_tracks_instead_of_bridging_them():
+    """The failure this prevents: one track whose first_seen is before a
+    loop point and whose last_seen is after it describes a vehicle in two
+    places with no time between them. The matcher consumes exactly those
+    two numbers."""
+    tr = ByteTracker("CAM-1", min_hits=3)
+    for f in range(6):
+        tr.update([det(50 + f * 18, 100, ts=_at(f * 100))], _at(f * 100))
+    assert len(tr.tracks) == 1
+    open_track = tr.tracks[0]
+
+    published = tr.reset_for_discontinuity()
+    assert published == [open_track], "the in-flight vehicle was silently dropped"
+    assert tr.tracks == [], "a track survived the discontinuity"
+
+    # After the cut, the same-looking vehicle must be a NEW identity.
+    tr.update([det(50, 100, ts=_at(0))], _at(0))
+    assert len(tr.tracks) == 1
+    assert tr.tracks[0].track_id != open_track.track_id, (
+        "the tracker bridged across the discontinuity and fabricated a journey")
+
+
+def test_a_discontinuity_restarts_the_clock_without_a_negative_age():
+    """PTS goes backwards at a loop point. Ageing a track by a negative
+    interval would make it younger and it would never retire."""
+    tr = ByteTracker("CAM-1", min_hits=2, max_age_s=1.0)
+    for f in range(4):
+        tr.update([det(50 + f * 18, 100, ts=_at(5000 + f * 100))], _at(5000 + f * 100))
+    tr.reset_for_discontinuity()
+    # PTS restarts at zero -- far in the past relative to the last frame.
+    tr.update([det(50, 100, ts=_at(0))], _at(0))
+    tr.update([det(68, 100, ts=_at(100))], _at(100))
+    assert all(t.age_s >= 0.0 for t in tr.tracks), "a track aged backwards"
+    assert tr.tracks[0].hits == 2, "the post-cut track did not associate"
+
+
+def test_an_ordinary_gap_does_not_end_a_track():
+    """A dropped frame is not a discontinuity. Resetting on every stutter
+    would shred long tracks and destroy the cross-camera signal."""
+    tr = ByteTracker("CAM-1", min_hits=3, max_age_s=2.5)
+    for f in range(6):
+        tr.update([det(50 + f * 18, 100, ts=_at(f * 100))], _at(f * 100))
+    tid = tr.tracks[0].track_id
+    # One frame missing: 200 ms instead of 100 ms, then it comes back.
+    tr.update([], _at(600))
+    tr.update([det(50 + 7 * 18, 100, ts=_at(700))], _at(700))
+    assert len(tr.tracks) == 1
+    assert tr.tracks[0].track_id == tid, "a single dropped frame broke the track"
+    assert tr.tracks[0].hits == 7
+
+
+def test_a_discontinuity_does_not_swallow_the_next_vehicle(tmp_path):
+    """The bridging this prevents, shown against the same frames twice.
+
+    The cut lands while a vehicle is MID-FRAME with its track open, and the
+    scene that follows puts a different vehicle in nearly the same place --
+    a camera repointed, or a decoder resynchronising after a stall. The IoU
+    association continues the open track straight onto the new vehicle.
+
+    Unsignalled, the second vehicle does not merely get the wrong id: it
+    produces NO SIGHTING AT ALL. Its detections are absorbed into the first
+    vehicle's track, so a red car with a different plate is recorded as
+    four seconds of the white car that preceded it, and the plate read from
+    it is attributed to that car. Nothing downstream can recover from this,
+    because nothing downstream ever learns the second vehicle existed.
+
+    Time runs FORWARD across this cut. A loop point that rewinds PTS is
+    caught by a second mechanism -- the frame sampler stalls on a backwards
+    clock -- and using one here would let this test pass with the tracker
+    reset removed.
+    """
+    def run(*, signal_the_cut: bool):
+        cfg = CameraConfig(camera_id="AHM-SAT-001", latitude=23.027,
+                           longitude=72.512, anpr_capable=True, target_fps=6.0)
+        p = CameraPipeline(cfg, SimulationDetector())
+        out = []
+
+        def obj(identity, plate, colour, x):
+            return SceneObject(identity=identity, vehicle_type=VehicleType.CAR,
+                               colour=colour, plate=plate,
+                               bbox=BoundingBox(x=x, y=300, w=520, h=340),
+                               latitude=23.027, longitude=72.512,
+                               speed_kmph=44, heading_deg=47)
+
+        n = 24
+        for f in range(n):
+            _, s = p.process(T0 + timedelta(seconds=f / 15.0),
+                             scene=[obj("GT-A", "GJ01AB1234", "white", 60 + f * 14)])
+            out += s
+        assert p.tracker.tracks, "no open track at the cut -- test proves nothing"
+
+        x_at_cut = 60 + (n - 1) * 14
+        for f in range(90):
+            x = x_at_cut + f * 14
+            scene = [obj("GT-B", "GJ05XY9999", "red", x)] if x < 900 else []
+            _, s = p.process(T0 + timedelta(seconds=(n + f) / 15.0), scene=scene,
+                             is_discontinuity=(signal_the_cut and f == 0))
+            out += s
+        return p, out
+
+    p_ok, ok = run(signal_the_cut=True)
+    assert p_ok.stats.discontinuities == 1
+    assert len(ok) == 2, (
+        f"expected one sighting per vehicle, got {len(ok)}")
+    for s in ok:
+        assert s.dwell_seconds < 3.0, (
+            f"sighting spans {s.dwell_seconds:.1f}s -- it was bridged across the cut")
+
+    _, fused = run(signal_the_cut=False)
+    assert len(fused) == 1, (
+        "the unsignalled run was expected to fuse both vehicles into one "
+        f"track, but produced {len(fused)} sightings -- this test is no "
+        "longer exercising the reset")
+    assert fused[0].dwell_seconds > max(s.dwell_seconds for s in ok), (
+        "the fused sighting should span both vehicles' time in frame")
+
+
+def test_a_discontinuity_with_nothing_open_is_harmless():
+    """Most discontinuities happen with no vehicle in frame. That must be a
+    no-op, not an error and not a spurious sighting."""
+    cfg = CameraConfig(camera_id="AHM-SAT-001", latitude=23.027, longitude=72.512)
+    p = CameraPipeline(cfg, SimulationDetector())
+    _, s = p.process(T0, scene=[], is_discontinuity=True)
+    assert s == []
+    assert p.stats.discontinuities == 1

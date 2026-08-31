@@ -69,6 +69,7 @@ class PipelineStats:
     anpr_reads: int = 0
     anpr_gated_out: int = 0
     reid_extractions: int = 0
+    discontinuities: int = 0
     total_ms: float = 0.0
 
     @property
@@ -134,15 +135,28 @@ class CameraPipeline:
     # ── main entry point ─────────────────────────────────────────────
     def process(self, timestamp: datetime, *, frame=None,
                 scene: list[SceneObject] | None = None,
-                is_night: bool = False) -> tuple[list[Detection], list[Sighting]]:
+                is_night: bool = False,
+                is_discontinuity: bool = False) -> tuple[list[Detection], list[Sighting]]:
         """Advance the pipeline by one frame.
+
+        `timestamp` must be the frame's PTS-derived capture time.
+
+        `is_discontinuity` is set by the reader when this frame does not
+        continue the previous one -- a loop point, a resynchronisation after
+        a long stall, a reconnect. It is not merely a dropped frame; see
+        `ByteTracker.reset_for_discontinuity`.
 
         Returns (detections_this_frame, sightings_closed_this_frame).
         """
         self.stats.frames_in += 1
+
+        carried: list[Sighting] = []
+        if is_discontinuity:
+            carried = self._handle_discontinuity()
+
         if not self._should_process(timestamp):
             self.stats.frames_skipped += 1
-            return [], []
+            return [], carried
 
         t0 = time.perf_counter()
         self.stats.frames_processed += 1
@@ -166,7 +180,41 @@ class CameraPipeline:
         self.stats.sightings_emitted += len(sightings)
 
         self.stats.total_ms += (time.perf_counter() - t0) * 1000
-        return detections, sightings
+        return detections, carried + sightings
+
+    def _handle_discontinuity(self) -> list[Sighting]:
+        """Close every open track; the next frame starts a new scene.
+
+        The tracker reset is what does the work. Without it the open track
+        associates straight onto whatever is in the new scene, and the
+        damage is worse than a wrong id: the second vehicle produces no
+        sighting at all. Its detections, its plate read and its appearance
+        embeddings are all absorbed into the first vehicle's track, which is
+        then published as one vehicle that was in two places with no time
+        between them -- and that first_seen/last_seen pair is exactly what
+        the cross-camera travel-time gate consumes. Nothing downstream can
+        recover, because nothing downstream learns the second vehicle
+        existed. `test_a_discontinuity_does_not_swallow_the_next_vehicle`
+        holds this.
+
+        Clearing `_track_state` is a leak guard, not a second safety
+        property: track ids are monotonic, so a new track cannot inherit a
+        stale entry. It matters because tracks dropped below `min_hits` are
+        never closed, so their accumulated crops would otherwise be retained
+        for the life of the process.
+        """
+        self.stats.discontinuities += 1
+        ended = self.tracker.reset_for_discontinuity()
+        out = [s for s in (self._close_track(t) for t in ended) if s]
+        self.stats.sightings_emitted += len(out)
+        # Nothing measured before the cut may describe anything after it.
+        self._track_state.clear()
+        self._scene_index = {}
+        # The frame sampler's clock restarts with the stream clock, or a
+        # backwards PTS would make it wait out the difference before
+        # processing another frame.
+        self._last_processed_ts = float("-inf")
+        return out
 
     # ── per-track enrichment ─────────────────────────────────────────
     def _enrich(self, track: Track, *, frame, scene, is_night: bool) -> None:
@@ -328,4 +376,5 @@ class CameraPipeline:
             "anpr_gate_efficiency": round(self.stats.anpr_gate_efficiency, 3),
             "inference_ms": round(self.stats.mean_latency_ms, 3),
             "open_tracks": len(self.tracker.tracks),
+            "discontinuities": self.stats.discontinuities,
         }

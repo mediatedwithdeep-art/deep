@@ -76,6 +76,20 @@ def require(permission: str) -> Callable:
     return _check
 
 
+def dept_filter(user: CurrentUser) -> tuple[str, str | None]:
+    """Department scope filter for queries.
+
+    SYSTEM admins see all departments. All others see only their own.
+    Returns (WHERE clause fragment, parameter value or None).
+    """
+    if user.role.name == "SYSTEM":
+        return ("", None)  # no filter
+    if user.department:
+        return ("d.code = %s", user.department)
+    # No department assignment; shouldn't happen but safe to null-filter
+    return ("FALSE", None)
+
+
 async def write_audit(request: Request, *, user: CurrentUser | None,
                       action: str, resource: str, resource_id: str | None = None,
                       reason: str | None = None, result: str = "SUCCESS",

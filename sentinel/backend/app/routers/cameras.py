@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
 from pydantic import BaseModel, Field
 
 from .. import db
-from ..deps import CurrentUserDep, require, write_audit
+from ..deps import CurrentUserDep, dept_filter, require, write_audit
 
 router = APIRouter(prefix="/cameras", tags=["cameras"])
 
@@ -99,10 +99,18 @@ async def list_cameras(
     where: list[str] = ["c.status <> 'DISABLED'"]
     params: list = []
 
+    # Enforce department scoping: non-SYSTEM users see only their own dept
+    dept_clause, dept_param = dept_filter(user)
+    if dept_clause:
+        where.append(dept_clause)
+        if dept_param:
+            params.append(dept_param)
+
     if status_filter:
         where.append("c.status = %s::camera_status")
         params.append(status_filter)
-    if department:
+    # Only SYSTEM admins can query other departments; others are limited to their own
+    if department and (user.role.name == "SYSTEM" or not dept_clause):
         where.append("d.code = %s")
         params.append(department)
     if zone:
@@ -148,7 +156,14 @@ async def cameras_geojson(user: Annotated[object, Depends(require("camera:read")
     Returns points and field-of-view polygons in one payload so the map
     makes a single request instead of one per camera.
     """
-    rows = await db.fetch_all(f"{_SELECT} WHERE c.status <> 'DISABLED' ORDER BY c.camera_id")
+    dept_clause, dept_param = dept_filter(user)
+    where_clause = "c.status <> 'DISABLED'"
+    params = []
+    if dept_clause:
+        where_clause += f" AND {dept_clause}"
+        if dept_param:
+            params.append(dept_param)
+    rows = await db.fetch_all(f"{_SELECT} WHERE {where_clause} ORDER BY c.camera_id", params)
     features = []
     for r in rows:
         props = {k: v for k, v in r.items() if k != "fov_geojson"}

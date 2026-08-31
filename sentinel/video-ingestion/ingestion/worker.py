@@ -17,13 +17,13 @@ import time
 from dataclasses import dataclass, field
 from datetime import datetime, timezone
 
-from sentinel_core.domain import CameraHealth, Sighting
+from sentinel_core.domain import CameraHealth, CameraStatus, Sighting
 from sentinel_core.log import get_logger
 from sentinel_ai.detector import Detector, SceneObject
 from sentinel_ai.pipeline import CameraConfig, CameraPipeline
 
 from .camera_config import CameraSpec
-from .stream_reader import FrameReader
+from .live_reader import LiveStreamReader
 
 log = get_logger("sentinel.ingest.worker")
 
@@ -34,6 +34,7 @@ class WorkerStats:
     sightings: int = 0
     errors: int = 0
     reconnects: int = 0
+    discontinuities: int = 0
     last_frame_at: float = 0.0
     last_scene_size: int = 0
     scene_change: float = 1.0
@@ -47,7 +48,7 @@ class CameraWorker:
         self.spec = spec
         self.live = live
         self.stats = WorkerStats()
-        self._reader: FrameReader | None = None
+        self._reader: LiveStreamReader | None = None
         self._prev_luma: float | None = None
         self._frozen_samples = 0
 
@@ -72,8 +73,13 @@ class CameraWorker:
         # ANPR lanes need the main stream's resolution to resolve a plate.
         # Everything else runs on the sub-stream, which is ~8x cheaper.
         w, h = (960, 540) if self.spec.anpr_capable else (640, 360)
-        self._reader = FrameReader(url, width=w, height=h,
-                                   fps=self.pipeline.config.target_fps)
+        # LiveStreamReader, not FrameReader: it is the reader that carries a
+        # PTS-derived capture time and a discontinuity flag on every frame.
+        # FrameReader hands back bare pixels, and a worker holding bare
+        # pixels has no honest timestamp to give the pipeline.
+        self._reader = LiveStreamReader(
+            url, camera_id=self.spec.camera_id, width=w, height=h,
+            expected_fps=self.spec.fps)
         self._reader.start()
 
     def stop(self) -> list[Sighting]:
@@ -88,16 +94,25 @@ class CameraWorker:
         """Advance this camera by one tick. Returns (sightings, healthy)."""
         frame = None
         healthy = True
+        discontinuous = False
+        # Simulation drives the clock from outside; a live camera drives it
+        # from its own stream. Mixing the two is the defect PART 6 exists to
+        # remove, so the live branch overwrites `now` from the frame's PTS.
+        capture_time = now
 
         if self.live and self._reader is not None:
-            frame = self._reader.read()
-            if frame is None:
+            live_frame = self._reader.read()
+            if live_frame is None:
                 healthy = False
             elif self._reader.is_stalled:
                 healthy = False
                 self.stats.errors += 1
             else:
+                frame = live_frame.image
+                capture_time = live_frame.capture_time
+                discontinuous = live_frame.is_discontinuity
                 self.stats.last_frame_at = time.time()
+                self.stats.discontinuities += int(discontinuous)
                 self._measure_scene_change(frame)
 
         if frame is None and not scene:
@@ -105,7 +120,8 @@ class CameraWorker:
 
         try:
             _dets, sightings = self.pipeline.process(
-                now, frame=frame, scene=scene, is_night=is_night)
+                capture_time, frame=frame, scene=scene, is_night=is_night,
+                is_discontinuity=discontinuous)
         except Exception as e:
             # One bad frame must never take down a worker, and one worker
             # must never take down the estate.
@@ -145,8 +161,16 @@ class CameraWorker:
         if self.live:
             if reader is None:
                 reachable, message = False, "no stream URL configured"
-            elif reader.frames_read == 0 and reader.last_error:
-                reachable, message = False, reader.last_error[:200]
+            elif reader.health.status is CameraStatus.OFFLINE:
+                reachable, message = False, (reader.health.last_error or "offline")[:200]
+            elif reader.health.status is CameraStatus.RECONNECTING:
+                # Distinct from OFFLINE on purpose: a camera in backoff is
+                # coming back, and reporting it as gone starts a callout.
+                reachable = True
+                message = (f"reconnecting (attempt {reader.health.reconnects}, "
+                           f"retry in {reader.health.next_retry_in_s:.0f}s)")
+            elif reader.health.frames == 0 and reader.health.last_error:
+                reachable, message = False, reader.health.last_error[:200]
             elif reader.is_stalled:
                 reachable, message = False, "stream stalled"
         if self._frozen_samples >= 5:
@@ -158,8 +182,8 @@ class CameraWorker:
             timestamp=datetime.now(timezone.utc),
             reachable=reachable,
             fps_actual=round(self.pipeline.stats.frames_processed / uptime, 2),
-            frames_decoded=reader.frames_read if reader else self.stats.frames,
-            decode_errors=(reader.decode_errors if reader else 0) + self.stats.errors,
+            frames_decoded=reader.health.frames if reader else self.stats.frames,
+            decode_errors=(reader.health.reconnects if reader else 0) + self.stats.errors,
             scene_change=round(self.stats.scene_change, 5),
             inference_ms=round(self.pipeline.stats.mean_latency_ms, 3),
             queue_depth=len(self.pipeline.tracker.tracks),

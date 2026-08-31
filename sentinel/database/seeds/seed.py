@@ -36,12 +36,33 @@ from ahmedabad import JUNCTIONS, RoadGraph, bearing_between
 RNG = random.Random(20260907)   # fixed seed: the demo must be reproducible
 
 DEPARTMENTS = [
-    ("GP_AHM",  "Ahmedabad City Police",            "POLICE"),
-    ("GP_TRAF", "Ahmedabad Traffic Police",         "POLICE"),
+    # 26 departments of Gujarat state government
+    ("HOME",    "Home Department (State)",          "POLICE"),      # coordinating body
+    ("GP_AHM",  "Ahmedabad City Police",           "POLICE"),
+    ("GP_TRAF", "Ahmedabad Traffic Police",        "POLICE"),
+    ("GP_SVAD", "Surat Police",                     "POLICE"),
+    ("GP_VAPI", "Vapi Police",                      "POLICE"),
+    ("GP_VALD", "Vadodara Police",                  "POLICE"),
+    ("GP_RAJ",  "Rajkot Police",                    "POLICE"),
+    ("GP_JUNA", "Junagadh Police",                  "POLICE"),
+    ("GP_BHJ",  "Bhavnagar Police",                 "POLICE"),
     ("AMC",     "Ahmedabad Municipal Corporation",  "MUNICIPAL"),
-    ("GSRTC",   "Gujarat State Road Transport Corp","TRANSPORT"),
-    ("AUDA",    "Ahmedabad Urban Development Auth", "MUNICIPAL"),
+    ("SMC",     "Surat Municipal Corporation",      "MUNICIPAL"),
+    ("VMC",     "Vadodara Municipal Corporation",   "MUNICIPAL"),
+    ("RMC",     "Rajkot Municipal Corporation",     "MUNICIPAL"),
+    ("JMC",     "Junagadh Municipal Corporation",   "MUNICIPAL"),
+    ("BMC",     "Bhavnagar Municipal Corporation",  "MUNICIPAL"),
+    ("GSRTC",   "Gujarat State Road Transport",     "TRANSPORT"),
+    ("AUDA",    "Ahmedabad Urban Development",      "MUNICIPAL"),
+    ("SUDA",    "Surat Urban Development",          "MUNICIPAL"),
+    ("VUDA",    "Vadodara Urban Development",       "MUNICIPAL"),
+    ("RUDA",    "Rajkot Urban Development",         "MUNICIPAL"),
+    ("JUDA",    "Junagadh Urban Development",       "MUNICIPAL"),
+    ("BUDA",    "Bhavnagar Urban Development",      "MUNICIPAL"),
     ("GAD",     "Gujarat Airports Authority",       "AVIATION"),
+    ("GSWAN",   "Gujarat State WAN Authority",      "IT"),
+    ("REVENUE", "Revenue Department",               "REVENUE"),
+    ("FIRE",    "Fire & Emergency Services",        "SAFETY"),
 ]
 
 # (protocol, vendor, width, height, fps, signal_class, firmware_risk, share)
@@ -157,8 +178,11 @@ def seed(dsn: str, camera_count: int = 50, demo_password: str | None = None) -> 
             fov = 32.0 if anpr else RNG.choice([70.0, 82.0, 90.0, 100.0])
             rng_m = 45.0 if anpr else RNG.choice([50.0, 60.0, 75.0])
 
-            dept_code = RNG.choices(
-                [d[0] for d in DEPARTMENTS], weights=[45, 20, 15, 8, 7, 5])[0]
+            # Distribute cameras across police departments, with a few in municipal
+            police_depts = [d[0] for d in DEPARTMENTS if d[2] == "POLICE"]
+            weights = [45 if d == "GP_AHM" else 15 if d.startswith("GP_") else 5
+                      for d in police_depts]
+            dept_code = RNG.choices(police_depts, weights=weights)[0]
             if junction.zone == "Hansol":
                 dept_code = "GAD"
 
