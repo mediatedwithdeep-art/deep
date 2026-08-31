@@ -143,6 +143,61 @@ class IngestionSupervisor:
                                    worker.health().model_dump(mode="json"),
                                    key=worker.spec.camera_id)
 
+    def seed_target_vehicle(self, plate: str = "GJ01AB1234",
+                            colour: str = "white") -> object | None:
+        """Seed the vehicle the demo narrative follows.
+
+        Its route is COMPUTED from this estate's ANPR-capable cameras, not
+        hardcoded. The demo has to show a plate being read at one camera and
+        the same vehicle recognised at the next, and a randomly routed
+        vehicle usually never passes an ANPR camera at all -- only ~26% of
+        the estate can resolve a plate. Deriving the route from the actual
+        camera list means the demo works on the seeded estate and on a real
+        one without editing anything.
+        """
+        if self.world is None:
+            return None
+        from ahmedabad import JUNCTIONS
+
+        anpr_junctions = set()
+        for spec in self.specs:
+            if not spec.anpr_capable:
+                continue
+            for j in JUNCTIONS:
+                if abs(j.lat - spec.latitude) < 1e-5 and abs(j.lon - spec.longitude) < 1e-5:
+                    anpr_junctions.add(j.code)
+                    break
+
+        route = None
+        if anpr_junctions:
+            graph = self.world.graph
+            best_hits: set[str] = set()
+            for start in sorted(anpr_junctions):
+                walk, current, previous = [start], start, None
+                hits = {start}
+                for _ in range(24):
+                    options = [n for n, _ in graph.neighbours.get(current, [])
+                               if n != previous]
+                    if not options:
+                        break
+                    # Step toward the nearest ANPR junction not yet visited.
+                    options.sort(key=lambda n: (
+                        n in hits or n not in anpr_junctions,
+                        min((graph.shortest_paths(n, 900).get(a, (9e9, 0))[0]
+                             for a in anpr_junctions if a not in hits), default=9e9)))
+                    previous, current = current, options[0]
+                    walk.append(current)
+                    if current in anpr_junctions:
+                        hits.add(current)
+                if len(hits) > len(best_hits):
+                    best_hits, route = hits, walk
+            log.info("demo target route computed",
+                     extra={"anpr_cameras_on_route": len(best_hits),
+                            "anpr_cameras_total": len(anpr_junctions),
+                            "hops": len(route or [])})
+
+        return self.world.add_target_vehicle(plate=plate, colour=colour, route=route)
+
     async def stop(self) -> None:
         self._running = False
         # Close every open track so vehicles in flight still produce

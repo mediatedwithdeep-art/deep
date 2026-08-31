@@ -60,7 +60,7 @@ async def main() -> int:
     # the presentation repeatable.
     if supervisor.world is not None:
         target_plate = os.environ.get("DEMO_TARGET_PLATE", "GJ01AB1234")
-        supervisor.world.add_target_vehicle(plate=target_plate)
+        supervisor.seed_target_vehicle(plate=target_plate)
         log.info("demo target vehicle seeded", extra={"plate": target_plate})
 
     stop = asyncio.Event()
