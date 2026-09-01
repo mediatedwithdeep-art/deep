@@ -99,6 +99,8 @@ class ReaderHealth:
     discontinuities: int = 0
     reconnects: int = 0
     consecutive_failures: int = 0
+    #: How many times this reader rotated to a different transport.
+    transport_failovers: int = 0
     last_error: str | None = None
     last_frame_wall: float = 0.0
     observed_fps: float = 0.0
@@ -138,8 +140,19 @@ class LiveStreamReader:
                  stall_timeout_s: float = 15.0,
                  expected_fps: float | None = None,
                  max_failures_before_offline: int = 3,
+                 fallback_urls: "tuple[str, ...] | list[str] | None" = None,
+                 failures_before_failover: int = 2,
                  seed: int | None = None):
-        self.url = url
+        # Ordered transports for one camera. The integrator's guide is
+        # explicit that RTSP (8554/TCP) is blocked on many corporate and
+        # government networks and that HLS is the supported way through,
+        # so a camera carries its alternatives and the reader rotates to
+        # them rather than sitting RECONNECTING against a port that policy
+        # will never open.
+        self._urls: list[str] = [url, *[u for u in (fallback_urls or [])
+                                        if u and u != url]]
+        self._url_index = 0
+        self.failures_before_failover = failures_before_failover
         self.camera_id = camera_id
         self.width = width
         self.height = height
@@ -165,6 +178,34 @@ class LiveStreamReader:
         self._pending_discontinuity = False
         self._recent_pts: list[float] = field(default_factory=list)  # replaced below
         self._recent_pts = []
+
+    # ── transports ────────────────────────────────────────────────────
+
+    @property
+    def url(self) -> str:
+        """The transport currently in use."""
+        return self._urls[self._url_index]
+
+    @property
+    def transports(self) -> list[str]:
+        return list(self._urls)
+
+    def _failover(self) -> bool:
+        """Rotate to the next transport. True if it actually moved.
+
+        Rotation is cyclic rather than terminal: a blocked port and a
+        temporarily sick CDN are indistinguishable from here, so the reader
+        keeps cycling instead of committing permanently to whichever
+        transport happened to be up when it started.
+        """
+        if len(self._urls) < 2:
+            return False
+        previous = self.url
+        self._url_index = (self._url_index + 1) % len(self._urls)
+        log.warning("camera %s failing over: %s -> %s", self.camera_id,
+                    redact(previous), redact(self.url))
+        self.health.transport_failovers += 1
+        return True
 
     # ── options ───────────────────────────────────────────────────────
 
@@ -276,6 +317,11 @@ class LiveStreamReader:
                 self.health.status = CameraStatus.OFFLINE
             else:
                 self.health.status = CameraStatus.RECONNECTING
+
+            if (self.health.consecutive_failures
+                    and self.health.consecutive_failures
+                    % self.failures_before_failover == 0):
+                self._failover()
 
             delay = backoff_delay(attempt, self._rng)
             self.health.next_retry_in_s = delay

@@ -259,3 +259,51 @@ malformed row is reported and skipped rather than aborting the other 1,999.
 - [ ] Every camera probed and `ONLINE`
 - [ ] `build_adjacency.py` run, and its selectivity line read
 - [ ] NTP configured on every gateway
+
+---
+
+## Connecting the Sentinel Camera Grid
+
+The grid publishes each camera over three protocols, from **two different
+hosts** — a CDN cannot proxy RTP, so HLS is served from the CDN hostname
+behind an access password while RTSP and WHEP come direct from the media
+host. Nothing about those addresses is compiled in; they are configuration:
+
+```bash
+export SENTINEL_CATALOGUE_URL=https://<cdn-host>/cameras.json
+export SENTINEL_GATEWAY_PROFILE=split-cdn
+export SENTINEL_MEDIA_HOST=<media-host>        # RTSP 8554, WHEP 8889
+export SENTINEL_HLS_HOST=<cdn-host>            # HLS over TLS
+export SENTINEL_CATALOGUE_BASIC=user:password  # if the catalogue is protected
+```
+
+Verify before you rely on it:
+
+```bash
+python scripts/sentinel_preflight.py \
+    --catalogue "$SENTINEL_CATALOGUE_URL" \
+    --media-host "$SENTINEL_MEDIA_HOST" \
+    --hls-host "$SENTINEL_HLS_HOST" \
+    --profile split-cdn --cameras 3 --seconds 15
+```
+
+It drives the production catalogue client and the production reader, so a
+pass is evidence about the system rather than about the script. It reports
+which catalogue field spellings the gateway actually used, whether the RTSP
+port is reachable, and — per camera — frames decoded, PTS monotonicity,
+frame rate measured from PTS rather than from the reported rate, and the
+spread of inter-frame gaps. It writes a JSON report you can attach to a bug
+report or paste back.
+
+**If port 8554 is closed on your network**, that is expected on many
+government and corporate WANs and is not a camera fault. Each camera
+carries its HLS URL as a fallback transport and the reader rotates to it
+after repeated failures, cyclically rather than permanently — a blocked
+port and a temporarily sick CDN are indistinguishable from the client, so
+committing forever to whichever was up at startup would be wrong.
+
+**Cameras without coordinates cannot join the adjacency graph.** If the
+catalogue carries no `latitude`/`longitude`, preflight says so per camera.
+Those cameras still ingest, but the spatio-temporal gate cannot score them,
+which is the component the whole cross-camera argument rests on. One
+compass reading and one GPS fix per camera during survey is the fix.

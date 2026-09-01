@@ -55,6 +55,55 @@ DEFAULT_RTSP_PORT = 8554
 DEFAULT_WHEP_PORT = 8889
 DEFAULT_HLS_PORT = 8888
 
+
+@dataclass(frozen=True)
+class GatewayProfile:
+    """How this gateway spells its URLs, when it does not advertise them.
+
+    A real grid does not necessarily serve every protocol from one host.
+    The Sentinel Camera Grid serves HLS from a CDN hostname behind an
+    access password, and RTSP/WHEP direct from a static IP, because a CDN
+    cannot proxy RTP. Two hosts, three protocols, one catalogue -- so the
+    derivation has to be a template per protocol rather than a port per
+    protocol on a shared host.
+
+    Templates take `{id}`, `{media_host}` and `{hls_host}`. Hosts come from
+    configuration, never from source: this file must not carry the address
+    of anyone's estate.
+    """
+    name: str = "default"
+    rtsp_template: str = "rtsp://{media_host}:8554/stream/{id}"
+    whep_template: str = "http://{media_host}:8889/stream/{id}/whep"
+    hls_template: str = "http://{media_host}:8888/live/stream/{id}/index.m3u8"
+
+    def rtsp(self, cam_id: str, media_host: str, hls_host: str) -> str:
+        return self.rtsp_template.format(id=cam_id, media_host=media_host,
+                                         hls_host=hls_host)
+
+    def whep(self, cam_id: str, media_host: str, hls_host: str) -> str:
+        return self.whep_template.format(id=cam_id, media_host=media_host,
+                                         hls_host=hls_host)
+
+    def hls(self, cam_id: str, media_host: str, hls_host: str) -> str:
+        return self.hls_template.format(id=cam_id, media_host=media_host,
+                                        hls_host=hls_host)
+
+
+#: The shape the challenge brief documents: everything on one host.
+PROFILE_SINGLE_HOST = GatewayProfile(name="single-host")
+
+#: The shape the Sentinel Camera Grid integrator's guide documents: HLS
+#: over a CDN hostname (TLS, password), RTSP and WHEP direct from the media
+#: host because a CDN cannot proxy RTP.
+PROFILE_SPLIT_CDN = GatewayProfile(
+    name="split-cdn",
+    rtsp_template="rtsp://{media_host}:8554/stream/{id}",
+    whep_template="http://{media_host}:8889/stream/{id}/whep",
+    hls_template="https://{hls_host}/{id}/index.m3u8",
+)
+
+PROFILES = {p.name: p for p in (PROFILE_SINGLE_HOST, PROFILE_SPLIT_CDN)}
+
 # Accepted spellings, most specific first. The real gateway will use one of
 # these or something close; whichever it is, `FieldReport` will name it.
 _ALIASES: dict[str, tuple[str, ...]] = {
@@ -152,19 +201,34 @@ def _host_of(url: str) -> str:
 
 
 def fetch_catalogue(base_url: str, timeout_s: float = 10.0,
-                    token: str | None = None) -> dict:
+                    token: str | None = None,
+                    default_endpoint: str = "api/ingest",
+                    basic_auth: str | None = None,
+                    extra_headers: dict[str, str] | None = None) -> dict:
     """GET the catalogue. Read-only, always.
 
     `base_url` may be the gateway root or the full endpoint; both are
     accepted because operators will paste either.
     """
     url = base_url.rstrip("/")
-    if not url.endswith("/api/ingest"):
-        url = f"{url}/api/ingest"
+    # Two real gateways, two endpoint names: the brief documents
+    # `<base>/api/ingest`, the Camera Grid serves `<base>/cameras.json`.
+    # A URL that already names an endpoint is used verbatim; only a bare
+    # host gets the default appended. Guessing over an explicit path is how
+    # an integrator ends up debugging a 404 that was their tool's fault.
+    tail = urllib.parse.urlparse(url).path.rsplit("/", 1)[-1]
+    if not (tail.endswith(".json") or tail == "ingest"):
+        url = f"{url}/{default_endpoint.lstrip('/')}"
     req = urllib.request.Request(url, method="GET",
                                  headers={"Accept": "application/json"})
     if token:
         req.add_header("Authorization", f"Bearer {token}")
+    if basic_auth:
+        import base64
+        blob = base64.b64encode(basic_auth.encode()).decode()
+        req.add_header("Authorization", f"Basic {blob}")
+    for header, value in (extra_headers or {}).items():
+        req.add_header(header, value)
     try:
         with urllib.request.urlopen(req, timeout=timeout_s) as resp:
             raw = resp.read()
@@ -205,6 +269,9 @@ def parse_catalogue(doc, gateway_host: str | None = None,
                     whep_port: int = DEFAULT_WHEP_PORT,
                     hls_port: int = DEFAULT_HLS_PORT,
                     credential_ref: str | None = None,
+                    profile: GatewayProfile | None = None,
+                    media_host: str | None = None,
+                    hls_host: str | None = None,
                     ) -> tuple[list[CameraSpec], FieldReport]:
     """Turn a catalogue document into CameraSpecs.
 
@@ -228,16 +295,19 @@ def parse_catalogue(doc, gateway_host: str | None = None,
         whep = _pick(entry, "whep", report)
         hls = _pick(entry, "hls", report)
 
-        # Derive only what the gateway did not advertise, and derive it from
-        # the gateway's own host rather than from anything hard-coded.
+        # Derive only what the gateway did not advertise, and derive it
+        # from configured hosts rather than from anything hard-coded.
         host = gateway_host or (_host_of(rtsp) if rtsp else None)
-        if host:
-            if not rtsp:
-                rtsp = f"rtsp://{host}:{rtsp_port}/stream/{cam_id}"
-            if not whep:
-                whep = f"http://{host}:{whep_port}/stream/{cam_id}/whep"
-            if not hls:
-                hls = f"http://{host}:{hls_port}/live/stream/{cam_id}/index.m3u8"
+        m_host = media_host or host
+        h_host = hls_host or media_host or host
+        if m_host or h_host:
+            prof = profile or PROFILE_SINGLE_HOST
+            if not rtsp and m_host:
+                rtsp = prof.rtsp(cam_id, m_host, h_host or m_host)
+            if not whep and m_host:
+                whep = prof.whep(cam_id, m_host, h_host or m_host)
+            if not hls and h_host:
+                hls = prof.hls(cam_id, m_host or h_host, h_host)
 
         width = _pick(entry, "width", report)
         height = _pick(entry, "height", report)
@@ -294,15 +364,50 @@ def parse_catalogue(doc, gateway_host: str | None = None,
     return specs, report
 
 
+def gateway_settings_from_env(env: dict | None = None) -> dict:
+    """Read the gateway's addressing from the environment.
+
+    Hosts, endpoint name and credentials are deployment facts, so they live
+    in configuration. Nothing here has a default that points at anyone's
+    estate; an unset variable simply falls back to the catalogue's own host.
+
+        SENTINEL_CATALOGUE_URL   full URL, e.g. https://host/cameras.json
+        SENTINEL_GATEWAY_PROFILE single-host | split-cdn
+        SENTINEL_MEDIA_HOST      host serving RTSP and WHEP
+        SENTINEL_HLS_HOST        host serving HLS, when it differs
+        SENTINEL_CATALOGUE_TOKEN bearer token, if the catalogue needs one
+        SENTINEL_CATALOGUE_BASIC user:password, if it is password-protected
+    """
+    import os
+    e = env if env is not None else os.environ
+    name = (e.get("SENTINEL_GATEWAY_PROFILE") or "single-host").strip()
+    return {
+        "url": e.get("SENTINEL_CATALOGUE_URL"),
+        "profile": PROFILES.get(name, PROFILE_SINGLE_HOST),
+        "media_host": e.get("SENTINEL_MEDIA_HOST") or None,
+        "hls_host": e.get("SENTINEL_HLS_HOST") or None,
+        "token": e.get("SENTINEL_CATALOGUE_TOKEN") or None,
+        "basic_auth": e.get("SENTINEL_CATALOGUE_BASIC") or None,
+    }
+
+
 def load_from_sentinel(base_url: str, timeout_s: float = 10.0,
                        token: str | None = None,
                        credential_ref: str | None = None,
                        department: str = "GP_SENTINEL",
+                       profile: GatewayProfile | None = None,
+                       media_host: str | None = None,
+                       hls_host: str | None = None,
+                       basic_auth: str | None = None,
+                       default_endpoint: str = "api/ingest",
                        ) -> tuple[list[CameraSpec], FieldReport]:
-    doc = fetch_catalogue(base_url, timeout_s=timeout_s, token=token)
+    doc = fetch_catalogue(base_url, timeout_s=timeout_s, token=token,
+                          default_endpoint=default_endpoint,
+                          basic_auth=basic_auth)
     specs, report = parse_catalogue(
         doc, gateway_host=_host_of(base_url), department=department,
-        credential_ref=credential_ref)
+        credential_ref=credential_ref, profile=profile,
+        media_host=media_host, hls_host=hls_host)
     log.info("%s", report.summary())
     if report.missing:
         log.warning("catalogue did not supply: %s -- if this is the real "

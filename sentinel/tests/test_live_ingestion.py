@@ -344,3 +344,51 @@ def test_capture_time_is_re_anchored_after_a_discontinuity(tmp_path):
     assert times == sorted(times), (
         "capture_time went backwards across a loop point -- the anchor was "
         "not reset, so the vehicle appears to travel into the past")
+
+
+# ── transport failover: RTSP blocked, HLS available ──────────────────
+
+def test_a_reader_carries_alternative_transports_for_one_camera():
+    from ingestion.live_reader import LiveStreamReader
+
+    r = LiveStreamReader("rtsp://10.0.0.1:8554/stream/cam04", camera_id="cam04",
+                         fallback_urls=["https://cdn.test/cam04/index.m3u8"])
+    assert r.url.startswith("rtsp://")
+    assert len(r.transports) == 2
+
+
+def test_repeated_failures_rotate_to_the_next_transport():
+    """8554 blocked by policy is not a camera fault, and never becomes one.
+
+    The integrator's guide says to use HLS when the RTSP port is closed.
+    A reader that only ever retried RTSP would report every camera on such
+    a network as down, which is a network diagnosis dressed as an estate
+    health figure.
+    """
+    from ingestion.live_reader import LiveStreamReader
+
+    r = LiveStreamReader("rtsp://10.0.0.1:8554/stream/cam04", camera_id="cam04",
+                         fallback_urls=["https://cdn.test/cam04/index.m3u8"],
+                         failures_before_failover=2)
+    assert r._failover() is True
+    assert r.url.startswith("https://")
+    assert r.health.transport_failovers == 1
+    # Cyclic, not terminal: a sick CDN must not strand the camera there.
+    r._failover()
+    assert r.url.startswith("rtsp://")
+
+
+def test_a_camera_with_one_transport_never_pretends_to_fail_over():
+    from ingestion.live_reader import LiveStreamReader
+
+    r = LiveStreamReader("rtsp://10.0.0.1:8554/stream/cam04", camera_id="cam04")
+    assert r._failover() is False
+    assert r.health.transport_failovers == 0
+
+
+def test_a_duplicate_fallback_is_not_added_twice():
+    from ingestion.live_reader import LiveStreamReader
+
+    url = "rtsp://10.0.0.1:8554/stream/cam04"
+    r = LiveStreamReader(url, camera_id="cam04", fallback_urls=[url, ""])
+    assert r.transports == [url]

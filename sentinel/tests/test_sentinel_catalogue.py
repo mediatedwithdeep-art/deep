@@ -280,3 +280,62 @@ def test_an_unreachable_gateway_does_not_take_the_estate_offline(tmp_path):
     specs = load_cameras(catalogue_url="http://127.0.0.1:9",
                          yaml_path=str(overlay))
     assert [s.camera_id for s in specs] == ["KNOWN-1"]
+
+
+# ── the Camera Grid's addressing: two hosts, three protocols ─────────
+
+def test_the_split_cdn_profile_matches_the_integrators_guide():
+    """HLS over the CDN name, RTSP and WHEP direct from the media host.
+
+    A CDN cannot proxy RTP, so the grid publishes HLS on one hostname and
+    RTSP/WHEP on another. A single-host assumption derives URLs that 404.
+    """
+    from ingestion.sentinel_catalogue import PROFILE_SPLIT_CDN, parse_catalogue
+
+    specs, _ = parse_catalogue(
+        [{"id": "cam04"}], profile=PROFILE_SPLIT_CDN,
+        media_host="203.0.113.10", hls_host="cdn.example.test")
+    spec = specs[0]
+    assert spec.stream_url == "rtsp://203.0.113.10:8554/stream/cam04"
+    assert spec.extra["whep_url"] == "http://203.0.113.10:8889/stream/cam04/whep"
+    assert spec.extra["hls_url"] == "https://cdn.example.test/cam04/index.m3u8"
+
+
+def test_no_gateway_address_is_hard_coded_in_the_catalogue_client():
+    """Hosts are configuration. This file must not carry anyone's estate."""
+    import pathlib
+    import re
+
+    src = (pathlib.Path(__file__).resolve().parents[1] / "video-ingestion"
+           / "ingestion" / "sentinel_catalogue.py").read_text()
+    code = "\n".join(ln for ln in src.splitlines()
+                     if not ln.strip().startswith("#"))
+    # Any dotted quad that is not a placeholder or a documentation example.
+    quads = [q for q in re.findall(r"\b(?:\d{1,3}\.){3}\d{1,3}\b", code)
+             if not q.startswith(("0.", "127.", "255."))]
+    assert quads == [], f"a gateway IP is hard-coded here: {quads}"
+
+
+def test_an_explicit_catalogue_endpoint_is_used_verbatim(monkeypatch):
+    """`/cameras.json` must not become `/cameras.json/api/ingest`."""
+    from ingestion import sentinel_catalogue as sc
+
+    seen = {}
+
+    class _Resp:
+        def read(self): return b"[]"
+        def __enter__(self): return self
+        def __exit__(self, *a): return False
+
+    def fake_urlopen(req, timeout=None):
+        seen["url"] = req.full_url
+        return _Resp()
+
+    monkeypatch.setattr(sc.urllib.request, "urlopen", fake_urlopen)
+
+    sc.fetch_catalogue("https://host.test/cameras.json")
+    assert seen["url"] == "https://host.test/cameras.json"
+
+    # A bare host still gets the default endpoint appended.
+    sc.fetch_catalogue("https://host.test")
+    assert seen["url"] == "https://host.test/api/ingest"

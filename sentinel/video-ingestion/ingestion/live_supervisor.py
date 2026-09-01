@@ -113,11 +113,19 @@ class LiveEstate:
     def _open(self, spec: CameraSpec) -> None:
         """Open one camera, holding an open slot for the whole handshake."""
         self.connect_started_at[spec.camera_id] = time.time()
+        # The catalogue's HLS URL is carried as a fallback transport. On a
+        # network where 8554/TCP is closed -- which the integrator's guide
+        # says to expect, and which a government WAN will often be -- the
+        # reader rotates to HLS instead of reporting the camera down.
+        primary = spec.ai_url or spec.stream_url or ""
+        fallbacks = [u for u in (spec.extra or {}).get("hls_url", "") .split()
+                     if u and u != primary]
         reader = LiveStreamReader(
-            spec.ai_url or spec.stream_url or "",
+            primary,
             camera_id=spec.camera_id,
             width=self.width, height=self.height,
             open_timeout_s=self.open_timeout_s,
+            fallback_urls=fallbacks,
             expected_fps=spec.fps)
         with self._lock:
             # Guard against a reconcile having removed it while we were
