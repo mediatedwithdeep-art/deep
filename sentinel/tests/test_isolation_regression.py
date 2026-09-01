@@ -238,3 +238,66 @@ async def test_alert_summary_counts_only_the_callers_department(api, victim_aler
     assert state_total > a_total, (
         f"LEAK: dept A's alert total ({a_total}) matches the state-wide total "
         f"({state_total}); the summary is not scoped")
+
+
+# ── inference leaks: what a scoped row still admits ──────────────────
+
+
+@pytest.fixture
+def cross_boundary(db, estate):
+    """One vehicle seen by BOTH departments: 1 hop in A, 3 hops in B."""
+    db.execute("""INSERT INTO vehicle (vehicle_track_id, first_seen, last_seen,
+                      sighting_count, camera_count, vehicle_type, vehicle_color,
+                      best_plate, best_plate_conf, plate_read_count, total_distance_m)
+                  VALUES ('XB-TRACK', now()-interval '30 min', now(), 4, 2,
+                          'car','white','GJ07ZZ7777',0.95,4, 8800)
+                  ON CONFLICT (vehicle_track_id) DO UPDATE
+                    SET sighting_count=4, camera_count=2, total_distance_m=8800""")
+    for i, cam in enumerate(["SEC-A-CAM-001", "SEC-B-CAM-001",
+                             "SEC-B-CAM-001", "SEC-B-CAM-001"]):
+        db.execute("""INSERT INTO vehicle_sighting (sighting_id, timestamp, first_seen,
+                          last_seen, camera_id, camera_ref, vehicle_track_id, track_id,
+                          vehicle_type, vehicle_color, plate_normalized,
+                          plate_confidence, plate_valid_fmt, latitude, longitude)
+                      SELECT %s, now()-make_interval(mins=>%s), now()-make_interval(mins=>%s),
+                             now()-make_interval(mins=>%s), c.id, c.camera_id,
+                             'XB-TRACK', 'T-XB','car','white','GJ07ZZ7777',0.95,TRUE,
+                             23.03, 72.58
+                      FROM camera c WHERE c.camera_id=%s
+                      ON CONFLICT DO NOTHING""",
+                   (f"XB-SIGHT-{i}", 30 - i * 5, 30 - i * 5, 30 - i * 5, cam))
+    return {"track": "XB-TRACK"}
+
+
+async def test_vehicle_detail_aggregates_do_not_count_other_departments(
+        api, cross_boundary):
+    """A saw 1 hop on 1 camera. Does the detail admit to 4 hops on 2?"""
+    h = await auth(api, "sec_a_operator")
+    r = await api.get("/api/v1/vehicles/XB-TRACK", headers=h)
+    assert r.status_code == 200, r.text
+    b = r.json()
+    assert (b["sighting_count"], b["camera_count"]) == (1, 1), (
+        f"LEAK: aggregates are estate-wide. A saw 1 sighting on 1 camera but "
+        f"the API reports sighting_count={b['sighting_count']} "
+        f"camera_count={b['camera_count']} distance={b.get('total_distance_m')}")
+
+
+async def test_next_cameras_does_not_name_another_departments_camera(
+        api, cross_boundary):
+    h = await auth(api, "sec_a_operator")
+    r = await api.get("/api/v1/vehicles/XB-TRACK/next-cameras", headers=h)
+    assert r.status_code in (200, 404), r.text
+    assert "SEC-B-CAM-001" not in r.text, (
+        f"LEAK: next-cameras names a dept B camera: {r.text[:400]}")
+
+
+async def test_search_result_camera_list_is_scoped(api, cross_boundary):
+    """The search row carries an array of every camera that saw the vehicle."""
+    h = await auth(api, "sec_a_operator")
+    r = await api.get("/api/v1/vehicles/search",
+                      params={"plate": "GJ07ZZ7777"}, headers=h)
+    assert r.status_code == 200, r.text
+    items = r.json()["items"]
+    assert items, "dept A legitimately saw this vehicle and should find it"
+    assert "SEC-B-CAM-001" not in str(items), (
+        f"LEAK: search row lists dept B cameras: {items}")

@@ -72,20 +72,37 @@ async def search_vehicles(
                      "AND c.zone = %s)")
         params.append(zone)
 
+    # Counts and the camera list are recomputed over the caller's own
+    # sightings. The stored aggregates on `vehicle` are estate-wide, and
+    # publishing them would tell one department how many other cameras saw
+    # the vehicle, and name them -- the row itself becoming the disclosure
+    # the WHERE clause just prevented.
+    agg_sql, agg_params = dept_scope_sighting(user, "s")
     rows = await db.fetch_all(f"""
         SELECT v.vehicle_track_id, v.best_plate, v.best_plate_conf,
                v.vehicle_type::text AS vehicle_type, v.vehicle_color,
-               v.first_seen, v.last_seen, v.sighting_count, v.camera_count,
+               v.first_seen, v.last_seen,
+               (SELECT count(*) FROM vehicle_sighting s
+                 WHERE s.vehicle_track_id = v.vehicle_track_id
+                   AND {agg_sql})::int AS sighting_count,
+               (SELECT count(DISTINCT s.camera_ref) FROM vehicle_sighting s
+                 WHERE s.vehicle_track_id = v.vehicle_track_id
+                   AND {agg_sql})::int AS camera_count,
                v.plate_read_count, v.is_watchlisted,
-               round(v.total_distance_m::numeric) AS total_distance_m,
+               {'round(v.total_distance_m::numeric)' if sees_all_departments(user)
+                else 'NULL::numeric'} AS total_distance_m,
                EXTRACT(EPOCH FROM (v.last_seen - v.first_seen))::int AS duration_seconds,
                (SELECT array_agg(DISTINCT s.camera_ref)
                   FROM vehicle_sighting s
-                 WHERE s.vehicle_track_id = v.vehicle_track_id) AS cameras
+                 WHERE s.vehicle_track_id = v.vehicle_track_id
+                   AND {agg_sql}) AS cameras
         FROM vehicle v
         WHERE {' AND '.join(where)}
         ORDER BY v.last_seen DESC
-        LIMIT %s""", params + [limit])
+        LIMIT %s""",
+        # Placeholder order follows the SQL text: the three scoped
+        # sub-selects bind before the WHERE clause, which binds before LIMIT.
+        [*agg_params, *agg_params, *agg_params, *params, limit])
 
     result = {"items": rows, "count": len(rows)}
     if plate:
@@ -107,15 +124,26 @@ async def search_vehicles(
 async def get_vehicle(vehicle_track_id: str,
                       user: Annotated[object, Depends(require("vehicle:read"))]):
     scope_sql, scope_params = dept_scope_vehicle(user, "v")
+    agg_sql, agg_params = dept_scope_sighting(user, "s")
+    # `total_distance_m` is computed over the whole trajectory, most of
+    # which a scoped caller cannot see, so it is withheld rather than
+    # reported as if it described their own observations.
     row = await db.fetch_one(f"""
         SELECT v.vehicle_track_id, v.best_plate, v.best_plate_conf,
                v.vehicle_type::text AS vehicle_type, v.vehicle_color, v.make_model,
-               v.first_seen, v.last_seen, v.sighting_count, v.camera_count,
+               v.first_seen, v.last_seen,
+               (SELECT count(*) FROM vehicle_sighting s
+                 WHERE s.vehicle_track_id = v.vehicle_track_id
+                   AND {agg_sql})::int AS sighting_count,
+               (SELECT count(DISTINCT s.camera_ref) FROM vehicle_sighting s
+                 WHERE s.vehicle_track_id = v.vehicle_track_id
+                   AND {agg_sql})::int AS camera_count,
                v.plate_read_count, v.is_watchlisted,
-               round(v.total_distance_m::numeric) AS total_distance_m,
+               {'round(v.total_distance_m::numeric)' if sees_all_departments(user)
+                else 'NULL::numeric'} AS total_distance_m,
                v.embedding_model
         FROM vehicle v WHERE v.vehicle_track_id = %s AND {scope_sql}""",
-        (vehicle_track_id, *scope_params))
+        (*agg_params, *agg_params, vehicle_track_id, *scope_params))
     if row is None:
         # 404 rather than 403: confirming the vehicle exists elsewhere is
         # itself a cross-department disclosure an operator could enumerate.
