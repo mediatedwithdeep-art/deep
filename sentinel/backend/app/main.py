@@ -189,7 +189,13 @@ async def websocket_endpoint(websocket: WebSocket, token: str | None = None):
         await websocket.close(code=4401, reason="invalid or expired token")
         return
 
-    client = await ws.manager.connect(websocket, payload.get("username", "?"))
+    # The socket inherits exactly the scope the token carries, so the live
+    # channel enforces the same boundary as every REST query.
+    role = Role.parse(payload.get("role"))
+    client = await ws.manager.connect(
+        websocket, payload.get("username", "?"),
+        department=payload.get("dept"),
+        sees_all=role is Role.SYSTEM)
     pump = asyncio.create_task(ws.manager.pump(client))
     try:
         while True:

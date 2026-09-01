@@ -106,6 +106,71 @@ def dept_filter(user: CurrentUser, column: str = "d.code") -> tuple[str, list]:
     return ("FALSE", [])
 
 
+def _scope_through_camera(user: CurrentUser, camera_id_expr: str) -> tuple[str, list]:
+    """EXISTS clause tying a row to a camera this caller may see.
+
+    Every derived record in this system -- a sighting, a vehicle, an alert --
+    inherits its department from the camera that produced it. Scoping the
+    camera therefore scopes everything downstream, and doing it as an
+    EXISTS keeps the clause composable into any WHERE without disturbing
+    the outer query's joins or its row count.
+    """
+    if sees_all_departments(user):
+        return ("TRUE", [])
+    if not user.department:
+        return ("FALSE", [])
+    return (
+        f"EXISTS (SELECT 1 FROM camera _sc JOIN department _sd "
+        f"ON _sd.id = _sc.department_id "
+        f"WHERE _sc.id = {camera_id_expr} AND _sd.code = %s)",
+        [user.department],
+    )
+
+
+def dept_scope_sighting(user: CurrentUser, alias: str = "s") -> tuple[str, list]:
+    """Restrict a sighting row to the caller's department."""
+    return _scope_through_camera(user, f"{alias}.camera_id")
+
+
+def dept_scope_alert(user: CurrentUser, alias: str = "a") -> tuple[str, list]:
+    """Restrict an alert row to the caller's department.
+
+    An alert with no camera is not attributable to a department, so only
+    the state admin sees it. Failing closed here matters: the alternative
+    is that a NULL camera_id becomes a channel through which every
+    department reads every other one's alerts.
+    """
+    if sees_all_departments(user):
+        return ("TRUE", [])
+    if not user.department:
+        return ("FALSE", [])
+    clause, params = _scope_through_camera(user, f"{alias}.camera_id")
+    return (f"({alias}.camera_id IS NOT NULL AND {clause})", params)
+
+
+def dept_scope_vehicle(user: CurrentUser, alias: str = "v") -> tuple[str, list]:
+    """Restrict a vehicle to one this caller's own cameras have seen.
+
+    A vehicle crossing a department boundary is visible to both, because
+    both genuinely observed it. What each may then read is still only its
+    own hops -- see `dept_scope_sighting`, which the timeline applies -- so
+    this grants the existence of the vehicle, never another department's
+    view of where it went.
+    """
+    if sees_all_departments(user):
+        return ("TRUE", [])
+    if not user.department:
+        return ("FALSE", [])
+    return (
+        f"EXISTS (SELECT 1 FROM vehicle_sighting _vs "
+        f"JOIN camera _vc ON _vc.id = _vs.camera_id "
+        f"JOIN department _vd ON _vd.id = _vc.department_id "
+        f"WHERE _vs.vehicle_track_id = {alias}.vehicle_track_id "
+        f"AND _vd.code = %s)",
+        [user.department],
+    )
+
+
 def require_department(user: CurrentUser, department: str | None) -> None:
     """Authorise access to one resource owned by `department`.
 

@@ -50,7 +50,7 @@ fuses plate (precision) with appearance and attributes (recall), under the gate.
 
 | | |
 |---|---|
-| **Tests** | **346 collected** — unit, integration against a live PostgreSQL, live-feed tests against a real RTSP server, plus dedicated Sentinel-contract and security-regression suites |
+| **Tests** | **359 collected** — unit, integration against a live PostgreSQL, live-feed tests against a real RTSP server, plus dedicated Sentinel-contract and security-regression suites |
 | Database | 10 migrations, PostGIS + pgvector, range partitioning, HOT/WARM/COLD tiering |
 | API | 45 operations across 41 paths, JWT + RBAC, WebSocket, audit log, Prometheus |
 | AI pipeline | detect → track → quality gate → ANPR + ReID → sighting |
@@ -125,7 +125,7 @@ sentinel/
 ├── config/cameras.yaml     ← THE file you edit for real cameras
 ├── infrastructure/         nginx, Prometheus, Grafana, Kubernetes
 ├── scripts/benchmark.py    every number in the docs comes from here
-├── tests/                  346 tests
+├── tests/                  359 tests
 └── docs/
 ```
 
@@ -138,7 +138,7 @@ make demo            # everything, one command
 make logs            # follow the pipeline
 make down            # stop (keeps data)
 make clean           # stop and delete data
-make test            # 346 tests
+make test            # 359 tests
 make verify          # the ten verification questions, answered by running it
 make benchmark       # measure it yourself
 make observability   # + Prometheus and Grafana
@@ -219,6 +219,7 @@ correct degraded behaviour for a control room, and it is tested.
 | [SCALING.md](docs/SCALING.md) | The path from 50 to 80,000 cameras |
 | [BENCHMARKS.md](docs/BENCHMARKS.md) | Measured performance and method |
 | [SENTINEL_LIVE_TEST_REPORT.md](docs/SENTINEL_LIVE_TEST_REPORT.md) | 50 cameras over live RTSP: PTS, codecs, reconnection |
+| [SECURITY_REVIEW.md](docs/SECURITY_REVIEW.md) | **Adversarial test of the authorisation boundary: 18 findings, how each was proved, and the fix** |
 | [PHASE2_AUDIT.md](docs/PHASE2_AUDIT.md) | What was executed, and what is still pending |
 | [REQUIREMENT_TRACEABILITY_MATRIX.md](docs/REQUIREMENT_TRACEABILITY_MATRIX.md) | **Every requirement → implementation → test → status.** Start here to check a claim |
 | [GOVERNMENT_INTEGRATION.md](docs/GOVERNMENT_INTEGRATION.md) | VAHAN / SARTHI / eGujCop / AFIS / NAFIS adapters, and why none is connected |

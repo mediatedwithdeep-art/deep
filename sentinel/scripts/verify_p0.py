@@ -286,13 +286,15 @@ def main() -> int:
     # ── 9 · does department authorisation actually block? ────────────
     r = subprocess.run(
         [sys.executable, "-m", "pytest", "tests/test_security_regression.py",
+         "tests/test_isolation_regression.py",
          "-q", "--no-header", "-p", "no:cacheprovider"],
         capture_output=True, text=True, cwd=ROOT, timeout=900)
     out = (r.stdout or "") + (r.stderr or "")
     last = [ln for ln in out.strip().splitlines() if ln.strip()][-1:]
     record("9. Does department authorisation actually block unauthorised data?",
            r.returncode == 0 if "passed" in out else None,
-           f"tests/test_security_regression.py against live PostgreSQL: "
+           f"test_security_regression.py + test_isolation_regression.py "
+           f"against live PostgreSQL: "
            f"{last[0] if last else 'no output'}")
 
     # ── 10 · is the real/demo distinction honest? ────────────────────

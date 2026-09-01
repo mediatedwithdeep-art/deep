@@ -10,7 +10,10 @@ from pydantic import BaseModel, Field
 from sentinel_core import plate_rules
 
 from .. import db
-from ..deps import CurrentUserDep, require, write_audit
+from ..deps import (
+    CurrentUserDep, dept_scope_alert, dept_scope_vehicle, require,
+    sees_all_departments, write_audit,
+)
 
 router = APIRouter(tags=["alerts"])
 
@@ -26,8 +29,10 @@ async def list_alerts(
     hours: int = Query(24, ge=1, le=8760),
     limit: int = Query(100, ge=1, le=1000),
 ):
-    where = ["a.timestamp > now() - make_interval(hours => %s)"]
-    params: list = [hours]
+    # An alert inherits its department from the camera that raised it.
+    scope_sql, scope_params = dept_scope_alert(user, "a")
+    where = [scope_sql, "a.timestamp > now() - make_interval(hours => %s)"]
+    params: list = [*scope_params, hours]
     for column, value, cast in (("state", state, "::alert_state"),
                                 ("severity", severity, "::alert_severity"),
                                 ("alert_type", alert_type, "::alert_type"),
@@ -52,17 +57,26 @@ async def list_alerts(
 
 @router.get("/alerts/summary")
 async def alert_summary(user: Annotated[object, Depends(require("alert:read"))]):
-    counts = await db.fetch_one("""
-        SELECT count(*) FILTER (WHERE state='NEW') AS open,
-               count(*) FILTER (WHERE state='NEW' AND severity IN ('HIGH','CRITICAL')) AS urgent,
-               count(*) FILTER (WHERE state='ACKNOWLEDGED') AS acknowledged,
-               count(*) FILTER (WHERE state='FALSE_POSITIVE') AS false_positive,
+    # Counts are scoped too. An unscoped total tells one department how
+    # busy another's estate is, and a false-positive rate computed over
+    # alerts the caller may not read is not a number about their estate.
+    scope_sql, scope_params = dept_scope_alert(user, "a")
+    counts = await db.fetch_one(f"""
+        SELECT count(*) FILTER (WHERE a.state='NEW') AS open,
+               count(*) FILTER (WHERE a.state='NEW'
+                                AND a.severity IN ('HIGH','CRITICAL')) AS urgent,
+               count(*) FILTER (WHERE a.state='ACKNOWLEDGED') AS acknowledged,
+               count(*) FILTER (WHERE a.state='FALSE_POSITIVE') AS false_positive,
                count(*) AS total_24h
-        FROM alert WHERE timestamp > now() - INTERVAL '24 hours'""")
-    by_type = await db.fetch_all("""
-        SELECT alert_type::text AS alert_type, severity::text AS severity, count(*) AS n
-        FROM alert WHERE timestamp > now() - INTERVAL '24 hours'
-        GROUP BY 1,2 ORDER BY n DESC""")
+        FROM alert a
+        WHERE a.timestamp > now() - INTERVAL '24 hours' AND {scope_sql}""",
+        tuple(scope_params))
+    by_type = await db.fetch_all(f"""
+        SELECT a.alert_type::text AS alert_type, a.severity::text AS severity,
+               count(*) AS n
+        FROM alert a
+        WHERE a.timestamp > now() - INTERVAL '24 hours' AND {scope_sql}
+        GROUP BY 1,2 ORDER BY n DESC""", tuple(scope_params))
     # The false-positive rate is the number that determines whether
     # operators keep trusting the system. Surfacing it makes the honest
     # thing the visible thing.
@@ -81,14 +95,18 @@ class AckRequest(BaseModel):
 async def acknowledge_alert(alert_id: str, body: AckRequest, request: Request,
                             user: CurrentUserDep,
                             _perm: Annotated[object, Depends(require("alert:ack"))]):
-    n = await db.execute("""
+    # Scoped in the UPDATE itself. Acknowledging is a write: an operator
+    # who could ack a neighbouring department's CRITICAL alert could
+    # silence a stolen-vehicle hit in an estate they have no authority over.
+    scope_sql, scope_params = dept_scope_alert(user, "alert")
+    n = await db.execute(f"""
         UPDATE alert SET state=%s::alert_state, acknowledged_by=%s::uuid,
                acknowledged_at=now(),
                resolved_at = CASE WHEN %s IN ('RESOLVED','FALSE_POSITIVE')
                                   THEN now() ELSE resolved_at END,
                note=COALESCE(%s, note)
-        WHERE alert_id=%s""",
-        (body.state, user.id, body.state, body.note, alert_id))
+        WHERE alert_id=%s AND {scope_sql}""",
+        (body.state, user.id, body.state, body.note, alert_id, *scope_params))
     if n == 0:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "alert not found")
     await write_audit(request, user=user, action=f"ALERT_{body.state}",
@@ -116,14 +134,29 @@ class WatchlistCreate(BaseModel):
 @router.get("/watchlist")
 async def list_watchlist(user: Annotated[object, Depends(require("watchlist:read"))],
                          active_only: bool = True):
-    where = "WHERE is_active" if active_only else ""
+    # A watchlist entry carries the case reference and the stated reason
+    # for tracking a vehicle. Listing every department's entries would tell
+    # one force which vehicles another is working and under which case,
+    # which is investigation metadata, not shared estate data. Scoped by
+    # the department of the officer who created it.
+    clauses = ["w.is_active"] if active_only else []
+    params: list = []
+    if not sees_all_departments(user):
+        if not user.department:
+            clauses.append("FALSE")
+        else:
+            clauses.append("_wd.code = %s")
+            params.append(user.department)
+    where = f"WHERE {' AND '.join(clauses)}" if clauses else ""
     rows = await db.fetch_all(f"""
         SELECT w.id::text AS id, w.label, w.plate_query, w.vehicle_type::text AS vehicle_type,
                w.vehicle_color, w.severity::text AS severity, w.reason, w.case_ref,
                w.is_active, w.created_at, w.expires_at, w.hit_count, w.last_hit_at,
                u.username AS created_by
-        FROM watchlist w LEFT JOIN app_user u ON u.id = w.created_by
-        {where} ORDER BY w.created_at DESC""")
+        FROM watchlist w
+        LEFT JOIN app_user u ON u.id = w.created_by
+        LEFT JOIN department _wd ON _wd.id = u.department_id
+        {where} ORDER BY w.created_at DESC""", tuple(params))
     return {"items": rows, "count": len(rows)}
 
 

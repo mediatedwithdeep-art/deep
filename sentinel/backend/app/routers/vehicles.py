@@ -10,7 +10,10 @@ from pydantic import BaseModel, Field
 from sentinel_core import plate_rules
 
 from .. import db
-from ..deps import CurrentUserDep, require, require_reason, write_audit
+from ..deps import (
+    CurrentUserDep, dept_scope_sighting, dept_scope_vehicle, require,
+    require_reason, sees_all_departments, write_audit,
+)
 
 router = APIRouter(prefix="/vehicles", tags=["vehicles"])
 
@@ -36,8 +39,12 @@ async def search_vehicles(
     confusion-collapsed canonical form, which is indexed, so this stays an
     index lookup rather than a scan with a distance function.
     """
-    where = ["v.last_seen > now() - make_interval(hours => %s)"]
-    params: list = [hours]
+    # A vehicle is visible only if one of THIS caller's cameras saw it.
+    # Without this the plate search is a state-wide lookup for every
+    # operator in every department.
+    scope_sql, scope_params = dept_scope_vehicle(user, "v")
+    where = [scope_sql, "v.last_seen > now() - make_interval(hours => %s)"]
+    params: list = [*scope_params, hours]
 
     canonical = None
     if plate:
@@ -99,15 +106,19 @@ async def search_vehicles(
 @router.get("/{vehicle_track_id}")
 async def get_vehicle(vehicle_track_id: str,
                       user: Annotated[object, Depends(require("vehicle:read"))]):
-    row = await db.fetch_one("""
+    scope_sql, scope_params = dept_scope_vehicle(user, "v")
+    row = await db.fetch_one(f"""
         SELECT v.vehicle_track_id, v.best_plate, v.best_plate_conf,
                v.vehicle_type::text AS vehicle_type, v.vehicle_color, v.make_model,
                v.first_seen, v.last_seen, v.sighting_count, v.camera_count,
                v.plate_read_count, v.is_watchlisted,
                round(v.total_distance_m::numeric) AS total_distance_m,
                v.embedding_model
-        FROM vehicle v WHERE v.vehicle_track_id = %s""", (vehicle_track_id,))
+        FROM vehicle v WHERE v.vehicle_track_id = %s AND {scope_sql}""",
+        (vehicle_track_id, *scope_params))
     if row is None:
+        # 404 rather than 403: confirming the vehicle exists elsewhere is
+        # itself a cross-department disclosure an operator could enumerate.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "vehicle not found")
     return row
 
@@ -126,7 +137,12 @@ async def vehicle_timeline(
     2023 purpose limitation exists to govern, so the reason is recorded in
     the audit log alongside the query.
     """
-    sightings = await db.fetch_all("""
+    # Scoped to the caller's own cameras. A vehicle that crossed a
+    # boundary is legitimately visible to both departments, but each sees
+    # only the hops its own estate observed -- the other department's
+    # camera positions and timings are not theirs to read.
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    sightings = await db.fetch_all(f"""
         SELECT s.sighting_id, s.timestamp, s.camera_ref, c.name AS camera_name,
                c.zone, s.latitude, s.longitude, s.heading_deg, s.speed_kmph,
                s.vehicle_type::text AS vehicle_type, s.vehicle_color,
@@ -134,8 +150,8 @@ async def vehicle_timeline(
                s.detection_count
         FROM vehicle_sighting s
         LEFT JOIN camera c ON c.id = s.camera_id
-        WHERE s.vehicle_track_id = %s
-        ORDER BY s.timestamp""", (vehicle_track_id,))
+        WHERE s.vehicle_track_id = %s AND {scope_sql}
+        ORDER BY s.timestamp""", (vehicle_track_id, *scope_params))
     if not sightings:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no sightings for this vehicle")
 
@@ -204,10 +220,30 @@ async def vehicle_track_geojson(vehicle_track_id: str,
     drawing an unobserved segment the same way as an observed one would
     misrepresent evidence.
     """
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    visible = await db.fetch_all(
+        f"SELECT DISTINCT s.camera_ref FROM vehicle_sighting s "
+        f"WHERE s.vehicle_track_id = %s AND {scope_sql}",
+        (vehicle_track_id, *scope_params))
+    if not visible:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "vehicle not found")
+
     row = await db.fetch_one("SELECT vehicle_track_geojson(%s) AS fc", (vehicle_track_id,))
     if row is None or not row["fc"]:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "vehicle not found")
-    return row["fc"]
+    fc = row["fc"]
+    if not sees_all_departments(user):
+        # The SQL function is estate-wide by design. Drop the points this
+        # caller may not see, and drop the path with them: a line drawn
+        # through withheld points would redraw exactly what was withheld.
+        allowed = {r["camera_ref"] for r in visible}
+        fc = dict(fc)
+        fc["features"] = [
+            f for f in fc.get("features", [])
+            if (f.get("properties") or {}).get("kind") != "path"
+            and ((f.get("properties") or {}).get("camera_ref") in allowed)
+        ]
+    return fc
 
 
 @router.get("/{vehicle_track_id}/next-cameras")
@@ -223,11 +259,12 @@ async def predicted_next_cameras(
     the same gate the matcher uses, surfaced for the operator: the map can
     highlight cameras ahead of the vehicle rather than behind it.
     """
-    last = await db.fetch_one("""
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    last = await db.fetch_one(f"""
         SELECT s.camera_id::text AS cid, s.camera_ref, s.timestamp
         FROM vehicle_sighting s
-        WHERE s.vehicle_track_id = %s
-        ORDER BY s.timestamp DESC LIMIT 1""", (vehicle_track_id,))
+        WHERE s.vehicle_track_id = %s AND {scope_sql}
+        ORDER BY s.timestamp DESC LIMIT 1""", (vehicle_track_id, *scope_params))
     if last is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "no sightings for this vehicle")
 
@@ -288,6 +325,10 @@ async def find_similar(body: SimilarRequest, request: Request,
             SELECT camera_id FROM candidate_cameras(%s::uuid, %s::timestamptz))""")
         params += [seed["cid"], seed["timestamp"]]
 
+    sc_sql, sc_params = dept_scope_sighting(user, "s")
+    where.append(sc_sql)
+    params += sc_params
+
     rows = await db.fetch_all(f"""
         SELECT s.sighting_id, s.timestamp, s.camera_ref, s.vehicle_track_id,
                s.vehicle_type::text AS vehicle_type, s.vehicle_color,
@@ -331,9 +372,17 @@ async def link_verdict(link_id: str, body: VerdictRequest, request: Request,
     Recording them is what lets the system improve after deployment instead
     of staying frozen at its hackathon accuracy.
     """
-    n = await db.execute("""
-        UPDATE track_link SET operator_verdict=%s, operator_id=%s::uuid, verdict_at=now()
-        WHERE id=%s::uuid""", (body.verdict, user.id, link_id))
+    # Scoped in the UPDATE itself: a check-then-write would let the link
+    # change hands between the two statements.
+    scope_sql, scope_params = dept_scope_vehicle(user, "v")
+    n = await db.execute(f"""
+        UPDATE track_link tl
+           SET operator_verdict=%s, operator_id=%s::uuid, verdict_at=now()
+        WHERE tl.id=%s::uuid
+          AND EXISTS (SELECT 1 FROM vehicle v
+                       WHERE v.vehicle_track_id = tl.vehicle_track_id
+                         AND {scope_sql})""",
+        (body.verdict, user.id, link_id, *scope_params))
     if n == 0:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "link not found")
     await write_audit(request, user=user, action=f"LINK_{body.verdict}",
@@ -346,7 +395,8 @@ async def link_verdict(link_id: str, body: VerdictRequest, request: Request,
 async def pending_links(user: Annotated[object, Depends(require("link:verdict"))],
                         limit: int = Query(50, ge=1, le=500)):
     """Probable associations awaiting operator confirmation."""
-    rows = await db.fetch_all("""
+    scope_sql, scope_params = dept_scope_vehicle(user, "v")
+    rows = await db.fetch_all(f"""
         SELECT tl.id::text AS link_id, tl.vehicle_track_id, tl.timestamp,
                tl.score_total, tl.score_plate, tl.score_reid, tl.score_color,
                tl.score_spatiotemporal, tl.travel_expected_s, tl.travel_actual_s,
@@ -357,5 +407,6 @@ async def pending_links(user: Annotated[object, Depends(require("link:verdict"))
         LEFT JOIN camera ct ON ct.id = tl.to_camera_id
         LEFT JOIN vehicle v ON v.vehicle_track_id = tl.vehicle_track_id
         WHERE tl.decision = 'PROBABLE' AND tl.operator_verdict IS NULL
-        ORDER BY tl.timestamp DESC LIMIT %s""", (limit,))
+          AND {scope_sql}
+        ORDER BY tl.timestamp DESC LIMIT %s""", (*scope_params, limit))
     return {"items": rows, "count": len(rows)}

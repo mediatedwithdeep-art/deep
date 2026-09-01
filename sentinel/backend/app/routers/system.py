@@ -7,7 +7,10 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, Query, Request
 
 from .. import db
-from ..deps import CurrentUserDep, require, require_reason, write_audit
+from ..deps import (
+    CurrentUserDep, dept_filter, dept_scope_sighting, require, require_reason,
+    sees_all_departments, write_audit,
+)
 
 router = APIRouter(tags=["system"])
 
@@ -66,7 +69,16 @@ async def analytics_timeline(
 
 @router.get("/analytics/cameras")
 async def analytics_cameras(user: Annotated[object, Depends(require("analytics:read"))]):
-    rows = await db.fetch_all("SELECT * FROM v_camera_activity_1h ORDER BY sightings DESC")
+    # The view is estate-wide by design. Naming every camera in every
+    # department, with its activity, is a full inventory disclosure, so
+    # it is joined back to the registry and scoped here.
+    scope_sql, scope_params = dept_filter(user, "d.code")
+    rows = await db.fetch_all(f"""
+        SELECT va.* FROM v_camera_activity_1h va
+        JOIN camera c ON c.camera_id = va.camera_id
+        JOIN department d ON d.id = c.department_id
+        WHERE {scope_sql}
+        ORDER BY va.sightings DESC""", tuple(scope_params))
     return {"items": rows}
 
 
@@ -74,14 +86,17 @@ async def analytics_cameras(user: Annotated[object, Depends(require("analytics:r
 async def analytics_vehicle_mix(
     user: Annotated[object, Depends(require("analytics:read"))],
     hours: int = Query(24, ge=1, le=168)):
-    by_type = await db.fetch_all("""
-        SELECT vehicle_type::text AS vehicle_type, count(*) AS n
-        FROM vehicle_sighting WHERE timestamp > now() - make_interval(hours => %s)
-        GROUP BY 1 ORDER BY n DESC""", (hours,))
-    by_color = await db.fetch_all("""
-        SELECT COALESCE(vehicle_color,'unknown') AS color, count(*) AS n
-        FROM vehicle_sighting WHERE timestamp > now() - make_interval(hours => %s)
-        GROUP BY 1 ORDER BY n DESC LIMIT 12""", (hours,))
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    by_type = await db.fetch_all(f"""
+        SELECT s.vehicle_type::text AS vehicle_type, count(*) AS n
+        FROM vehicle_sighting s
+        WHERE s.timestamp > now() - make_interval(hours => %s) AND {scope_sql}
+        GROUP BY 1 ORDER BY n DESC""", (hours, *scope_params))
+    by_color = await db.fetch_all(f"""
+        SELECT COALESCE(s.vehicle_color,'unknown') AS color, count(*) AS n
+        FROM vehicle_sighting s
+        WHERE s.timestamp > now() - make_interval(hours => %s) AND {scope_sql}
+        GROUP BY 1 ORDER BY n DESC LIMIT 12""", (hours, *scope_params))
     return {"by_type": by_type, "by_color": by_color}
 
 
@@ -136,8 +151,9 @@ async def list_sightings(
     minutes: int = Query(15, ge=1, le=10080),
     limit: int = Query(200, ge=1, le=2000),
 ):
-    where = ["s.timestamp > now() - make_interval(mins => %s)"]
-    params: list = [minutes]
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    where = [scope_sql, "s.timestamp > now() - make_interval(mins => %s)"]
+    params: list = [*scope_params, minutes]
     if camera_id:
         where.append("s.camera_ref = %s"); params.append(camera_id)
     if vehicle_type:
@@ -162,14 +178,16 @@ async def live_sightings_geojson(
     user: Annotated[object, Depends(require("sighting:read"))],
     minutes: int = Query(5, ge=1, le=120)):
     """Recent sightings as GeoJSON points for the live map layer."""
-    rows = await db.fetch_all("""
+    scope_sql, scope_params = dept_scope_sighting(user, "s")
+    rows = await db.fetch_all(f"""
         SELECT s.sighting_id, s.timestamp, s.camera_ref, s.vehicle_track_id,
                s.vehicle_type::text AS vehicle_type, s.vehicle_color,
                s.plate_normalized, s.latitude, s.longitude, s.heading_deg, s.speed_kmph
         FROM vehicle_sighting s
-        WHERE s.timestamp > now() - make_interval(mins => %s)
+        WHERE {scope_sql}
+          AND s.timestamp > now() - make_interval(mins => %s)
           AND s.latitude IS NOT NULL
-        ORDER BY s.timestamp DESC LIMIT 3000""", (minutes,))
+        ORDER BY s.timestamp DESC LIMIT 3000""", (*scope_params, minutes))
     return {"type": "FeatureCollection", "features": [
         {"type": "Feature",
          "geometry": {"type": "Point", "coordinates": [r["longitude"], r["latitude"]]},
@@ -223,19 +241,40 @@ async def audit_log(request: Request, user: CurrentUserDep,
     audit trail nobody can tamper with silently is the point, and the first
     thing an insider does is check what was recorded about them.
     """
-    where = ["timestamp > now() - make_interval(hours => %s)"]
+    # Scoped like everything else. An audit trail that shows one
+    # department what another department's officers looked at is itself a
+    # disclosure -- and the reason to read it, investigating misuse, is
+    # satisfied within one's own department. Only the state admin spans all.
+    #
+    # Rows carrying no department are those written before authentication
+    # succeeded, chiefly failed logins. Those are released to a scoped
+    # caller only when the username they name belongs to that caller's own
+    # department, so a department admin can still see brute-force attempts
+    # against their own officers without learning of attempts elsewhere.
+    where = ["al.timestamp > now() - make_interval(hours => %s)"]
     params: list = [hours]
+    if not sees_all_departments(user):
+        if not user.department:
+            where.append("FALSE")
+        else:
+            where.append(
+                "(al.department = %s OR (al.department IS NULL AND EXISTS ("
+                "  SELECT 1 FROM app_user _au"
+                "    JOIN department _ad ON _ad.id = _au.department_id"
+                "   WHERE _au.username = al.resource_id AND _ad.code = %s)))")
+            params += [user.department, user.department]
     if action:
-        where.append("action ILIKE %s"); params.append(f"%{action}%")
+        where.append("al.action ILIKE %s"); params.append(f"%{action}%")
     if username:
-        where.append("username = %s"); params.append(username)
+        where.append("al.username = %s"); params.append(username)
     if denied_only:
-        where.append("result = 'DENIED'")
+        where.append("al.result = 'DENIED'")
     rows = await db.fetch_all(f"""
-        SELECT timestamp, username, department, action, resource, resource_id,
-               reason, ip_address::text AS ip_address, result, detail
-        FROM audit_log WHERE {' AND '.join(where)}
-        ORDER BY timestamp DESC LIMIT %s""", params + [limit])
+        SELECT al.timestamp, al.username, al.department, al.action, al.resource,
+               al.resource_id, al.reason, al.ip_address::text AS ip_address,
+               al.result, al.detail
+        FROM audit_log al WHERE {' AND '.join(where)}
+        ORDER BY al.timestamp DESC LIMIT %s""", params + [limit])
     await write_audit(request, user=user, action="AUDIT_READ",
                       resource="/system/audit", reason=reason,
                       detail={"rows": len(rows), "filter_action": action})

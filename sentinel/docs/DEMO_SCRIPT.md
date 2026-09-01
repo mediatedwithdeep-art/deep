@@ -65,9 +65,12 @@ username.
 (Ahmedabad *Traffic* Police, a different department). The camera list is
 different. Same system, same database, different estate.
 
-> "That is not a UI filter. It is enforced in every query — 25 tests hold
-> it, including that a department admin cannot switch off a neighbour's
-> camera during an incident."
+> "That is not a UI filter. It is enforced in the query, on every surface
+> that carries camera-derived data — cameras, vehicles, sightings, alerts,
+> the watchlist, analytics, the audit log and the live WebSocket. 38 tests
+> hold it, including that a department admin cannot switch off a
+> neighbour's camera during an incident, and that an operator cannot
+> acknowledge a neighbour's CRITICAL alert."
 
 ### 3 · The estate, honestly (40 s)
 
@@ -311,7 +314,7 @@ where nothing goes wrong.
 | Centralised vs metadata, 80k cameras | **320 Gbps vs 96 Mbps** |
 | Departments / roles | 26 / 6 |
 | Government systems connected | **0 of 5** — all mock, all stamped |
-| Tests | **346 collected** |
+| Tests | **359 collected** |
 | Gate, in comparisons | 20,000 pairs → **473**; 2,240 ms → **53 ms** |
 | Migrations / API operations | 10 / 45 across 41 paths |
 
