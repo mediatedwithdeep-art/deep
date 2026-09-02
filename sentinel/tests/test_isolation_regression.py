@@ -301,3 +301,49 @@ async def test_search_result_camera_list_is_scoped(api, cross_boundary):
     assert items, "dept A legitimately saw this vehicle and should find it"
     assert "SEC-B-CAM-001" not in str(items), (
         f"LEAK: search row lists dept B cameras: {items}")
+
+
+# ── the denormalised authorisation key ───────────────────────────────
+
+async def test_the_department_stamp_is_written_by_the_database_not_the_caller(
+        db, estate):
+    """An INSERT that lies about its department must not be believed.
+
+    `vehicle_sighting.department_code` gates access, so if application code
+    could set it, one missed INSERT path or one hostile writer becomes a
+    cross-department leak. The trigger overwrites whatever arrives.
+    """
+    db.execute("""INSERT INTO vehicle_sighting (sighting_id, timestamp,
+                      first_seen, last_seen, camera_id, camera_ref,
+                      vehicle_track_id, track_id, department_code)
+                  SELECT 'LIAR-1', now(), now(), now(), c.id, c.camera_id,
+                         'LIAR-TRACK','T-L','SECA'          -- claims dept A
+                  FROM camera c WHERE c.camera_id='SEC-B-CAM-001'""")
+    got = db.execute("SELECT department_code FROM vehicle_sighting "
+                     "WHERE sighting_id='LIAR-1'").fetchone()
+    assert got and got[0] == "SECB", (
+        f"the trigger let a caller stamp its own department: {got}")
+
+
+async def test_moving_a_camera_restamps_its_history(db, estate):
+    """Re-pointing a camera must not leave its past readable by the old owner."""
+    db.execute("""INSERT INTO vehicle_sighting (sighting_id, timestamp,
+                      first_seen, last_seen, camera_id, camera_ref,
+                      vehicle_track_id, track_id)
+                  SELECT 'MOVE-1', now(), now(), now(), c.id, c.camera_id,
+                         'MOVE-TRACK','T-M'
+                  FROM camera c WHERE c.camera_id='SEC-B-CAM-001'""")
+    assert db.execute("SELECT department_code FROM vehicle_sighting "
+                      "WHERE sighting_id='MOVE-1'").fetchone()[0] == "SECB"
+
+    db.execute("""UPDATE camera SET department_id =
+                      (SELECT id FROM department WHERE code='SECA')
+                   WHERE camera_id='SEC-B-CAM-001'""")
+    after = db.execute("SELECT department_code FROM vehicle_sighting "
+                       "WHERE sighting_id='MOVE-1'").fetchone()[0]
+    # Restore before asserting, so a failure cannot poison later tests.
+    db.execute("""UPDATE camera SET department_id =
+                      (SELECT id FROM department WHERE code='SECB')
+                   WHERE camera_id='SEC-B-CAM-001'""")
+    assert after == "SECA", (
+        f"history kept its old department stamp after the camera moved: {after}")
