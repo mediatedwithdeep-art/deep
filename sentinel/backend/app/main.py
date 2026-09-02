@@ -1,6 +1,8 @@
 """Sentinel API.
 
-    uvicorn app.main:app --host 0.0.0.0 --port 8000
+    sentinel-api                      # after `pip install -e .`
+    python -m app.main                # same thing, no console script
+    uvicorn app.main:app --port 8000  # when you want uvicorn's own flags
 
 Serves the command centre: camera registry, vehicle search and tracking,
 alerts, analytics, and a WebSocket fan-out for live events.
@@ -13,6 +15,7 @@ and one slow viewer cannot affect anyone else.
 from __future__ import annotations
 
 import contextlib
+import os
 import time
 from contextlib import asynccontextmanager
 from typing import Annotated
@@ -238,3 +241,43 @@ async def root():
         "health": "/health",
         "websocket": "/api/v1/ws?token=<access_token>",
     }
+
+
+# ── entrypoint ───────────────────────────────────────────────────────
+# `app` above is an ASGI object, not a program: importing this module builds
+# it and returns. So `python -m app.main` used to import cleanly, start
+# nothing, and exit 0 -- a silent success that looks exactly like a silent
+# failure. The ingestion and event-processor services both have a __main__
+# guard; the API was the one service without one.
+def main(argv: list[str] | None = None) -> int:
+    """Serve the API with uvicorn."""
+    import argparse
+
+    import uvicorn
+
+    ap = argparse.ArgumentParser(
+        prog="sentinel-api", description="Run the Sentinel API server.")
+    # 127.0.0.1, not 0.0.0.0. Binding every interface by default would put an
+    # unproxied police API on the LAN the moment someone runs it on a station
+    # machine. The container overrides this explicitly in its own CMD, where
+    # exposure is a deliberate, port-mapped decision.
+    ap.add_argument("--host", default=os.environ.get("API_HOST", "127.0.0.1"))
+    ap.add_argument("--port", type=int,
+                    default=int(os.environ.get("API_PORT", "8000")))
+    ap.add_argument("--reload", action="store_true",
+                    help="restart on source changes (development only)")
+    args = ap.parse_args(argv)
+
+    uvicorn.run(
+        # An import string rather than the `app` object: --reload needs to
+        # re-import the module in a fresh process, and cannot do that from an
+        # already-constructed instance.
+        "app.main:app",
+        host=args.host, port=args.port, reload=args.reload,
+        proxy_headers=True, forwarded_allow_ips="*",
+    )
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -71,6 +71,17 @@ hybrid:
 
 # ── host-native development ─────────────────────────────────────────
 
+## install: make every service importable outside Docker (do this first)
+install:
+	$(PY) -m pip install -e .
+	@echo
+	@echo "  installed. 'sentinel-api' now starts the API from any directory."
+	@echo "  for real camera ingestion, add PyAV:  pip install -e '.[live]'"
+
+## install-live: as above, plus PyAV for real camera ingestion
+install-live:
+	$(PY) -m pip install -e ".[live]"
+
 ## dev-db: start only PostgreSQL and Redis, for host-native development
 dev-db:
 	$(COMPOSE) up -d postgres redis
@@ -83,9 +94,12 @@ migrate:
 seed:
 	$(PY) database/seeds/seed.py
 
-## dev-api: run the API on the host with reload
+## dev-api: run the API on the host with reload (needs `make install` first)
+# No PYTHONPATH here on purpose. Setting it made this one target work while
+# every other way of starting the API failed, which hid the fact that the
+# project was never installed. `make install` fixes it for all of them.
 dev-api:
-	PYTHONPATH=shared:backend $(PY) -m uvicorn app.main:app --reload --port 8000
+	$(PY) -m app.main --reload --port 8000
 
 ## dev-ingestion: run ingestion on the host
 dev-ingestion:
@@ -130,5 +144,6 @@ help:
 	@echo
 
 .PHONY: demo up down clean logs ps observability media live hybrid \
+        install install-live \
         dev-db migrate seed dev-api dev-ingestion dev-processor dev-web \
         test test-unit typecheck benchmark help

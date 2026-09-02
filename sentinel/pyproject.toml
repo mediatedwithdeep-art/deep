@@ -1,0 +1,74 @@
+##
+## Sentinel — one installable project across several source roots.
+##
+## This repository is deliberately laid out as one directory per service,
+## and each of those directories is its own Python import root:
+##
+##     shared/           -> sentinel_core
+##     backend/          -> app
+##     ai/               -> sentinel_ai
+##     video-ingestion/  -> ingestion
+##     event-processor/  -> processor
+##     tools/            -> sentinel_sandbox
+##
+## Nothing about that layout is discoverable by Python on its own. Before
+## this file existed the knowledge lived in three unrelated places --
+## pytest.ini's `pythonpath`, one PYTHONPATH assignment in the Makefile,
+## and the Dockerfiles -- so `pytest` passed and `docker compose up` worked
+## while a plain `uvicorn app.main:app` in a terminal died with
+## `ModuleNotFoundError: No module named 'sentinel_core'`. Tests that pass
+## on an import path the application never uses are not evidence the
+## application runs.
+##
+## `pip install -e .` from this directory teaches the interpreter itself,
+## once, so the shell, VS Code, uvicorn and pytest all resolve imports the
+## same way.
+##
+[build-system]
+requires = ["setuptools>=64"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "sentinel"
+version = "1.0.0"
+description = "Sentinel — Gujarat Police unified video management system."
+requires-python = ">=3.11"
+
+# The union of backend/, ai/ and event-processor/ requirements.txt. Those
+# files stay as they are: each Docker image installs only its own service's
+# dependencies, which is what keeps the images small and independent. This
+# list is for the host-native install, where one environment runs all of it.
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "psycopg[binary,pool]>=3.2",
+  "pydantic>=2.6",
+  "pydantic-settings>=2.2",
+  "python-jose[cryptography]>=3.3",
+  "python-multipart>=0.0.9",
+  "prometheus-client>=0.20",
+  "redis>=5.0",
+  "numpy>=1.26",
+  "scipy>=1.11",
+  "PyYAML>=6.0",
+]
+
+[project.optional-dependencies]
+# PyAV is held out of the base install on purpose. It is the one dependency
+# here that binds to system codec libraries, so it is the one most likely to
+# fail on a machine that has never built native code -- and someone who only
+# wants to start the API should not be blocked by a video decoder. Add it
+# when you are ingesting real cameras:  pip install -e ".[live]"
+live = ["av>=12.0"]
+
+[project.scripts]
+# So there is a name to type that does not depend on which directory you
+# happen to be standing in.
+sentinel-api = "app.main:main"
+
+[tool.setuptools.packages.find]
+# setuptools accepts a list of roots here and works out the package-dir
+# mapping itself. This list is the single source of truth for the layout;
+# tests/test_project_layout.py fails if pytest.ini's `pythonpath` and this
+# list ever drift apart again.
+where = ["shared", "backend", "ai", "video-ingestion", "event-processor", "tools"]

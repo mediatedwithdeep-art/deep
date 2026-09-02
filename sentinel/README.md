@@ -145,7 +145,16 @@ make observability   # + Prometheus and Grafana
 make help            # all targets
 ```
 
-Host-native development, without Docker:
+Host-native development, without Docker. **Install the project once first** —
+this is what makes `sentinel_core`, `app`, `ingestion` and the rest importable
+outside Docker:
+
+```bash
+python3 -m pip install -e .        # from this directory (sentinel/)
+python3 -m pip install -e ".[live]"  # add PyAV, for real camera ingestion
+```
+
+Then:
 
 ```bash
 make dev-db          # just PostgreSQL + Redis
@@ -155,6 +164,27 @@ make dev-ingestion   # in another
 make dev-processor   # in another
 make dev-web         # in another
 ```
+
+`make dev-api` is a thin wrapper. Any of these start the API directly, from
+any directory, once the install above has been done:
+
+```bash
+sentinel-api                          # installed console script
+sentinel-api --reload --port 8000     # development
+python3 -m app.main                   # same, without the console script
+uvicorn app.main:app --port 8000      # when you want uvicorn's own flags
+```
+
+It binds `127.0.0.1` by default rather than every interface; pass `--host` or
+set `API_HOST` to change that deliberately.
+
+> **Why the install step is not optional.** Each service directory is its own
+> Python import root (`shared/` → `sentinel_core`, `backend/` → `app`, …).
+> Python cannot infer that. Skipping `pip install -e .` gives you
+> `ModuleNotFoundError: No module named 'sentinel_core'` even though the test
+> suite passes — pytest reaches the code through `pythonpath` in `pytest.ini`,
+> which is a route the application itself never takes.
+> `tests/test_project_layout.py` fails if those two ever drift apart again.
 
 ---
 

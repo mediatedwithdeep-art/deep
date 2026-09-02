@@ -1,5 +1,7 @@
 __pycache__/
 *.py[cod]
+# Build metadata from `pip install -e .`; regenerated on every install.
+*.egg-info/
 .env
 sentinel/.env
 sentinel/data/
