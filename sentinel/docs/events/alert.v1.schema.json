@@ -1,0 +1,62 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sentinel.alerts.v1",
+  "title": "Operator alert",
+  "type": "object",
+  "required": ["alert_id", "ts", "type", "severity"],
+  "properties": {
+    "alert_id": { "type": "string", "format": "uuid" },
+    "ts":       { "type": "string", "format": "date-time" },
+    "type":     { "type": "string",
+                  "enum": ["TARGET_SIGHTED","TARGET_PROBABLE","TARGET_LOST","HOTLIST_HIT","ROUTE_DEVIATION","CAMERA_DOWN","TAMPER"] },
+    "severity": { "type": "string", "enum": ["INFO","LOW","MEDIUM","HIGH","CRITICAL"] },
+    "target_id":   { "type": ["string","null"], "format": "uuid" },
+    "target_label":{ "type": ["string","null"] },
+    "camera_id":   { "type": ["string","null"], "format": "uuid" },
+    "camera_name": { "type": ["string","null"] },
+    "sighting_id": { "type": ["string","null"], "format": "uuid" },
+    "location": {
+      "type": ["object","null"],
+      "properties": { "lat": { "type": "number" }, "lon": { "type": "number" } }
+    },
+    "confidence": { "type": "number" },
+
+    "evidence": {
+      "type": "object",
+      "description": "Why the system believes this. Shown to the operator verbatim — an alert an operator cannot interrogate is an alert they will learn to ignore.",
+      "properties": {
+        "score_total":  { "type": "number" },
+        "score_plate":  { "type": "number" },
+        "score_reid":   { "type": "number" },
+        "score_colour": { "type": "number" },
+        "score_type":   { "type": "number" },
+        "score_st":     { "type": "number" },
+        "plate_read":   { "type": ["string","null"] },
+        "plate_distance": { "type": ["number","null"], "description": "Confusion-weighted edit distance to the target plate." },
+        "travel_expected_s": { "type": ["number","null"] },
+        "travel_actual_s":   { "type": ["number","null"] },
+        "prev_camera_name":  { "type": ["string","null"] },
+        "crop_url":     { "type": ["string","null"] },
+        "whep_url":     { "type": ["string","null"], "description": "Live view of the camera that raised this." }
+      }
+    },
+
+    "next_cameras": {
+      "type": "array",
+      "description": "Predicted downstream cameras with arrival windows. Drives the map's look-here-next highlight.",
+      "items": {
+        "type": "object",
+        "properties": {
+          "camera_id":   { "type": "string", "format": "uuid" },
+          "camera_name": { "type": "string" },
+          "expected_at": { "type": "string", "format": "date-time" },
+          "window_start":{ "type": "string", "format": "date-time" },
+          "window_end":  { "type": "string", "format": "date-time" }
+        }
+      }
+    },
+
+    "dedup_key": { "type": "string",
+      "description": "target_id:camera_id, suppressed in Redis for 60s. Without this a stationary target at a junction generates an alert per frame and the operator mutes the system." }
+  }
+}

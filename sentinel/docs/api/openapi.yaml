@@ -1,0 +1,794 @@
+openapi: 3.1.0
+info:
+  title: Sentinel VMS — Ingest & Tracking API
+  version: 1.0.0
+  description: |
+    Control plane for the Sentinel unified VMS. This API onboards cameras,
+    designates targets, and serves tracks and alerts.
+
+    It deliberately does NOT carry video. Video is served out-of-band by
+    MediaMTX over WHEP (WebRTC); this API returns the URL to negotiate
+    against. See docs/01-architecture.md.
+
+    Auth: OIDC bearer (Keycloak) for humans; mTLS client cert for edge
+    gateways. Every mutating call is written to `audit_log` with the
+    caller's stated `reason` (DPDP Act 2023 purpose limitation).
+servers:
+  - url: https://sentinel.gujarat.gov.in/api/v1
+
+security:
+  - oidc: []
+
+paths:
+
+  # ───────────────────────── Camera onboarding ─────────────────────────
+  /cameras:
+    post:
+      summary: Register a camera (the first call you make to ingest a feed)
+      description: |
+        Creates the camera in PENDING, then enqueues a probe job that
+        connects, reads codec/resolution/fps/GOP, measures RTT, and
+        promotes to ACTIVE — or to DEGRADED with a diagnostic.
+
+        Credentials are never stored in this table. Supply them once via
+        `credentials`; the API writes them to Vault and retains only
+        `credential_ref`. They are never returned by any GET.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CameraCreate' }
+            examples:
+              onvif_ip_camera:
+                summary: ONVIF IP camera — URLs auto-discovered
+                value:
+                  external_ref: "AHM-SG-014"
+                  site_code: "AHM_SATELLITE_PS"
+                  department_code: "GP_AHM"
+                  name: "Satellite Rd / Jodhpur Cross — NE approach"
+                  source_type: "ONVIF"
+                  role: "SURVEILLANCE"
+                  host: "10.42.7.14"
+                  port: 80
+                  credentials: { username: "viewer", password: "REDACTED" }
+                  location: { lat: 23.02705, lon: 72.51192, altitude_m: 8.5 }
+                  optics: { heading_deg: 47.0, fov_deg: 82.0, range_m: 65.0 }
+                  vendor: "Hikvision"
+                  model: "DS-2CD2143G2-I"
+                  signal_class: "IP"
+                  tags: ["junction", "arterial"]
+              analog_dvr_channel:
+                summary: Analog camera on a legacy DVR channel
+                value:
+                  external_ref: "AMC-DVR3-CH07"
+                  site_code: "AHM_MUNI_ZONE3"
+                  department_code: "AMC"
+                  name: "Zone-3 Yard — gate"
+                  source_type: "DVR_ANALOG"
+                  role: "SURVEILLANCE"
+                  host: "10.42.9.3"
+                  port: 554
+                  dvr_channel: 7
+                  credentials: { username: "admin", password: "REDACTED" }
+                  location: { lat: 23.0410, lon: 72.5610 }
+                  optics: { heading_deg: 190.0, fov_deg: 70.0, range_m: 35.0 }
+                  vendor: "CP Plus"
+                  signal_class: "CVBS"
+                  firmware_risk: "EOL"
+                  gateway_code: "EDGE-AHM-03"
+              explicit_rtsp:
+                summary: Explicit RTSP URLs (non-ONVIF or unknown vendor)
+                value:
+                  external_ref: "GSRTC-BUS-STN-02"
+                  site_code: "AHM_GSRTC"
+                  department_code: "GSRTC"
+                  name: "Geeta Mandir bus stand — exit ramp"
+                  source_type: "RTSP"
+                  role: "ANPR"
+                  main_stream_url: "rtsp://10.42.11.8:554/Streaming/Channels/101"
+                  sub_stream_url:  "rtsp://10.42.11.8:554/Streaming/Channels/102"
+                  credentials: { username: "anpr", password: "REDACTED" }
+                  location: { lat: 23.0132, lon: 72.5905 }
+                  optics: { heading_deg: 275.0, fov_deg: 28.0, range_m: 40.0 }
+                  signal_class: "IP"
+      responses:
+        '201':
+          description: Created; probe enqueued
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Camera' }
+        '409': { description: external_ref already exists for this department }
+        '422': { description: Validation failed }
+
+    get:
+      summary: List cameras
+      parameters:
+        - { name: department_code, in: query, schema: { type: string } }
+        - { name: status, in: query, schema: { $ref: '#/components/schemas/CameraStatus' } }
+        - { name: role, in: query, schema: { $ref: '#/components/schemas/CameraRole' } }
+        - { name: bbox, in: query, description: "minLon,minLat,maxLon,maxLat", schema: { type: string } }
+        - { name: near, in: query, description: "lon,lat,radius_m", schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100, maximum: 1000 } }
+        - { name: cursor, in: query, schema: { type: string } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Camera' } }
+                  next_cursor: { type: string, nullable: true }
+
+  /cameras/bulk:
+    post:
+      summary: Bulk import (the realistic path for 50 — and for 80,000)
+      description: Accepts up to 5000 CameraCreate objects. Returns per-row results; partial success is normal and expected.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                cameras: { type: array, maxItems: 5000, items: { $ref: '#/components/schemas/CameraCreate' } }
+      responses:
+        '207':
+          description: Multi-status
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  created: { type: integer }
+                  failed:  { type: integer }
+                  results:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        external_ref: { type: string }
+                        status: { type: string, enum: [CREATED, FAILED] }
+                        camera_id: { type: string, format: uuid, nullable: true }
+                        error: { type: string, nullable: true }
+
+  /cameras/{camera_id}:
+    parameters:
+      - { name: camera_id, in: path, required: true, schema: { type: string, format: uuid } }
+    get:
+      summary: Get camera
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Camera' }
+    patch:
+      summary: Update camera (recomputes FOV polygon if optics change)
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/CameraUpdate' }
+      responses: { '200': { description: Updated } }
+    delete:
+      summary: Disable camera (soft; registry rows are never hard-deleted — audit trail)
+      responses: { '204': { description: Disabled } }
+
+  /cameras/{camera_id}/probe:
+    post:
+      summary: Re-probe a camera now
+      description: Connects, reads stream properties, measures RTT, updates status. Idempotent.
+      parameters:
+        - { name: camera_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ProbeResult' }
+
+  /cameras/{camera_id}/stream:
+    get:
+      summary: Get playback URLs for this camera
+      description: |
+        Returns a WHEP endpoint for sub-second WebRTC playback and an
+        LL-HLS fallback. MediaMTX pulls the camera on demand, so calling
+        this is what causes the stream to start.
+      parameters:
+        - { name: camera_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: quality, in: query, schema: { type: string, enum: [sub, main], default: sub } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  whep_url:   { type: string, example: "https://media.sentinel.gov.in/cam-a3f1/whep" }
+                  llhls_url:  { type: string }
+                  expires_at: { type: string, format: date-time }
+                  token:      { type: string, description: Short-lived playback token }
+
+  /cameras/discover:
+    post:
+      summary: ONVIF WS-Discovery sweep on a subnet
+      description: |
+        Multicast probe to 239.255.255.250:3702 from the named gateway,
+        then GetProfiles/GetStreamUri per responder. Returns candidates —
+        it does not auto-register them; an operator confirms location
+        before onboarding, because a camera without a correct position is
+        useless to the GIS and worse than useless to the matcher.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [gateway_code]
+              properties:
+                gateway_code: { type: string }
+                cidr: { type: string, example: "10.42.7.0/24" }
+                timeout_s: { type: integer, default: 8 }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  candidates:
+                    type: array
+                    items: { $ref: '#/components/schemas/DiscoveredDevice' }
+
+  /cameras/adjacency/rebuild:
+    post:
+      summary: Rebuild the camera adjacency graph from OSRM
+      description: |
+        Recomputes road-network travel times between all camera pairs
+        within `max_dist_m`. Run after any bulk onboarding. This graph is
+        the spatio-temporal gate — cross-camera tracking precision depends
+        on it more than on any model choice.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                max_dist_m: { type: number, default: 5000 }
+                department_code: { type: string, nullable: true }
+      responses: { '202': { description: Rebuild started } }
+
+  # ───────────────────────── Targets & tracking ─────────────────────────
+  /targets:
+    post:
+      summary: Designate a vehicle to track
+      description: |
+        Two ways to designate, and they compose:
+          1. `plate_query` — you know the plate.
+          2. `seed_sighting_id` — an operator clicked a vehicle on the
+             wall. The API pulls that tracklet's ReID embedding and
+             attributes and tracks by appearance.
+        Supplying both is strongest: plate gives precision, embedding
+        gives recall on the ~85% of cameras that cannot read a plate.
+      requestBody:
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/TargetCreate' }
+            examples:
+              by_plate:
+                value:
+                  label: "Suspect vehicle — FIR 0142/2026"
+                  plate_query: "GJ01AB1234"
+                  priority: "HIGH"
+                  case_ref: "FIR/0142/2026"
+                  reason: "Vehicle linked to reported offence"
+              by_click:
+                value:
+                  label: "White hatchback — Satellite Rd"
+                  seed_sighting_id: "9f1c2e6a-4b7d-4f21-9a30-77e51b0c3d18"
+                  colour_hint: "white"
+                  class_hint: "car"
+                  priority: "CRITICAL"
+                  reason: "Live pursuit support"
+      responses:
+        '201':
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Target' }
+
+  /targets/{target_id}/track:
+    get:
+      summary: Movement history as GeoJSON (feeds the GIS dashboard directly)
+      description: |
+        FeatureCollection containing: LineString features per global track
+        (M-ordinate = epoch seconds), Point features per sighting, and
+        — distinctly styled — LineString features for *inferred* corridors
+        between non-adjacent sightings. Inferred segments are never drawn
+        as observed ones; conflating them would misrepresent evidence.
+      parameters:
+        - { name: target_id, in: path, required: true, schema: { type: string, format: uuid } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to,   in: query, schema: { type: string, format: date-time } }
+        - { name: min_confidence, in: query, schema: { type: number, default: 0.55 } }
+        - { name: include_inferred, in: query, schema: { type: boolean, default: true } }
+      responses:
+        '200':
+          content:
+            application/geo+json:
+              schema: { $ref: '#/components/schemas/TrackGeoJSON' }
+
+  /targets/{target_id}/candidates:
+    get:
+      summary: Cameras to watch next (the predictive layer)
+      description: Given the latest confirmed sighting, returns downstream cameras with expected arrival windows. Drives the map's "look here next" highlight.
+      parameters:
+        - { name: target_id, in: path, required: true, schema: { type: string, format: uuid } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  from_camera_id: { type: string, format: uuid }
+                  seen_at: { type: string, format: date-time }
+                  candidates:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        camera_id: { type: string, format: uuid }
+                        camera_name: { type: string }
+                        travel_s: { type: number }
+                        window_start: { type: string, format: date-time }
+                        window_end: { type: string, format: date-time }
+                        expected_at: { type: string, format: date-time }
+                        source: { type: string, enum: [observed, osrm_prior] }
+
+  /links/{link_id}/verdict:
+    post:
+      summary: Operator confirms or rejects a PROBABLE match
+      description: Human verdicts are the training signal that tunes fusion weights. Recording them is what lets the system improve after deployment rather than staying frozen at hackathon accuracy.
+      parameters:
+        - { name: link_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [verdict]
+              properties:
+                verdict: { type: string, enum: [CONFIRMED, REJECTED] }
+                note: { type: string }
+      responses: { '200': { description: Recorded } }
+
+  # ───────────────────────── Sightings & search ─────────────────────────
+  /sightings/search:
+    get:
+      summary: Search sightings (fuzzy plate, spatial, temporal, attribute)
+      parameters:
+        - { name: plate, in: query, description: "Fuzzy — tolerates O/0, I/1, 8/B, 5/S, 2/Z, 6/G confusions", schema: { type: string } }
+        - { name: max_plate_distance, in: query, schema: { type: number, default: 1.5 } }
+        - { name: from, in: query, schema: { type: string, format: date-time } }
+        - { name: to,   in: query, schema: { type: string, format: date-time } }
+        - { name: bbox, in: query, schema: { type: string } }
+        - { name: camera_id, in: query, schema: { type: string, format: uuid } }
+        - { name: class, in: query, schema: { type: string } }
+        - { name: colour, in: query, schema: { type: string } }
+        - { name: limit, in: query, schema: { type: integer, default: 100 } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Sighting' } }
+
+  /sightings/similar:
+    post:
+      summary: Visual search — find this vehicle elsewhere (ReID kNN)
+      description: kNN over pgvector, hard-masked by the spatio-temporal gate. Without the gate this returns every white hatchback in Gujarat; with it, it returns the same car.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [sighting_id]
+              properties:
+                sighting_id: { type: string, format: uuid }
+                top_k: { type: integer, default: 50 }
+                apply_st_gate: { type: boolean, default: true }
+                from: { type: string, format: date-time }
+                to: { type: string, format: date-time }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  matches:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        sighting: { $ref: '#/components/schemas/Sighting' }
+                        cosine: { type: number }
+                        st_feasibility: { type: number }
+                        fused_score: { type: number }
+
+  # ───────────────────────── Ingest from edge gateways ─────────────────
+  /ingest/sightings:
+    post:
+      summary: Edge gateway posts a batch of sightings (mTLS)
+      description: |
+        The HTTP fallback for gateways that cannot reach Kafka directly.
+        Preferred path is the gateway producing to `sentinel.sightings.v1`.
+        Idempotent on (camera_id, tracklet_id, ts).
+      security:
+        - mtls: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gateway_code: { type: string }
+                sightings: { type: array, maxItems: 500, items: { $ref: '#/components/schemas/SightingIngest' } }
+      responses:
+        '202': { description: Accepted }
+
+  /ingest/health:
+    post:
+      summary: Edge gateway health beacon
+      security:
+        - mtls: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                gateway_code: { type: string }
+                cameras: { type: array, items: { $ref: '#/components/schemas/CameraHealth' } }
+      responses: { '202': { description: Accepted } }
+
+  # ───────────────────────── Alerts ─────────────────────────
+  /alerts:
+    get:
+      summary: List alerts
+      parameters:
+        - { name: state, in: query, schema: { type: string, enum: [NEW, ACKED, RESOLVED, FALSE_POSITIVE] } }
+        - { name: target_id, in: query, schema: { type: string, format: uuid } }
+        - { name: since, in: query, schema: { type: string, format: date-time } }
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items: { type: array, items: { $ref: '#/components/schemas/Alert' } }
+
+  /alerts/{alert_id}/ack:
+    post:
+      summary: Acknowledge an alert
+      parameters:
+        - { name: alert_id, in: path, required: true, schema: { type: string, format: uuid } }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                state: { type: string, enum: [ACKED, RESOLVED, FALSE_POSITIVE] }
+                note: { type: string }
+      responses: { '200': { description: Updated } }
+
+  # ───────────────────────── Evidence ─────────────────────────
+  /evidence/export:
+    post:
+      summary: Export an evidence clip with a BSA 2023 s.63 certificate
+      description: |
+        Instructs the owning edge node to upload the requested window at
+        full resolution, hashes it, appends to the tamper-evident chain,
+        and generates the s.63 electronic-evidence certificate needed for
+        court admissibility.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [camera_id, window_start, window_end, case_ref, purpose]
+              properties:
+                camera_id: { type: string, format: uuid }
+                window_start: { type: string, format: date-time }
+                window_end: { type: string, format: date-time }
+                case_ref: { type: string }
+                purpose: { type: string, description: DPDP Act purpose statement }
+      responses:
+        '202':
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  export_id: { type: string, format: uuid }
+                  status: { type: string }
+
+  # ───────────────────────── Realtime ─────────────────────────
+  /ws/stream:
+    get:
+      summary: "WebSocket: live alerts, sightings and camera health"
+      description: |
+        Client subscribes: `{"action":"subscribe","channels":["alerts","target:<uuid>","camera:<uuid>"]}`
+        Server pushes Alert / Sighting / CameraHealth envelopes tagged with `channel`.
+      responses: { '101': { description: Switching Protocols } }
+
+components:
+  securitySchemes:
+    oidc:
+      type: openIdConnect
+      openIdConnectUrl: https://sso.gujarat.gov.in/realms/sentinel/.well-known/openid-configuration
+    mtls:
+      type: http
+      scheme: mutual
+
+  schemas:
+    CameraStatus: { type: string, enum: [PENDING, PROBING, ACTIVE, DEGRADED, OFFLINE, DISABLED] }
+    CameraRole:   { type: string, enum: [SURVEILLANCE, ANPR, PTZ, THERMAL, CROWD] }
+    SourceType:   { type: string, enum: [RTSP, ONVIF, HLS, DVR_ANALOG, VENDOR_SDK, FILE_LOOP] }
+    SignalClass:  { type: string, enum: [CVBS, AHD, TVI, CVI, IP] }
+
+    Location:
+      type: object
+      required: [lat, lon]
+      properties:
+        lat: { type: number, minimum: -90, maximum: 90 }
+        lon: { type: number, minimum: -180, maximum: 180 }
+        altitude_m: { type: number }
+
+    Optics:
+      type: object
+      description: |
+        Required for anything beyond a dot on a map. `heading_deg` and
+        `fov_deg` produce the ground FOV polygon, which is what spatial
+        queries use. `homography` additionally enables true speed and
+        heading instead of pixel-space estimates.
+      properties:
+        heading_deg: { type: number, minimum: 0, maximum: 360, description: True north bearing of the optical axis }
+        fov_deg: { type: number, default: 90 }
+        range_m: { type: number, default: 60 }
+        homography:
+          type: array
+          minItems: 9
+          maxItems: 9
+          items: { type: number }
+          description: 3x3 row-major image-px -> local metric ground plane
+
+    Credentials:
+      type: object
+      description: Write-only. Stored in Vault; never returned by any endpoint.
+      writeOnly: true
+      properties:
+        username: { type: string }
+        password: { type: string, format: password }
+
+    CameraCreate:
+      type: object
+      required: [external_ref, site_code, department_code, name, source_type, location]
+      properties:
+        external_ref: { type: string, description: Owning department's own camera ID }
+        site_code: { type: string }
+        department_code: { type: string }
+        gateway_code: { type: string, nullable: true, description: Edge gateway that will pull this camera. Null = pulled centrally. }
+        name: { type: string }
+        source_type: { $ref: '#/components/schemas/SourceType' }
+        role: { $ref: '#/components/schemas/CameraRole' }
+        host: { type: string, format: ipv4 }
+        port: { type: integer }
+        dvr_channel: { type: integer, nullable: true, description: Channel number for DVR_ANALOG sources }
+        main_stream_url: { type: string, nullable: true, description: Omit for ONVIF — discovered automatically }
+        sub_stream_url:  { type: string, nullable: true, description: What the AI pipeline consumes. Omit for ONVIF. }
+        hls_url: { type: string, nullable: true }
+        credentials: { $ref: '#/components/schemas/Credentials' }
+        location: { $ref: '#/components/schemas/Location' }
+        optics: { $ref: '#/components/schemas/Optics' }
+        vendor: { type: string }
+        model: { type: string }
+        firmware: { type: string }
+        firmware_risk: { type: string, enum: [OK, EOL, KNOWN_CVE, UNKNOWN] }
+        signal_class: { $ref: '#/components/schemas/SignalClass' }
+        tags: { type: array, items: { type: string } }
+
+    CameraUpdate:
+      type: object
+      properties:
+        name: { type: string }
+        role: { $ref: '#/components/schemas/CameraRole' }
+        location: { $ref: '#/components/schemas/Location' }
+        optics: { $ref: '#/components/schemas/Optics' }
+        credentials: { $ref: '#/components/schemas/Credentials' }
+        tags: { type: array, items: { type: string } }
+        status: { $ref: '#/components/schemas/CameraStatus' }
+
+    Camera:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        external_ref: { type: string }
+        name: { type: string }
+        department_code: { type: string }
+        site_code: { type: string }
+        source_type: { $ref: '#/components/schemas/SourceType' }
+        role: { $ref: '#/components/schemas/CameraRole' }
+        status: { $ref: '#/components/schemas/CameraStatus' }
+        location: { $ref: '#/components/schemas/Location' }
+        optics: { $ref: '#/components/schemas/Optics' }
+        fov_geojson: { type: object, description: Ground FOV polygon, GeoJSON }
+        vendor: { type: string }
+        model: { type: string }
+        signal_class: { $ref: '#/components/schemas/SignalClass' }
+        firmware_risk: { type: string }
+        codec: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        fps: { type: number }
+        gop_size: { type: integer }
+        trust_score: { type: number, description: 0-1 rolling health/usability score }
+        last_frame_at: { type: string, format: date-time, nullable: true }
+        clock_offset_ms: { type: integer, nullable: true }
+        tags: { type: array, items: { type: string } }
+        created_at: { type: string, format: date-time }
+
+    ProbeResult:
+      type: object
+      properties:
+        camera_id: { type: string, format: uuid }
+        reachable: { type: boolean }
+        status: { $ref: '#/components/schemas/CameraStatus' }
+        codec: { type: string }
+        width: { type: integer }
+        height: { type: integer }
+        fps: { type: number }
+        gop_size: { type: integer }
+        rtt_ms: { type: number }
+        resolved_sub_stream_url: { type: string, nullable: true }
+        anpr_capable: { type: boolean, description: Heuristic from resolution, FOV and range — is a plate likely to exceed 90px here }
+        warnings: { type: array, items: { type: string } }
+        error: { type: string, nullable: true }
+
+    DiscoveredDevice:
+      type: object
+      properties:
+        ip: { type: string }
+        xaddr: { type: string }
+        manufacturer: { type: string }
+        model: { type: string }
+        firmware: { type: string }
+        mac: { type: string }
+        profiles:
+          type: array
+          items:
+            type: object
+            properties:
+              token: { type: string }
+              name: { type: string }
+              encoding: { type: string }
+              width: { type: integer }
+              height: { type: integer }
+              fps: { type: number }
+              stream_uri: { type: string }
+              is_substream: { type: boolean }
+        already_registered: { type: boolean }
+
+    SightingIngest:
+      type: object
+      required: [camera_id, tracklet_id, ts, class, class_conf, bbox]
+      properties:
+        camera_id: { type: string, format: uuid }
+        tracklet_id: { type: string, format: uuid }
+        ts: { type: string, format: date-time, description: UTC, microsecond precision, stamped by the gateway's NTP-disciplined clock — never the camera RTC }
+        class: { type: string, enum: [car, motorcycle, auto_rickshaw, truck, bus, tractor, cycle] }
+        class_conf: { type: number }
+        bbox: { type: array, minItems: 4, maxItems: 4, items: { type: integer }, description: "[x, y, w, h] in source pixels" }
+        plate_text: { type: string, nullable: true }
+        plate_conf: { type: number, nullable: true }
+        plate_crop_key: { type: string, nullable: true }
+        colour: { type: string, nullable: true }
+        colour_conf: { type: number, nullable: true }
+        embedding: { type: array, items: { type: number }, minItems: 512, maxItems: 512, nullable: true }
+        speed_kmph: { type: number, nullable: true }
+        heading_deg: { type: number, nullable: true }
+        quality_score: { type: number }
+        clock_confidence: { type: number, default: 1.0 }
+        crop_key: { type: string, nullable: true }
+
+    Sighting:
+      allOf:
+        - $ref: '#/components/schemas/SightingIngest'
+        - type: object
+          properties:
+            id: { type: string, format: uuid }
+            camera_name: { type: string }
+            global_track_id: { type: string, format: uuid, nullable: true }
+            location: { $ref: '#/components/schemas/Location' }
+            plate_valid_fmt: { type: boolean }
+            crop_url: { type: string, nullable: true }
+
+    CameraHealth:
+      type: object
+      properties:
+        camera_id: { type: string, format: uuid }
+        ts: { type: string, format: date-time }
+        reachable: { type: boolean }
+        fps_actual: { type: number }
+        decode_err_rate: { type: number }
+        scene_change: { type: number, description: Low value on a reachable stream indicates a frozen picture — the classic silent failure }
+        mean_luma: { type: number }
+        blur_var: { type: number }
+        clock_offset_ms: { type: integer }
+        rtt_ms: { type: number }
+
+    TargetCreate:
+      type: object
+      required: [label, reason]
+      properties:
+        label: { type: string }
+        plate_query: { type: string, nullable: true }
+        seed_sighting_id: { type: string, format: uuid, nullable: true }
+        class_hint: { type: string, nullable: true }
+        colour_hint: { type: string, nullable: true }
+        priority: { type: string, enum: [LOW, MEDIUM, HIGH, CRITICAL], default: MEDIUM }
+        case_ref: { type: string, nullable: true }
+        expires_at: { type: string, format: date-time, nullable: true }
+        reason: { type: string, description: DPDP Act purpose statement — written to audit_log }
+
+    Target:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        label: { type: string }
+        plate_query: { type: string, nullable: true }
+        priority: { type: string }
+        status: { type: string, enum: [ACTIVE, PAUSED, CLOSED] }
+        case_ref: { type: string, nullable: true }
+        created_by: { type: string }
+        created_at: { type: string, format: date-time }
+        sighting_count: { type: integer }
+        last_seen_at: { type: string, format: date-time, nullable: true }
+        last_camera_id: { type: string, format: uuid, nullable: true }
+
+    TrackGeoJSON:
+      type: object
+      properties:
+        type: { type: string, enum: [FeatureCollection] }
+        features:
+          type: array
+          items:
+            type: object
+            properties:
+              type: { type: string, enum: [Feature] }
+              geometry: { type: object }
+              properties:
+                type: object
+                properties:
+                  kind: { type: string, enum: [observed_path, sighting, inferred_corridor] }
+                  ts: { type: string, format: date-time }
+                  camera_id: { type: string, format: uuid }
+                  camera_name: { type: string }
+                  confidence: { type: number }
+                  plate_text: { type: string, nullable: true }
+                  crop_url: { type: string, nullable: true }
+
+    Alert:
+      type: object
+      properties:
+        id: { type: string, format: uuid }
+        ts: { type: string, format: date-time }
+        type: { type: string, enum: [TARGET_SIGHTED, TARGET_PROBABLE, TARGET_LOST, HOTLIST_HIT, ROUTE_DEVIATION, CAMERA_DOWN, TAMPER] }
+        severity: { type: string, enum: [INFO, LOW, MEDIUM, HIGH, CRITICAL] }
+        target_id: { type: string, format: uuid, nullable: true }
+        camera_id: { type: string, format: uuid, nullable: true }
+        camera_name: { type: string, nullable: true }
+        location: { $ref: '#/components/schemas/Location' }
+        confidence: { type: number }
+        state: { type: string, enum: [NEW, ACKED, RESOLVED, FALSE_POSITIVE] }
+        payload: { type: object }

@@ -1,0 +1,70 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sentinel.sightings.v1",
+  "title": "Vehicle sighting",
+  "type": "object",
+  "required": ["camera_id", "tracklet_id", "ts", "class", "class_conf", "bbox"],
+  "properties": {
+    "camera_id":   { "type": "string", "format": "uuid" },
+    "tracklet_id": { "type": "string", "format": "uuid",
+                     "description": "Per-camera track ID from ByteTrack. Stable within one camera only." },
+    "ts": { "type": "string", "format": "date-time",
+            "description": "UTC, microsecond precision. Stamped by the gateway's NTP-disciplined clock, NEVER the camera RTC — legacy DVR clocks drift minutes per week and a reversed timestamp corrupts the whole trajectory." },
+    "seq": { "type": "integer" },
+    "class": { "type": "string",
+               "enum": ["car","motorcycle","auto_rickshaw","truck","bus","tractor","cycle"],
+               "description": "auto_rickshaw is not a COCO class and must be added by fine-tuning; it is a large share of Indian traffic." },
+    "class_conf": { "type": "number", "minimum": 0, "maximum": 1 },
+    "bbox": { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "integer" },
+              "description": "[x, y, w, h] in SOURCE pixels, not resized-model pixels." },
+
+    "plate": {
+      "type": ["object", "null"],
+      "properties": {
+        "text":       { "type": "string", "description": "Raw OCR output, uppercased, punctuation stripped." },
+        "conf":       { "type": "number" },
+        "char_confs": { "type": "array", "items": { "type": "number" },
+                        "description": "Per-character confidence. Lets the matcher weight a fuzzy match by WHICH character is uncertain." },
+        "valid_fmt":  { "type": "boolean", "description": "Passed Indian plate grammar + valid state code." },
+        "lexicon_corrected": { "type": "boolean" },
+        "bbox":       { "type": "array", "minItems": 4, "maxItems": 4, "items": { "type": "integer" } },
+        "width_px":   { "type": "integer", "description": "Below ~90px, treat the read as unreliable regardless of conf." },
+        "crop_key":   { "type": "string" }
+      }
+    },
+
+    "attributes": {
+      "type": "object",
+      "properties": {
+        "colour":      { "type": "string", "enum": ["white","silver","grey","black","red","blue","green","yellow","brown","orange","other"] },
+        "colour_conf": { "type": "number" },
+        "make_model":  { "type": ["string", "null"] }
+      }
+    },
+
+    "geo": {
+      "type": ["object", "null"],
+      "description": "Present only when the camera is calibrated (homography set).",
+      "properties": {
+        "lat": { "type": "number" },
+        "lon": { "type": "number" },
+        "speed_kmph":  { "type": "number" },
+        "heading_deg": { "type": "number" }
+      }
+    },
+
+    "quality": {
+      "type": "object",
+      "properties": {
+        "score":        { "type": "number", "description": "Composite gate score; drives whether ANPR ran at all." },
+        "blur_var":     { "type": "number" },
+        "occlusion":    { "type": "number" },
+        "bbox_area_px": { "type": "integer" }
+      }
+    },
+
+    "clock_confidence": { "type": "number", "default": 1.0,
+      "description": "0-1. Low values widen the matcher's spatio-temporal gate instead of producing a false negative." },
+    "crop_key": { "type": "string", "description": "Object key of the vehicle crop. NOT the image itself." }
+  }
+}

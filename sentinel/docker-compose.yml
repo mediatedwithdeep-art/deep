@@ -1,0 +1,196 @@
+# ─────────────────────────────────────────────────────────────────────────
+#  SENTINEL — one command starts everything
+#
+#      docker compose up -d
+#
+#  Then open http://localhost:3000 and sign in with the credentials printed
+#  by the `bootstrap` service:  docker compose logs bootstrap
+#
+#  Startup order is enforced with health checks, not sleeps: bootstrap waits
+#  for a healthy database, and every service waits for bootstrap to finish
+#  migrating and seeding. A `sleep 10` works on a fast laptop and fails on a
+#  loaded one, which is the worst possible failure on demo day.
+# ─────────────────────────────────────────────────────────────────────────
+
+name: sentinel
+
+x-logging: &logging
+  logging:
+    driver: json-file
+    options: { max-size: "20m", max-file: "3" }
+
+x-python-env: &python-env
+  ENVIRONMENT: ${ENVIRONMENT:-demo}
+  POSTGRES_HOST: postgres
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: ${POSTGRES_DB:-sentinel}
+  POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+  POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel-demo-password}
+  REDIS_HOST: redis
+  REDIS_PORT: "6379"
+  BUS_BACKEND: ${BUS_BACKEND:-redis}
+  LOG_LEVEL: ${LOG_LEVEL:-INFO}
+  LOG_FORMAT: ${LOG_FORMAT:-json}
+  SECRET_KEY: ${SECRET_KEY:-demo-only-secret-key-change-me-in-production-000}
+
+services:
+
+  # ── data ────────────────────────────────────────────────────────────
+  postgres:
+    image: postgis/postgis:16-3.4
+    container_name: sentinel-postgres
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-sentinel}
+      POSTGRES_USER: ${POSTGRES_USER:-sentinel}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-sentinel-demo-password}
+    ports: ["5432:5432"]
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      # pgvector is not in the postgis image; install it on first boot.
+      - ./infrastructure/postgres-init.sh:/docker-entrypoint-initdb.d/10-pgvector.sh:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-sentinel} -d ${POSTGRES_DB:-sentinel}"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+    <<: *logging
+
+  redis:
+    image: redis:7-alpine
+    container_name: sentinel-redis
+    # No persistence: this is a transport, not a store of record. Everything
+    # durable lives in PostgreSQL, and an AOF here would only add IO.
+    command: >
+      redis-server --save "" --appendonly no
+      --maxmemory 1gb --maxmemory-policy allkeys-lru
+    ports: ["6379:6379"]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    <<: *logging
+
+  # ── bootstrap: migrate + seed, then exit ────────────────────────────
+  bootstrap:
+    build: { context: ., dockerfile: database/Dockerfile }
+    container_name: sentinel-bootstrap
+    environment:
+      <<: *python-env
+      DATABASE_URL: postgresql://${POSTGRES_USER:-sentinel}:${POSTGRES_PASSWORD:-sentinel-demo-password}@postgres:5432/${POSTGRES_DB:-sentinel}
+      SEED_ADMIN_PASSWORD: ${SEED_ADMIN_PASSWORD:-}
+    depends_on:
+      postgres: { condition: service_healthy }
+    restart: "no"
+    <<: *logging
+
+  # ── application ─────────────────────────────────────────────────────
+  api:
+    build: { context: ., dockerfile: backend/Dockerfile }
+    container_name: sentinel-api
+    environment:
+      <<: *python-env
+      CORS_ORIGINS: ${CORS_ORIGINS:-http://localhost:3000,http://127.0.0.1:3000}
+      MEDIA_BASE_URL: ${MEDIA_BASE_URL:-http://localhost:8889}
+    ports: ["8000:8000"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      bootstrap: { condition: service_completed_successfully }
+    restart: unless-stopped
+    <<: *logging
+
+  ingestion:
+    build: { context: ., dockerfile: video-ingestion/Dockerfile }
+    container_name: sentinel-ingestion
+    environment:
+      <<: *python-env
+      # demo   = the 50-camera traffic world, no cameras needed
+      # live   = only real cameras from config/cameras.yaml
+      # hybrid = both, which is what to use at the venue
+      INGEST_MODE: ${INGEST_MODE:-demo}
+      DEMO_VEHICLE_COUNT: ${DEMO_VEHICLE_COUNT:-1800}
+      DEMO_TICK_HZ: ${DEMO_TICK_HZ:-6}
+      DEMO_TIME_SCALE: ${DEMO_TIME_SCALE:-3}
+      DEMO_TARGET_PLATE: ${DEMO_TARGET_PLATE:-GJ01AB1234}
+      AI_BACKEND: ${AI_BACKEND:-simulation}
+      CAMERA_CONFIG_PATH: config/cameras.yaml
+    volumes:
+      # Mounted, not baked in: edit config/cameras.yaml and restart this one
+      # service to bring real cameras online. No rebuild.
+      - ./config:/app/config:ro
+    depends_on:
+      redis: { condition: service_healthy }
+      bootstrap: { condition: service_completed_successfully }
+    restart: unless-stopped
+    <<: *logging
+
+  processor:
+    build: { context: ., dockerfile: event-processor/Dockerfile }
+    container_name: sentinel-processor
+    environment:
+      <<: *python-env
+      MATCHER_TICK_SECONDS: ${MATCHER_TICK_SECONDS:-1.0}
+      MATCHER_TRACK_TTL_SECONDS: ${MATCHER_TRACK_TTL_SECONDS:-900}
+      ALERT_DEDUP_SECONDS: ${ALERT_DEDUP_SECONDS:-60}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      bootstrap: { condition: service_completed_successfully }
+    restart: unless-stopped
+    <<: *logging
+
+  web:
+    build: { context: ./frontend, dockerfile: Dockerfile }
+    container_name: sentinel-web
+    ports: ["3000:80"]
+    depends_on:
+      api: { condition: service_started }
+    restart: unless-stopped
+    <<: *logging
+
+  # ── media server (optional) ─────────────────────────────────────────
+  # Only needed to view real camera video. The demo estate runs without it;
+  # camera tiles fall back to live analytics rather than a fake picture.
+  mediamtx:
+    image: bluenviron/mediamtx:1.9.3
+    container_name: sentinel-media
+    profiles: ["media"]
+    network_mode: host
+    volumes:
+      - ./infrastructure/mediamtx.yml:/mediamtx.yml:ro
+    restart: unless-stopped
+    <<: *logging
+
+  # ── observability (optional) ────────────────────────────────────────
+  #   docker compose --profile observability up -d
+  prometheus:
+    image: prom/prometheus:v2.54.1
+    container_name: sentinel-prometheus
+    profiles: ["observability"]
+    ports: ["9090:9090"]
+    volumes:
+      - ./infrastructure/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - promdata:/prometheus
+    restart: unless-stopped
+    <<: *logging
+
+  grafana:
+    image: grafana/grafana:11.2.0
+    container_name: sentinel-grafana
+    profiles: ["observability"]
+    ports: ["3001:3000"]
+    environment:
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-sentinel}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./infrastructure/grafana:/etc/grafana/provisioning:ro
+      - grafanadata:/var/lib/grafana
+    depends_on: [prometheus]
+    restart: unless-stopped
+    <<: *logging
+
+volumes:
+  pgdata:
+  promdata:
+  grafanadata:

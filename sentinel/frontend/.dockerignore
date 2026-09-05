@@ -1,0 +1,20 @@
+# Build context for the web image.
+#
+# node_modules is the load-bearing entry. The Dockerfile runs `npm ci` and
+# then `COPY . .`; without this file that COPY overwrites the freshly
+# installed Linux packages with whatever the host has. A node_modules
+# installed on Windows or macOS carries platform-specific binaries
+# (esbuild, rollup), so `npm run build` then fails inside Alpine with
+# "you installed esbuild for another platform" -- a confusing error whose
+# real cause is the copy, not the install.
+node_modules
+
+# Rebuilt inside the image by `npm run build`; copying a stale host build
+# in first only invites serving yesterday's bundle.
+dist
+tsconfig.tsbuildinfo
+
+.git
+.gitignore
+Dockerfile
+.dockerignore

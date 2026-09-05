@@ -1,0 +1,112 @@
+# Ingestion: one pod per group of cameras.
+#
+# Sized by DECODE capacity, not by CPU. A pod handling ~250 sub-streams at
+# 6 fps needs a GPU for NVDEC; without one, decode alone saturates the CPU
+# long before inference does. Shard by district with CAMERA_FILTER_ZONE so
+# each pod's cameras are geographically close and its adjacency graph stays
+# local.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: sentinel-ingestion, namespace: sentinel }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: sentinel-ingestion } }
+  template:
+    metadata: { labels: { app: sentinel-ingestion } }
+    spec:
+      containers:
+        - name: ingestion
+          image: sentinel/ingestion:latest
+          envFrom:
+            - configMapRef: { name: sentinel-config }
+            - secretRef: { name: sentinel-secrets }
+          volumeMounts:
+            - { name: cameras, mountPath: /app/config, readOnly: true }
+          resources:
+            requests: { cpu: "2", memory: 4Gi }
+            limits:
+              cpu: "8"
+              memory: 16Gi
+              # Uncomment on GPU nodes running AI_BACKEND=onnx.
+              # nvidia.com/gpu: 1
+      volumes:
+        - name: cameras
+          configMap: { name: sentinel-cameras, optional: true }
+---
+# Event processor. Every replica joins ONE consumer group, so the bus
+# distributes batches between them and each sighting is matched once.
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: sentinel-processor, namespace: sentinel }
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: sentinel-processor } }
+  template:
+    metadata: { labels: { app: sentinel-processor } }
+    spec:
+      containers:
+        - name: processor
+          image: sentinel/processor:latest
+          envFrom:
+            - configMapRef: { name: sentinel-config }
+            - secretRef: { name: sentinel-secrets }
+          resources:
+            requests: { cpu: "1", memory: 2Gi }
+            limits:   { cpu: "4", memory: 8Gi }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: sentinel-web, namespace: sentinel }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: sentinel-web } }
+  template:
+    metadata: { labels: { app: sentinel-web } }
+    spec:
+      containers:
+        - name: web
+          image: sentinel/frontend:latest
+          ports: [{ containerPort: 80 }]
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits:   { cpu: 500m, memory: 256Mi }
+          readinessProbe:
+            httpGet: { path: /index.html, port: 80 }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: sentinel-web, namespace: sentinel }
+spec:
+  selector: { app: sentinel-web }
+  ports: [{ port: 80, targetPort: 80 }]
+---
+# Partition maintenance. Native range partitions must exist BEFORE a row
+# lands in them -- an insert with no matching partition fails outright --
+# so this runs daily and creates several days ahead.
+apiVersion: batch/v1
+kind: CronJob
+metadata: { name: sentinel-partitions, namespace: sentinel }
+spec:
+  schedule: "17 2 * * *"
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          restartPolicy: OnFailure
+          containers:
+            - name: maintenance
+              image: sentinel/database:latest
+              command: ["sh", "-c"]
+              args:
+                - |
+                  psql "$DATABASE_URL" -c "SELECT count(*) FROM ensure_partitions();"
+                  psql "$DATABASE_URL" -c "SELECT count(*) FROM drop_old_partitions();"
+                  psql "$DATABASE_URL" -c "SELECT refresh_adjacency_observations(7);"
+              envFrom:
+                - configMapRef: { name: sentinel-config }
+                - secretRef: { name: sentinel-secrets }
+              env:
+                - name: DATABASE_URL
+                  value: postgresql://sentinel:$(POSTGRES_PASSWORD)@sentinel-postgres:5432/sentinel

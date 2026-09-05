@@ -1,0 +1,9 @@
+# Base AI pipeline. The simulation backend needs nothing beyond numpy, which
+# is what makes the demo runnable with no GPU and no model weights.
+pydantic>=2.6
+numpy>=1.26
+
+# Real inference. Uncomment and set AI_BACKEND=onnx once you have weights.
+# onnxruntime>=1.18          # CPU
+# onnxruntime-gpu>=1.18      # CUDA
+# opencv-python-headless>=4.10

@@ -1,0 +1,11 @@
+pydantic>=2.6
+pydantic-settings>=2.2
+psycopg[binary]>=3.2
+redis>=5.0
+numpy>=1.26
+PyYAML>=6.0
+# Real PTS from the container clock. Raw frames over a pipe carry no
+# timestamps, so without this every timing is the moment Python read a
+# socket -- measured 70x wrong on a buffered connect. PyAV is libav
+# without the GUI baggage that ruled out opencv-python.
+av>=12.0

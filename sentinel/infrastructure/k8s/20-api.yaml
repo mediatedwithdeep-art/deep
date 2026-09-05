@@ -1,0 +1,94 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sentinel-migrate
+  namespace: sentinel
+  annotations:
+    # Re-run on every release. Migrations are idempotent and the runner
+    # refuses to proceed if an applied file has been edited.
+    argocd.argoproj.io/hook: PreSync
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: OnFailure
+      containers:
+        - name: migrate
+          image: sentinel/database:latest
+          command: ["python", "/app/database/migrate.py", "up"]
+          envFrom:
+            - configMapRef: { name: sentinel-config }
+            - secretRef: { name: sentinel-secrets }
+          env:
+            - name: DATABASE_URL
+              value: postgresql://sentinel:$(POSTGRES_PASSWORD)@sentinel-postgres:5432/sentinel
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata: { name: sentinel-api, namespace: sentinel }
+spec:
+  replicas: 3
+  selector: { matchLabels: { app: sentinel-api } }
+  strategy:
+    rollingUpdate: { maxUnavailable: 0, maxSurge: 1 }
+  template:
+    metadata:
+      labels: { app: sentinel-api }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "8000"
+        prometheus.io/path: "/metrics"
+    spec:
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+      containers:
+        - name: api
+          image: sentinel/backend:latest
+          ports: [{ containerPort: 8000 }]
+          envFrom:
+            - configMapRef: { name: sentinel-config }
+            - secretRef: { name: sentinel-secrets }
+          resources:
+            requests: { cpu: 250m, memory: 512Mi }
+            limits:   { cpu: "2",  memory: 2Gi }
+          # Liveness must NOT depend on the database. If PostgreSQL blips,
+          # restarting every API pod turns a recoverable incident into an
+          # outage and a thundering herd on recovery.
+          livenessProbe:
+            httpGet: { path: /health, port: 8000 }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+          readinessProbe:
+            httpGet: { path: /health/ready, port: 8000 }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: ["ALL"] }
+---
+apiVersion: v1
+kind: Service
+metadata: { name: sentinel-api, namespace: sentinel }
+spec:
+  selector: { app: sentinel-api }
+  ports: [{ port: 8000, targetPort: 8000 }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata: { name: sentinel-api, namespace: sentinel }
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: sentinel-api }
+  minReplicas: 3
+  maxReplicas: 20
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 70 } }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata: { name: sentinel-api, namespace: sentinel }
+spec:
+  minAvailable: 2
+  selector: { matchLabels: { app: sentinel-api } }

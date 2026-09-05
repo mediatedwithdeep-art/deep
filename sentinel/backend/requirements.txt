@@ -1,0 +1,12 @@
+fastapi>=0.115
+uvicorn[standard]>=0.30
+psycopg[binary,pool]>=3.2
+pydantic>=2.6
+pydantic-settings>=2.2
+python-jose[cryptography]>=3.3
+python-multipart>=0.0.9
+prometheus-client>=0.20
+redis>=5.0
+numpy>=1.26
+scipy>=1.11
+PyYAML>=6.0

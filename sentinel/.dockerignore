@@ -1,0 +1,38 @@
+# Build context for the Python images (api, bootstrap, ingestion, processor).
+#
+# The context is this whole directory, and without this file every one of
+# those builds uploaded ~150 MB to the daemon -- 143 MB of it being
+# frontend/node_modules, which no Python image copies. On Docker Desktop
+# that transfer happens before any build output appears, so a build looks
+# hung when it is only shipping files it will never use.
+#
+# Keep this in step with the COPY lines in */Dockerfile: shared/, ai/,
+# backend/app/, video-ingestion/, event-processor/, database/, config/ and
+# the requirements.txt files must all still reach the build.
+
+.git
+.gitignore
+
+# The web image builds from ./frontend as its own context; no Python image
+# copies it. node_modules alone is 143 MB.
+frontend
+
+# Python build and test artefacts. Copied into images otherwise, where they
+# are dead weight at best and stale bytecode at worst.
+__pycache__/
+*.py[cod]
+*.egg-info/
+.pytest_cache/
+.venv/
+venv/
+
+# Not copied by any Dockerfile.
+tests
+docs
+*.zip
+*.pptx
+
+# Local state and secrets. .env in particular must never be baked into a
+# layer -- it would ship credentials inside the image.
+.env
+data/

@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "sentinel.reid.v1",
+  "title": "ReID embedding for a closed tracklet",
+  "description": "Emitted once per tracklet at close-out, not per frame. The embedding is the quality-weighted mean of the best N crops, which is materially more robust than any single frame.",
+  "type": "object",
+  "required": ["tracklet_id", "camera_id", "ts", "embedding", "model"],
+  "properties": {
+    "tracklet_id": { "type": "string", "format": "uuid" },
+    "camera_id":   { "type": "string", "format": "uuid" },
+    "ts":          { "type": "string", "format": "date-time", "description": "Tracklet midpoint" },
+    "ts_enter":    { "type": "string", "format": "date-time" },
+    "ts_exit":     { "type": "string", "format": "date-time" },
+    "embedding":   { "type": "array", "minItems": 512, "maxItems": 512, "items": { "type": "number" },
+                     "description": "L2-normalised. Cosine similarity = dot product." },
+    "model":       { "type": "string", "example": "osnet_ain_x1_0_veri776_v3",
+                     "description": "Embeddings from different models are NOT comparable. The matcher must refuse cross-model comparison rather than silently returning nonsense." },
+    "n_crops":     { "type": "integer" },
+    "mean_quality":{ "type": "number" },
+    "class":       { "type": "string" },
+    "colour":      { "type": "string" },
+    "best_crop_key": { "type": "string" }
+  }
+}
